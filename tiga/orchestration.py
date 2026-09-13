@@ -8,6 +8,7 @@ email changes without a user-visible action.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import subprocess
 from datetime import datetime, timezone
@@ -282,7 +283,9 @@ async def github_sync_push() -> dict[str, Any]:
             subprocess.run,
             [
                 "git", "-C", str(PROJECT_ROOT),
-                "-c", f"http.extraheader=AUTHORIZATION: bearer {config.GITHUB_TOKEN}",
+                "-c",
+                "http.extraheader=AUTHORIZATION: basic "
+                + base64.b64encode(f"x-access-token:{config.GITHUB_TOKEN}".encode()).decode(),
                 "push", "-u", "origin", f"HEAD:{config.GITHUB_BRANCH}",
             ],
             capture_output=True,
