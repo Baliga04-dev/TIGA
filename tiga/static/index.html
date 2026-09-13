@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S.</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-inner">
+    <div class="gate-orb"></div>
+    <h1 class="gate-title">J.A.R.V.I.S.</h1>
+    <p class="gate-sub">Just A Rather Very Intelligent System</p>
+    <button id="initBtn">INITIALIZE</button>
+    <p class="gate-hint">Chrome or Edge recommended &mdash; microphone uses the Web Speech API</p>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <header class="topbar">
+    <div class="brand">
+      J.A.R.V.I.S.
+      <span id="sysMode" class="pill pill-dim">DEMO CORE</span>
+    </div>
+    <div class="topmid">
+      <span id="clock">--:--:--</span>
+    </div>
+    <div class="topright">
+      <span id="micState" class="pill pill-dim">MIC OFF</span>
+      <span id="linkState" class="pill pill-dim">LINK --</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="wave"></canvas>
+
+      <div id="orbWrap">
+        <div id="orb" class="idle">
+          <div class="orb-halo"></div>
+          <div class="orb-ring ring-a"></div>
+          <div class="orb-ring ring-b"></div>
+          <div class="orb-ring ring-c"></div>
+          <div class="orb-core"></div>
+        </div>
+        <div id="stateLabel" class="state-label">STANDBY</div>
+      </div>
+
+      <div class="console">
+        <div id="heard" class="heard">Awaiting your instruction&hellip;</div>
+        <form id="cmdForm" autocomplete="off">
+          <button type="button" id="micBtn" title="Toggle microphone" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/>
+              <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/>
+            </svg>
+          </button>
+          <input id="cmdInput" placeholder="Type a command or press the mic&hellip;" maxlength="500">
+          <button type="submit" id="sendBtn" title="Send">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M2 21l21-9L2 3v7l15 2-15 2z"/>
+            </svg>
+          </button>
+          <label class="handsfree" title="Keep listening after every reply">
+            <input type="checkbox" id="handsFree"><span>HANDSFREE</span>
+          </label>
+        </form>
+      </div>
+    </section>
+
+    <aside class="intel">
+      <h2>INTEL FEED</h2>
+      <div id="cards"></div>
+    </aside>
+  </main>
+</div>
+
+<audio id="player"></audio>
+<script src="/static/app.js"></script>
+</body>
+</html>
