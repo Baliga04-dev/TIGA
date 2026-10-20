@@ -9,6 +9,9 @@ export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<R | null>(null);
   const mounted = useRef(true);
+  // Always call the latest `fn`, so a form submitted later sees the latest values.
+  const latest = useRef(fn);
+  latest.current = fn;
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -21,7 +24,7 @@ export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>
       setPending(true);
       setError(null);
       try {
-        const value = await fn(...args);
+        const value = await latest.current(...args);
         if (mounted.current) setResult(value);
         return value;
       } catch (e) {
@@ -34,7 +37,6 @@ export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>
         if (mounted.current) setPending(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

@@ -17,30 +17,31 @@ function useRequest<T>(load: () => Promise<T>, fallback: string, pollMs?: number
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const latest = useRef(0);
+  const latest = useRef({ id: 0 });
 
   const refetch = useCallback(async () => {
-    const id = ++latest.current;
+    const id = ++latest.current.id;
     setLoading(true);
     try {
       const result = await load();
-      if (id !== latest.current) return;
+      if (id !== latest.current.id) return;
       setData(result);
       setError(null);
     } catch (e) {
-      if (id !== latest.current) return;
+      if (id !== latest.current.id) return;
       setData(null);
       setError(messageOf(e, fallback));
     } finally {
-      if (id === latest.current) setLoading(false);
+      if (id === latest.current.id) setLoading(false);
     }
   }, [load, fallback]);
 
   useEffect(() => {
+    const state = latest.current;
     refetch();
     const timer = pollMs ? setInterval(refetch, pollMs) : undefined;
     return () => {
-      latest.current++;
+      state.id++;
       if (timer) clearInterval(timer);
     };
   }, [refetch, pollMs]);

@@ -93,6 +93,22 @@ describe('Agents', () => {
     expect(screen.getByText('growth or launch signal')).toBeInTheDocument()
   })
 
+  it('researches and generates with what was typed, not with the initial values', async () => {
+    const researchBodies = mock.record('/research/leads', research) as Record<string, unknown>[]
+    const promptBodies = mock.record('/prompt/generate', { ok: true, generated_at: 'now', prompt: 'p', questions: [], research }) as Record<string, unknown>[]
+    const user = await open()
+    await user.clear(screen.getByLabelText(/research topic/i))
+    await user.type(screen.getByLabelText(/research topic/i), 'dentists')
+    await user.click(screen.getByRole('button', { name: /find signals/i }))
+    await waitFor(() => expect(researchBodies).toHaveLength(1))
+    expect(researchBodies[0]).toMatchObject({ topic: 'dentists' })
+    await user.type(screen.getByLabelText(/^idea/i), 'booking app')
+    await user.type(screen.getByLabelText(/desired outcome/i), 'fewer no-shows')
+    await user.click(screen.getByRole('button', { name: /research and generate/i }))
+    await waitFor(() => expect(promptBodies).toHaveLength(1))
+    expect(promptBodies[0]).toMatchObject({ idea: 'booking app', outcome: 'fewer no-shows', research_topic: 'dentists' })
+  })
+
   it('says which feeds failed when research is partial', async () => {
     mock.post('/research/leads', { ...research, errors: ['Google News: ConnectError'] })
     const user = await open()

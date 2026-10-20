@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { Check, Clipboard } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Check, Clipboard, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function PageHeader({ title, description, action }: {
@@ -115,5 +116,103 @@ export function CopyButton({ text, label = 'Copy', iconOnly = false }: { text: s
       {state === 'copied' ? <Check className="size-4" aria-hidden="true" /> : <Clipboard className="size-4" aria-hidden="true" />}
       {!iconOnly && copyLabel(state, label)}
     </button>
+  );
+}
+
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * An accessible modal dialog: labelled by its title, closes on Escape or a backdrop click,
+ * keeps Tab inside, and hands focus back to whatever opened it.
+ */
+export function Modal({ title, onClose, wide = false, children }: {
+  title: string;
+  onClose: () => void;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  const titleId = useId();
+  const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panel.current?.querySelector<HTMLElement>('input, textarea, select, [data-autofocus]');
+    (first ?? panel.current)?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close.current();
+      } else if (e.key === 'Tab' && panel.current) {
+        const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+        if (items.length === 0) return;
+        const firstItem = items[0];
+        const lastItem = items[items.length - 1];
+        if (e.shiftKey && (document.activeElement === firstItem || document.activeElement === panel.current)) {
+          e.preventDefault();
+          lastItem.focus();
+        } else if (!e.shiftKey && document.activeElement === lastItem) {
+          e.preventDefault();
+          firstItem.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      opener?.focus?.();
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={cn(
+          'w-full max-h-[90vh] overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-xl',
+          wide ? 'max-w-3xl' : 'max-w-2xl',
+        )}
+      >
+        <div className="flex items-center justify-between gap-4 p-4 border-b border-[var(--border-color)]">
+          <h2 id={titleId} className="font-semibold truncate">{title}</h2>
+          <button type="button" onClick={onClose} className="btn btn-ghost p-1.5" aria-label="Close">
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-4.5rem)]">{children}</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** A short confirmation that clears itself. Errors belong next to what failed, not here. */
+export function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    const timer = setTimeout(() => done.current(), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  return (
+    <div
+      role="status"
+      className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-lg bg-[var(--accent-green)] px-4 py-3 text-sm font-medium text-[var(--bg-primary)] shadow-lg"
+    >
+      <Check className="size-4" aria-hidden="true" />
+      {message}
+    </div>
   );
 }

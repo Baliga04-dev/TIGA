@@ -52,7 +52,7 @@ export function Chat() {
     if (!response) setInput(text);
   };
 
-  const useExample = (command: string) => {
+  const fillExample = (command: string) => {
     setInput(command);
     textareaRef.current?.focus();
   };
@@ -91,7 +91,7 @@ export function Chat() {
                   <p className="text-[var(--text-secondary)] mb-4">Try asking Tiga:</p>
                   <div className="flex flex-wrap gap-2">
                     {EXAMPLE_COMMANDS.map((cmd) => (
-                      <button key={cmd} onClick={() => useExample(cmd)} className="btn btn-ghost btn-sm text-xs">
+                      <button key={cmd} onClick={() => fillExample(cmd)} className="btn btn-ghost btn-sm text-xs">
                         {cmd}
                       </button>
                     ))}
@@ -189,7 +189,7 @@ export function Chat() {
           <Card title="Quick Actions">
             <div className="space-y-2">
               {QUICK_ACTIONS.map(({ label, command, icon: Icon }) => (
-                <button key={label} onClick={() => useExample(command)} className="btn btn-secondary w-full justify-start gap-2">
+                <button key={label} onClick={() => fillExample(command)} className="btn btn-secondary w-full justify-start gap-2">
                   <Icon className="size-4" aria-hidden="true" />
                   {label}
                 </button>
