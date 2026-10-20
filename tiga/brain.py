@@ -151,14 +151,33 @@ async def run_tool(name: str, args: dict) -> dict:
     }
 
 
+# Tools that read mailbox content (which may carry injected instructions) and
+# tools that act on the outside world. Once the first has run in a turn, the
+# second are refused for the rest of that turn.
+READS_UNTRUSTED = {"fetch_recent_emails", "get_email_summary"}
+ACTS_ON_WORLD = {"send_cold_email", "open_tab"}
+
+
 async def respond(user_text: str, history: list) -> dict:
     if config.OPENAI_API_KEY:
+        actions: list = []
+        reply = ""
         try:
-            reply, actions = await _llm_respond(user_text, history)
-            if reply:
-                return {"reply": reply, "actions": actions, "mode": "llm"}
+            reply = await _llm_respond(user_text, history, actions)
         except Exception:
             pass
+        if reply:
+            return {"reply": reply, "actions": actions, "mode": "llm"}
+        done = [a["tool"] for a in actions if a["tool"] in ACTS_ON_WORLD and a["ok"]]
+        if done:
+            return {
+                "reply": (
+                    "I carried out your request (" + ", ".join(done) + ") but lost the language "
+                    "model before I could summarise it, sir. Check the actions below."
+                ),
+                "actions": actions,
+                "mode": "llm",
+            }
     return await _builtin_respond(user_text)
 
 
@@ -350,14 +369,14 @@ def _status_reply() -> str:
     return "Diagnostics complete, sir: " + ", ".join(parts) + "."
 
 
-async def _llm_respond(user_text: str, history: list):
+async def _llm_respond(user_text: str, history: list, actions: list) -> str:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for turn in history[-8:]:
         if isinstance(turn, dict) and turn.get("role") in ("user", "assistant") and turn.get("content"):
             messages.append({"role": turn["role"], "content": str(turn["content"])[:2000]})
     messages.append({"role": "user", "content": user_text})
 
-    actions = []
+    read_untrusted = False
     headers = {"Authorization": f"Bearer {config.OPENAI_API_KEY}"}
     url = f"{config.OPENAI_BASE_URL}/chat/completions"
 
@@ -377,7 +396,7 @@ async def _llm_respond(user_text: str, history: list):
             message = resp.json()["choices"][0]["message"]
             calls = message.get("tool_calls") or []
             if not calls:
-                return (message.get("content") or "").strip(), actions
+                return (message.get("content") or "").strip()
             messages.append(
                 {
                     "role": "assistant",
@@ -401,7 +420,22 @@ async def _llm_respond(user_text: str, history: list):
                     args = json.loads(call["function"].get("arguments") or "{}")
                 except json.JSONDecodeError:
                     args = {}
-                action = await run_tool(name, args)
+                if read_untrusted and name in ACTS_ON_WORLD:
+                    action = {
+                        "tool": name,
+                        "args": {},
+                        "result": {
+                            "ok": False,
+                            "error": "refused: mailbox content was read this turn, so it cannot trigger "
+                            "this action. Ask the user to confirm it in a new message.",
+                        },
+                        "ok": False,
+                        "ms": 0,
+                    }
+                else:
+                    action = await run_tool(name, args)
+                    if name in READS_UNTRUSTED:
+                        read_untrusted = True
                 actions.append(action)
                 messages.append(
                     {
@@ -410,7 +444,7 @@ async def _llm_respond(user_text: str, history: list):
                         "content": tools.summarize_result(action["result"], limit=1500),
                     }
                 )
-    return "All done, sir.", actions
+    return "All done, sir."
 
 
 def _email_summary_reply(action: dict) -> str:

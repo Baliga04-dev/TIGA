@@ -12,6 +12,7 @@ _ISOLATED_ENV = {
     "GITHUB_SYNC_INTERVAL_MINUTES": "0",
     "GMAIL_CREDENTIALS_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-credentials.json"),
     "GMAIL_TOKEN_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-token.json"),
+    "TIGA_TESTER_CHILD": "1",  # the tester agent must not recursively run this suite
 }
 os.environ.update(_ISOLATED_ENV)
 
@@ -51,6 +52,10 @@ class HttpMock:
     def add(self, url_part, *, json=None, text=None, status=200, exc=None):
         self.routes.append((url_part, json, text, status, exc))
 
+    def add_sequence(self, url_part, responses):
+        """Answer successive calls to url_part with successive (status, json) pairs."""
+        self.routes.append((url_part, "SEQ", iter(responses), 0, None))
+
     def handler(self, request):
         import httpx
 
@@ -59,6 +64,9 @@ class HttpMock:
             if url_part in str(request.url):
                 if exc:
                     raise exc
+                if json == "SEQ":
+                    status, payload = next(text)
+                    return httpx.Response(status, json=payload)
                 if json is not None:
                     return httpx.Response(status, json=json)
                 return httpx.Response(status, text=text or "")

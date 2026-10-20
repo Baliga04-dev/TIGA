@@ -10,7 +10,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from email.utils import parseaddr
 from pathlib import Path
@@ -195,12 +197,16 @@ def _dev_report() -> dict[str, Any]:
 
 
 async def _tester_report() -> dict[str, Any]:
-    backend = await asyncio.to_thread(_run_backend_check)
+    checks = [await asyncio.to_thread(_run_backend_check)]
+    suite = await asyncio.to_thread(_run_test_suite)
+    if suite:
+        checks.append(suite)
+    ok = all(check["ok"] for check in checks)
     return {
         "agent": "tester",
-        "ok": backend["ok"],
-        "status": "passed" if backend["ok"] else "failed",
-        "checks": [backend],
+        "ok": ok,
+        "status": "passed" if ok else "failed",
+        "checks": checks,
     }
 
 
@@ -213,6 +219,50 @@ def _run_backend_check() -> dict[str, Any]:
         return {"name": "backend_import", "ok": False, "detail": f"{type(exc).__name__}: {exc}"}
 
 
+def _run_test_suite() -> dict[str, Any] | None:
+    """Run the backend pytest suite; skipped inside a test run to avoid recursion."""
+    backend_dir = Path(__file__).parent
+    if os.environ.get("TIGA_TESTER_CHILD") or not (backend_dir / "tests").is_dir():
+        return None
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-x", "--no-header"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env={**os.environ, "TIGA_TESTER_CHILD": "1"},
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"name": "backend_tests", "ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+    tail = (proc.stdout or proc.stderr).strip().splitlines()[-1:] or [""]
+    return {"name": "backend_tests", "ok": proc.returncode == 0, "detail": tail[0]}
+
+
+def _git_auth_env() -> dict[str, str]:
+    """Pass the token to git through the environment so it never shows in `ps`."""
+    token = base64.b64encode(f"x-access-token:{config.GITHUB_TOKEN}".encode()).decode()
+    return {
+        **os.environ,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "http.extraheader",
+        "GIT_CONFIG_VALUE_0": f"AUTHORIZATION: basic {token}",
+    }
+
+
+async def _git(*args: str, auth: bool = False) -> subprocess.CompletedProcess:
+    return await asyncio.to_thread(
+        subprocess.run,
+        ["git", "-C", str(PROJECT_ROOT), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=_git_auth_env() if auth else None,
+    )
+
+
 async def github_sync_status() -> dict[str, Any]:
     """Report GitHub sync state; pushing remains an explicit operation."""
     result: dict[str, Any] = {
@@ -223,13 +273,7 @@ async def github_sync_status() -> dict[str, Any]:
         "working_tree": "unknown",
     }
     try:
-        status = await asyncio.to_thread(
-            subprocess.run,
-            ["git", "-C", str(PROJECT_ROOT), "status", "--short"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        status = await _git("status", "--short")
         result["working_tree"] = status.stdout.strip() or "clean"
     except OSError as exc:
         result["working_tree"] = f"git unavailable: {exc}"
@@ -237,7 +281,7 @@ async def github_sync_status() -> dict[str, Any]:
 
 
 async def github_sync_push() -> dict[str, Any]:
-    """Commit and push the workspace using an already configured GitHub token."""
+    """Push commits that already exist. Never stages, commits, or rewrites the remote."""
     if not config.GITHUB_REPOSITORY:
         return {"ok": False, "error": "GITHUB_REPOSITORY is not configured"}
     if not config.GITHUB_TOKEN:
@@ -245,74 +289,45 @@ async def github_sync_push() -> dict[str, Any]:
     if "/" not in config.GITHUB_REPOSITORY:
         return {"ok": False, "error": "GITHUB_REPOSITORY must be owner/repository"}
 
-    remote = f"https://github.com/{config.GITHUB_REPOSITORY}.git"
+    branch = config.GITHUB_BRANCH
     try:
-        inside = await asyncio.to_thread(
-            subprocess.run,
-            ["git", "-C", str(PROJECT_ROOT), "rev-parse", "--is-inside-work-tree"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if inside.returncode != 0:
-            await asyncio.to_thread(
-                subprocess.run, ["git", "-C", str(PROJECT_ROOT), "init"], check=True
-            )
-        current_remote = await asyncio.to_thread(
-            subprocess.run,
-            ["git", "-C", str(PROJECT_ROOT), "remote", "get-url", "origin"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if current_remote.returncode != 0:
-            await asyncio.to_thread(
-                subprocess.run,
-                ["git", "-C", str(PROJECT_ROOT), "remote", "add", "origin", remote],
-                check=True,
-            )
-        elif current_remote.stdout.strip() != remote:
-            await asyncio.to_thread(
-                subprocess.run,
-                ["git", "-C", str(PROJECT_ROOT), "remote", "set-url", "origin", remote],
-                check=True,
-            )
-        await asyncio.to_thread(
-            subprocess.run, ["git", "-C", str(PROJECT_ROOT), "add", "-A"], check=True
-        )
-        commit = await asyncio.to_thread(
-            subprocess.run,
-            [
-                "git", "-C", str(PROJECT_ROOT),
-                "-c", "user.name=Tiga",
-                "-c", "user.email=tiga@users.noreply.github.com",
-                "commit", "-m", "chore: synchronize Tiga workspace",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        push = await asyncio.to_thread(
-            subprocess.run,
-            [
-                "git", "-C", str(PROJECT_ROOT),
-                "-c",
-                "http.extraheader=AUTHORIZATION: basic "
-                + base64.b64encode(f"x-access-token:{config.GITHUB_TOKEN}".encode()).decode(),
-                "push", "-u", "origin", f"HEAD:{config.GITHUB_BRANCH}",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        if (await _git("rev-parse", "--is-inside-work-tree")).returncode != 0:
+            return {"ok": False, "error": "The project folder is not a git repository"}
+        current = (await _git("rev-parse", "--abbrev-ref", "HEAD")).stdout.strip()
+        if current != branch:
+            return {"ok": False, "error": f"The current branch is '{current}'; switch to '{branch}' before syncing"}
+        if (await _git("remote", "get-url", "origin")).returncode != 0:
+            return {"ok": False, "error": "No 'origin' remote is set; add one with git remote add origin <url>"}
+        dirty = (await _git("status", "--porcelain")).stdout.strip()
+        if dirty:
+            return {"ok": False, "error": "There are uncommitted changes; commit or stash them first. Nothing was pushed."}
+
+        fetch = await _git("fetch", "origin", f"+refs/heads/{branch}:refs/remotes/origin/{branch}", auth=True)
+        remote_has_branch = fetch.returncode == 0
+        if not remote_has_branch and "couldn't find remote ref" not in fetch.stderr:
+            return {"ok": False, "error": f"Could not reach the remote: {fetch.stderr.strip()[-300:]}"}
+
+        ahead, behind = 0, 0
+        if remote_has_branch:
+            counts = (await _git("rev-list", "--left-right", "--count", f"HEAD...origin/{branch}")).stdout.split()
+            ahead, behind = int(counts[0]), int(counts[1])
+        else:
+            ahead = int((await _git("rev-list", "--count", "HEAD")).stdout.strip() or 0)
+        if behind:
+            return {"ok": False, "error": f"The local branch is {behind} commit(s) behind origin/{branch}; pull or rebase first"}
+        if not ahead:
+            return {"ok": True, "pushed": False, "repository": config.GITHUB_REPOSITORY, "branch": branch, "detail": "Nothing to push"}
+
+        push = await _git("push", "origin", f"HEAD:refs/heads/{branch}", auth=True)
         return {
             "ok": push.returncode == 0,
+            "pushed": push.returncode == 0,
+            "commits": ahead,
             "repository": config.GITHUB_REPOSITORY,
-            "branch": config.GITHUB_BRANCH,
-            "committed": commit.returncode == 0,
+            "branch": branch,
             "detail": (push.stdout or push.stderr).strip()[-1000:],
         }
-    except (OSError, subprocess.SubprocessError) as exc:
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError) as exc:
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
 

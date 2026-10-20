@@ -1,7 +1,11 @@
+import logging
+import re
+from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlparse
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -14,8 +18,27 @@ import asyncio
 app = FastAPI(title="Tiga", version="0.2.0")
 
 STATIC_DIR = Path(__file__).parent / "static"
+ENV_EXAMPLE = Path(__file__).parent / ".env.example"
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-_maintenance_task: asyncio.Task | None = None
+logger = logging.getLogger("tiga")
+
+
+def _origin_allowed(origin: str) -> bool:
+    parsed = urlparse(origin)
+    if parsed.scheme in ("http", "https") and parsed.hostname in _LOCAL_HOSTS:
+        return True
+    return origin.rstrip("/") in config.ALLOWED_ORIGINS
+
+
+@app.middleware("http")
+async def refuse_cross_site_writes(request: Request, call_next):
+    """A page on another site must not be able to trigger state-changing calls."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api/"):
+        origin = request.headers.get("origin")
+        if origin is not None and not _origin_allowed(origin):
+            return JSONResponse(status_code=403, content={"detail": "Cross-site request refused"})
+    return await call_next(request)
 
 
 class ChatIn(BaseModel):
@@ -89,6 +112,19 @@ async def status():
         "github_repository": config.GITHUB_REPOSITORY,
         "agents": ["manager", "dev", "tester"],
     }
+
+
+@app.get("/api/env-example")
+async def env_example():
+    if not ENV_EXAMPLE.exists():
+        return PlainTextResponse("", status_code=404)
+    lines = []
+    for line in ENV_EXAMPLE.read_text().splitlines():
+        key, sep, _ = line.partition("=")
+        if sep and not line.lstrip().startswith("#") and re.search(r"KEY|TOKEN|SECRET|PASSWORD", key.upper()):
+            line = f"{key}="
+        lines.append(line)
+    return PlainTextResponse("\n".join(lines) + "\n")
 
 
 @app.post("/api/chat")
@@ -202,29 +238,35 @@ async def daily_report():
     return {"report": report, "delivery": delivery}
 
 
+_sleep = asyncio.sleep
+
+
 async def _daily_maintenance() -> None:
     while True:
-        await asyncio.sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
-        report = await orchestration.run_agent_cycle()
-        if Path(config.GMAIL_CREDENTIALS_FILE).exists():
-            await orchestration.send_daily_report(report)
-        if config.GITHUB_TOKEN:
-            await orchestration.github_sync_push()
+        await _sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
+        try:
+            report = await orchestration.run_agent_cycle()
+            if Path(config.GMAIL_CREDENTIALS_FILE).exists():
+                await orchestration.send_daily_report(report)
+            if config.GITHUB_TOKEN:
+                await orchestration.github_sync_push()
+        except Exception:
+            logger.exception("Daily maintenance run failed; will retry next interval")
 
 
-@app.on_event("startup")
-async def start_daily_sync():
-    global _maintenance_task
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = None
     if config.GITHUB_SYNC_INTERVAL_MINUTES > 0 and (
         config.GITHUB_TOKEN or Path(config.GMAIL_CREDENTIALS_FILE).exists()
     ):
-        _maintenance_task = asyncio.create_task(_daily_maintenance())
+        task = asyncio.create_task(_daily_maintenance())
+    yield
+    if task:
+        task.cancel()
 
 
-@app.on_event("shutdown")
-async def stop_daily_sync():
-    if _maintenance_task:
-        _maintenance_task.cancel()
+app.router.lifespan_context = lifespan
 
 
 if __name__ == "__main__":
