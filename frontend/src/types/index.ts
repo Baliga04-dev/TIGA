@@ -205,7 +205,3 @@ export interface PromptGenerateResponse {
   research: ResearchLeadsResponse;
 }
 
-export interface DailyReportResponse {
-  report: AgentRunResponse;
-  delivery: { ok: boolean; error?: string; recipient?: string };
-}

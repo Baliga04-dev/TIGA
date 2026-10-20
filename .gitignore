@@ -13,3 +13,7 @@ __pycache__/
 .coverage
 .vscode/
 .idea/
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/

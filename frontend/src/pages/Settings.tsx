@@ -2,18 +2,9 @@ import { useEffect, useState } from 'react';
 import { Download, Key, Loader2, Mail } from 'lucide-react';
 import { useStatus } from '../hooks/useApi';
 import { useAction } from '../hooks/useAction';
-import { PageHeader, Card, Notice, CopyButton } from '../components/ui';
+import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
 import { api } from '../services/api';
 import { cn, downloadAsFile } from '../lib/utils';
-
-function StatusRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-ink-2">{label}</span>
-      <span className={cn('badge', good ? 'badge-green' : 'badge-amber')}>{value}</span>
-    </div>
-  );
-}
 
 export function Settings() {
   const { status } = useStatus();

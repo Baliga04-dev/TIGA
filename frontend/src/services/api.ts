@@ -14,7 +14,6 @@ import type {
   PromptGenerateResponse,
   GithubSyncResponse,
   ResearchLeadsResponse,
-  DailyReportResponse,
 } from '../types';
 
 const API_BASE = '/api';
@@ -107,8 +106,6 @@ export const api = {
   getAgentStatus: () => request<AgentStatusResponse>('/agents/status'),
 
   runAgents: () => post<AgentRunResponse>('/agents/run'),
-
-  dailyReport: () => post<DailyReportResponse>('/agents/daily-report'),
 
   syncGithub: () => post<GithubSyncResponse>('/github/sync'),
 

@@ -217,3 +217,14 @@ export function Toast({ message, onDone }: { message: string; onDone: () => void
     </div>
   );
 }
+
+
+/** A label with a status badge on the right; `good` picks the positive tone. */
+export function StatusRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-ink-2">{label}</span>
+      <span className={cn('badge', good ? 'badge-green' : 'badge-amber')}>{value}</span>
+    </div>
+  );
+}

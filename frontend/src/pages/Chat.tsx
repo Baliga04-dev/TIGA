@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChat, useStatus } from '../hooks/useApi';
 import { useSpeech } from '../hooks/useSpeech';
-import { PageHeader, Card, Notice, CopyButton } from '../components/ui';
+import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
 import { cn, formatRelativeTime } from '../lib/utils';
 import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings } from 'lucide-react';
 
@@ -22,15 +22,6 @@ const QUICK_ACTIONS = [
   { label: 'Generate Template', command: EXAMPLE_COMMANDS[2], icon: Sparkles },
   { label: 'Business Metrics', command: EXAMPLE_COMMANDS[4], icon: Settings },
 ];
-
-function StatusRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-ink-2">{label}</span>
-      <span className={cn('badge', good ? 'badge-green' : 'badge-amber')}>{value}</span>
-    </div>
-  );
-}
 
 export function Chat() {
   const { messages, loading, error, sendMessage, clearMessages } = useChat();

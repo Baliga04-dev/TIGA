@@ -15,13 +15,46 @@ import tts as tts_mod
 import orchestration
 import asyncio
 
-app = FastAPI(title="Tiga", version="0.2.0")
-
 STATIC_DIR = Path(__file__).parent / "static"
 ENV_EXAMPLE = Path(__file__).parent / ".env.example"
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 logger = logging.getLogger("tiga")
+
+
+_sleep = asyncio.sleep
+
+
+async def _daily_maintenance() -> None:
+    while True:
+        await _sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
+        try:
+            report = await orchestration.run_agent_cycle()
+            if Path(config.GMAIL_CREDENTIALS_FILE).exists():
+                delivery = await orchestration.send_daily_report(report)
+                if not delivery.get("ok"):
+                    logger.warning("Daily report not sent: %s", delivery.get("error"))
+            if config.GITHUB_TOKEN:
+                pushed = await orchestration.github_sync_push()
+                if not pushed.get("ok"):
+                    logger.warning("Scheduled push skipped: %s", pushed.get("error"))
+        except Exception:
+            logger.exception("Daily maintenance run failed; will retry next interval")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    task = None
+    if config.GITHUB_SYNC_INTERVAL_MINUTES > 0 and (
+        config.GITHUB_TOKEN or Path(config.GMAIL_CREDENTIALS_FILE).exists()
+    ):
+        task = asyncio.create_task(_daily_maintenance())
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="Tiga", version="0.2.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 def _origin_allowed(origin: str) -> bool:
@@ -236,37 +269,6 @@ async def daily_report():
     report = await orchestration.run_agent_cycle()
     delivery = await orchestration.send_daily_report(report)
     return {"report": report, "delivery": delivery}
-
-
-_sleep = asyncio.sleep
-
-
-async def _daily_maintenance() -> None:
-    while True:
-        await _sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
-        try:
-            report = await orchestration.run_agent_cycle()
-            if Path(config.GMAIL_CREDENTIALS_FILE).exists():
-                await orchestration.send_daily_report(report)
-            if config.GITHUB_TOKEN:
-                await orchestration.github_sync_push()
-        except Exception:
-            logger.exception("Daily maintenance run failed; will retry next interval")
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    task = None
-    if config.GITHUB_SYNC_INTERVAL_MINUTES > 0 and (
-        config.GITHUB_TOKEN or Path(config.GMAIL_CREDENTIALS_FILE).exists()
-    ):
-        task = asyncio.create_task(_daily_maintenance())
-    yield
-    if task:
-        task.cancel()
-
-
-app.router.lifespan_context = lifespan
 
 
 if __name__ == "__main__":

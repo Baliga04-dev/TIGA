@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 import json
 import random
 import re
@@ -9,6 +10,8 @@ import httpx
 
 import config
 import tools
+
+logger = logging.getLogger("tiga")
 
 MAX_TOOL_ROUNDS = 5
 
@@ -165,7 +168,7 @@ async def respond(user_text: str, history: list) -> dict:
         try:
             reply = await _llm_respond(user_text, history, actions)
         except Exception:
-            pass
+            logger.exception("LLM request failed; falling back to the built-in router")
         if reply:
             return {"reply": reply, "actions": actions, "mode": "llm"}
         done = [a["tool"] for a in actions if a["tool"] in ACTS_ON_WORLD and a["ok"]]
@@ -316,6 +319,11 @@ async def _builtin_respond(text: str) -> dict:
     return {"reply": random.choice(UNKNOWN), "actions": [], "mode": "builtin"}
 
 
+def _err(result: dict) -> str:
+    """The error text without a trailing period, so reply templates can add their own."""
+    return str(result.get('error', 'unknown error')).rstrip('.')
+
+
 def _demo_suffix(source: str) -> str:
     if source == "live":
         return ""
@@ -340,7 +348,7 @@ def _booking_reply(action: dict) -> str:
     when = payload.get("preferred_time")
     topic = payload.get("topic")
     if not action["ok"]:
-        return f"My apologies, sir — the booking failed: {str(result.get('error', 'unknown error')).rstrip('.')}."
+        return f"My apologies, sir — the booking failed: {_err(result)}."
     ref = result.get("booking_id", "confirmed")
     parts = ["Done, sir."]
     if topic:
@@ -450,7 +458,7 @@ async def _llm_respond(user_text: str, history: list, actions: list) -> str:
 def _email_summary_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch the email summary, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
+        return f"I couldn't fetch the email summary, sir — {_err(result)}."
     total = result.get("total_emails", 0)
     cold = result.get("cold_emails", 0)
     replies = result.get("replies_received", 0)
@@ -470,14 +478,14 @@ def _email_summary_reply(action: dict) -> str:
 def _send_email_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"My apologies, sir — the email failed to send: {str(result.get('error', 'unknown error')).rstrip('.')}."
+        return f"My apologies, sir — the email failed to send: {_err(result)}."
     return f"Email sent, sir. Message ID: {result.get('message_id', 'unknown')}."
 
 
 def _fetch_emails_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch emails, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
+        return f"I couldn't fetch emails, sir — {_err(result)}."
     count = result.get("count", 0)
     emails = result.get("emails", [])
     cold = sum(1 for e in emails if e.get("is_cold_email"))
@@ -489,7 +497,7 @@ def _fetch_emails_reply(action: dict) -> str:
 def _template_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"Couldn't generate template, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
+        return f"Couldn't generate template, sir — {_err(result)}."
     template = result.get("template", {})
     subject = template.get("subject", "")
     return f"Template ready, sir. Subject: {subject}. Check the UI for the full draft."
