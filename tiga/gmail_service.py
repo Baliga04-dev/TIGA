@@ -3,6 +3,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
+from email.utils import parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any
@@ -149,17 +150,17 @@ class GmailService:
             )
 
             headers = msg.get("payload", {}).get("headers", [])
-            header_dict = {h["name"]: h["value"] for h in headers}
+            header_dict = {h["name"].lower(): h["value"] for h in headers}
 
             body = self._extract_body(msg.get("payload", {}))
 
             return {
                 "id": message_id,
                 "thread_id": msg.get("threadId"),
-                "subject": header_dict.get("Subject", ""),
-                "from": header_dict.get("From", ""),
-                "to": header_dict.get("To", ""),
-                "date": header_dict.get("Date", ""),
+                "subject": header_dict.get("subject", ""),
+                "from": header_dict.get("from", ""),
+                "to": header_dict.get("to", ""),
+                "date": header_dict.get("date", ""),
                 "snippet": msg.get("snippet", ""),
                 "body": body,
                 "labels": msg.get("labelIds", []),
@@ -170,31 +171,30 @@ class GmailService:
 
     def _extract_body(self, payload: dict) -> str:
         """Extract plain text body from email payload."""
-        body = ""
-
         def decode_data(data: str) -> str:
             try:
-                return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                padded = data + "=" * (-len(data) % 4)
+                return base64.urlsafe_b64decode(padded).decode("utf-8", errors="ignore")
             except Exception:
                 return ""
 
+        plain_parts: list[str] = []
+        html_parts: list[str] = []
+
         def extract_parts(part: dict):
-            nonlocal body
             mime_type = part.get("mimeType", "")
             data = part.get("body", {}).get("data", "")
 
             if mime_type == "text/plain" and data:
-                body += decode_data(data)
-            elif mime_type == "text/html" and data and not body:
-                html = decode_data(data)
-                soup = BeautifulSoup(html, "lxml")
-                body += soup.get_text(separator="\n", strip=True)
-            elif "parts" in part:
-                for subpart in part["parts"]:
-                    extract_parts(subpart)
+                plain_parts.append(decode_data(data))
+            elif mime_type == "text/html" and data:
+                soup = BeautifulSoup(decode_data(data), "lxml")
+                html_parts.append(soup.get_text(separator="\n", strip=True))
+            for subpart in part.get("parts", []):
+                extract_parts(subpart)
 
         extract_parts(payload)
-        return body.strip()
+        return "".join(plain_parts or html_parts).strip()
 
     def parse_email_content(self, email: dict) -> dict:
         """Parse and analyze email content for key information."""
@@ -227,7 +227,7 @@ class GmailService:
 
     def _is_reply(self, subject: str) -> bool:
         """Check if email is a reply."""
-        return subject.lower().startswith("re:")
+        return bool(re.match(r"\s*(?:re|aw)\s*(?:\[\d+\]|\(\d+\))?\s*:", subject, re.IGNORECASE))
 
     def _extract_topics(self, subject: str, body: str) -> list:
         """Extract key topics from email."""
@@ -245,7 +245,7 @@ class GmailService:
         }
 
         for topic, keywords in topic_keywords.items():
-            if any(kw in text for kw in keywords):
+            if any(re.search(rf"\b{re.escape(kw)}s?\b", text) for kw in keywords):
                 topics.append(topic)
 
         return topics
@@ -268,15 +268,20 @@ class GmailService:
     def _extract_contact_info(self, body: str, from_addr: str) -> dict:
         """Extract contact information from email."""
         email_regex = r"[\w.+-]+@[\w-]+\.[\w.-]+"
-        phone_regex = r"(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+        phone_regex = r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
         linkedin_regex = r"linkedin\.com/in/[\w-]+"
-        website_regex = r"(?:https?://)?(?:www\.)?[\w-]+\.[\w.-]+"
+        website_regex = r"(?<![@\w.-])(?:https?://|www\.)[\w-]+(?:\.[\w-]+)+(?:/[^\s,;)\"']*)?"
+
+        sender = parseaddr(from_addr)[1]
+        emails = set(re.findall(email_regex, body))
+        if sender:
+            emails.add(sender)
 
         return {
-            "emails": list(set(re.findall(email_regex, body) + [from_addr])),
-            "phones": list(set(re.findall(phone_regex, body))),
-            "linkedin": list(set(re.findall(linkedin_regex, body))),
-            "websites": list(set(re.findall(website_regex, body))),
+            "emails": sorted(emails),
+            "phones": sorted({m.group(0).strip() for m in re.finditer(phone_regex, body)}),
+            "linkedin": sorted(set(re.findall(linkedin_regex, body))),
+            "websites": sorted({w.rstrip(".") for w in re.findall(website_regex, body)}),
         }
 
     def _analyze_sentiment(self, body: str) -> str:
@@ -284,9 +289,16 @@ class GmailService:
         positive = ["interested", "excited", "great", "love", "perfect", "yes", "sure", "happy", "pleased"]
         negative = ["not interested", "decline", "pass", "no thanks", "unsubscribe", "remove", "spam"]
 
+        def hits(words, text):
+            return [w for w in words if re.search(rf"\b{re.escape(w)}\b", text)]
+
         body_lower = body.lower()
-        pos_score = sum(1 for w in positive if w in body_lower)
-        neg_score = sum(1 for w in negative if w in body_lower)
+        neg_hits = hits(negative, body_lower)
+        positive_text = body_lower
+        for phrase in neg_hits:
+            positive_text = positive_text.replace(phrase, " ")
+        pos_score = len(hits(positive, positive_text))
+        neg_score = len(neg_hits)
 
         if pos_score > neg_score:
             return "positive"
