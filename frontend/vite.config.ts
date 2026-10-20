@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const apiTarget = process.env.TIGA_API_URL ?? 'http://127.0.0.1:8000'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -18,10 +20,10 @@ export default defineConfig({
     css: false,
   },
   server: {
-    port: 3000,
+    port: Number(process.env.TIGA_WEB_PORT ?? 3000),
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
     },
