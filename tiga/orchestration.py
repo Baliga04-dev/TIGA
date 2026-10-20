@@ -11,6 +11,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -93,12 +94,12 @@ async def research_leads(topic: str, limit: int = 10) -> dict[str, Any]:
 
 
 def _signal_for(title: str) -> str:
-    text = title.lower()
-    if any(word in text for word in ("launch", "funding", "growth", "expanding")):
+    words = set(re.findall(r"[a-z0-9]+", title.lower()))
+    if words & {"launch", "launches", "funding", "growth", "expanding", "expands"}:
         return "growth or launch signal"
-    if any(word in text for word in ("outage", "broken", "security", "problem")):
+    if words & {"outage", "broken", "security", "problem", "problems", "breach"}:
         return "possible pain point"
-    if any(word in text for word in ("ai", "automation", "software", "app")):
+    if words & {"ai", "automation", "software", "app", "apps"}:
         return "technology demand"
     return "needs manual qualification"
 

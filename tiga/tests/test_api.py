@@ -134,3 +134,19 @@ def test_booking_webhook_returning_a_list_still_counts_as_booked(client, http, m
     http.add("hook.example", json=["ok"])
     r = client.post("/api/chat", json={"text": "book a call about pricing", "history": []}).json()
     assert r["actions"][0]["ok"] is True
+
+
+@pytest.mark.parametrize(
+    "title,signal",
+    [
+        ("Startup announces funding round", "growth or launch signal"),
+        ("Major outage hits payments provider", "possible pain point"),
+        ("New AI automation tool", "technology demand"),
+        ("The mayor said it was a happy day", "needs manual qualification"),
+    ],
+)
+def test_client_signal_labels_use_whole_words(client, http, title, signal):
+    http.add("news.google.com", text=rss((title, "https://g.example/1")))
+    http.add("hnrss.org", text=rss())
+    lead = client.post("/api/research/leads", json={"topic": "anything"}).json()["leads"][0]
+    assert lead["client_signal"] == signal
