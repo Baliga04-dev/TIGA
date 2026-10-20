@@ -39,6 +39,9 @@ SITE_MAP = {
     "gmail": "https://mail.google.com",
     "google mail": "https://mail.google.com",
     "calendar": "https://calendar.google.com",
+    "google drive": "https://drive.google.com",
+    "google calendar": "https://calendar.google.com",
+    "google maps": "https://maps.google.com",
     "google": "https://google.com",
     "maps": "https://maps.google.com",
     "drive": "https://drive.google.com",
@@ -51,8 +54,9 @@ SITE_MAP = {
     "whatsapp web": "https://web.whatsapp.com",
 }
 
+_TLDS = "com|org|net|io|dev|app|ai|co|me|edu|gov|uk|in|de|fr|us|ca|au|tv|xyz|info|biz"
 URL_RE = re.compile(
-    r"(https?://[^\s\"']+|(?:[\w-]+\.)+[a-zA-Z]{2,}(?:/[^\s\"']*)?)", re.IGNORECASE
+    rf"(https?://[^\s\"']+|(?<![@\w.-])(?:[\w-]+\.)+(?:{_TLDS})\b(?:/[^\s\"']*)?)", re.IGNORECASE
 )
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
@@ -67,7 +71,8 @@ RE_BOOK = re.compile(
     re.IGNORECASE,
 )
 RE_OPEN = re.compile(
-    r"\b(open|launch|pull up|bring up|go to|show me|visit)\b(.*)",
+    r"^\s*(?:(?:hey|ok|okay|please|tiga|can you|could you|would you)[,\s]+)*"
+    r"(open|launch|pull up|bring up|go to|show me|visit)\b(.*)",
     re.IGNORECASE | re.DOTALL,
 )
 RE_TIME = re.compile(r"\btime is it\b|\bwhat('s| is)? (the )?(time|date)\b|\bwhat day is it\b", re.IGNORECASE)
@@ -76,7 +81,7 @@ RE_STATUS = re.compile(
     re.IGNORECASE,
 )
 RE_GREETING = re.compile(
-    r"^(hey|hi|hello|yo|good (morning|afternoon|evening))\b[,.\s]*(tiga|tiga)?\b[!. ]*$",
+    r"^(hey|hi|hello|yo|good (morning|afternoon|evening))\b[,.\s]*(tiga)?\b[!. ]*$",
     re.IGNORECASE,
 )
 
@@ -170,13 +175,16 @@ async def _builtin_respond(text: str) -> dict:
 
     if RE_GENERATE_TEMPLATE.search(lowered):
         service_type = "general"
-        if "web" in lowered or "website" in lowered or "frontend" in lowered:
+        if re.search(r"\b(web|website|websites|frontend)\b", lowered):
             service_type = "web_development"
-        elif "software" in lowered or "app" in lowered or "backend" in lowered or "api" in lowered:
+        elif re.search(r"\b(software|app|apps|backend|api|apis)\b", lowered):
             service_type = "software_development"
 
-        name_m = re.search(r"\b(?:to|for|dear)\s+([A-Z][a-z]+)", text)
-        company_m = re.search(r"\b(?:at|from)\s+([A-Z][a-zA-Z0-9\s]+)", text)
+        _cap = r"[A-Z][\w&-]*"
+        company_m = re.search(rf"\b(?:at|from)\s+({_cap}(?:\s+{_cap}){{0,3}})", text)
+        name_m = re.search(rf"\b(?:to|for|dear)\s+({_cap})(?=\s+(?:at|from)\b|[,.!?]|$)", text)
+        if not name_m:
+            name_m = re.search(rf"\b(?:to|dear)\s+({_cap})\b", text)
 
         action = await run_tool(
             "generate_cold_email_template",
@@ -190,10 +198,25 @@ async def _builtin_respond(text: str) -> dict:
 
     if RE_SEND_COLD_EMAIL.search(lowered):
         email_m = EMAIL_RE.search(text)
-        subject_m = re.search(r"\b(?:subject|re:)\s*[:\-]?\s*([^.!?]+)", text, re.IGNORECASE)
-        to = email_m.group(0) if email_m else ""
+        if not email_m:
+            return {
+                "reply": "Who should I send it to, sir? Give me an address and what to say.",
+                "actions": [],
+                "mode": "builtin",
+            }
+        to = email_m.group(0)
+        content_m = re.search(
+            r"\b(?:saying|says|that says|body|message)\s*[:\-]?\s*(.+)$", text, re.IGNORECASE | re.DOTALL
+        )
+        if not content_m:
+            return {
+                "reply": f"What should the email to {to} say, sir? Add 'saying ...' with the message.",
+                "actions": [],
+                "mode": "builtin",
+            }
+        subject_m = re.search(r"\bsubject\s*[:\-]\s*([^.!?]+)", text, re.IGNORECASE)
         subject = subject_m.group(1).strip() if subject_m else "Freelance proposal"
-        body = f"Cold email to {to} — please provide the full content, sir."
+        body = content_m.group(1).strip()
         action = await run_tool("send_cold_email", {"to": to, "subject": subject, "body": body})
         return {"reply": _send_email_reply(action), "actions": [action], "mode": "builtin"}
 
@@ -205,36 +228,40 @@ async def _builtin_respond(text: str) -> dict:
         action = await run_tool("fetch_recent_emails", {"days_back": days, "max_results": 20})
         return {"reply": _fetch_emails_reply(action), "actions": [action], "mode": "builtin"}
 
-    if RE_METRICS.search(lowered):
-        action = await run_tool("get_metrics", {})
-        return {"reply": _metrics_reply(action), "actions": [action], "mode": "builtin"}
-
     if RE_BOOK.search(lowered):
         email_m = EMAIL_RE.search(text)
-        topic_m = re.search(r"\b(?:about|regarding|re:?)\s+([\w .,-]{3,60})", text, re.IGNORECASE)
-        time_m = re.search(
-            r"\b(?:for|at|on)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|"
-            r"next week|this afternoon|this morning|\d{1,2}(:\d{2})?\s*(?:am|pm))",
+        _day = (
+            r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|"
+            r"next week|this afternoon|this morning"
+        )
+        _clock = r"\d{1,2}(?::\d{2})?\s*(?:am|pm)"
+        time_pat = rf"(?:{_day})(?:\s+(?:at\s+)?{_clock})?|{_clock}"
+        time_m = re.search(rf"\b(?:for|at|on)\s+({time_pat})", text, re.IGNORECASE)
+        topic_m = re.search(
+            rf"\b(?:about|regarding|re:?)\s+(.+?)(?=\s+(?:for|at|on)\s+(?:{time_pat})|[.?!,]|$)",
             text,
             re.IGNORECASE,
         )
         args = {
-            "topic": topic_m.group(1).strip() if topic_m else "",
+            "topic": topic_m.group(1).strip()[:60] if topic_m else "",
             "preferred_time": time_m.group(1) if time_m else "",
             "email": email_m.group(0) if email_m else "",
         }
         action = await run_tool("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
 
-    open_m = RE_OPEN.search(text)
+    if RE_METRICS.search(lowered):
+        action = await run_tool("get_metrics", {})
+        return {"reply": _metrics_reply(action), "actions": [action], "mode": "builtin"}
+
+    open_m = RE_OPEN.match(text)
     if open_m:
+        verb = open_m.group(1).lower()
         rest = (open_m.group(2) or "").strip()
         target = None
         url_m = URL_RE.search(rest)
         if url_m:
             target = url_m.group(0)
-        elif re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:\S+$", rest):
-            target = rest.split()[0]
         else:
             for key, url in sorted(SITE_MAP.items(), key=lambda kv: -len(kv[0])):
                 if re.search(rf"(?<!\w){re.escape(key)}(?!\w)", rest.lower()):
@@ -250,7 +277,8 @@ async def _builtin_respond(text: str) -> dict:
                 else f"I'm afraid I can't open that, sir — {host} was refused as unsafe."
             )
             return {"reply": reply, "actions": [action], "mode": "builtin"}
-        return {"reply": "Which site shall I summon, sir?", "actions": [], "mode": "builtin"}
+        if verb != "show me":
+            return {"reply": "Which site shall I summon, sir?", "actions": [], "mode": "builtin"}
 
     if RE_TIME.search(lowered):
         now = datetime.now()
@@ -263,7 +291,7 @@ async def _builtin_respond(text: str) -> dict:
     if RE_STATUS.search(lowered):
         return {"reply": _status_reply(), "actions": [], "mode": "builtin"}
 
-    if RE_GREETING.match(lowered) or lowered.rstrip("!?. ") in {"tiga", "tiga"}:
+    if RE_GREETING.match(lowered) or lowered.rstrip("!?. ") in {"tiga"}:
         return {"reply": random.choice(GREETINGS), "actions": [], "mode": "builtin"}
 
     return {"reply": random.choice(UNKNOWN), "actions": [], "mode": "builtin"}

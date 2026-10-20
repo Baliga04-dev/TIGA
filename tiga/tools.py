@@ -58,12 +58,16 @@ def _normalize_url(raw: str) -> str | None:
     url = (raw or "").strip()
     if not url:
         return None
+    scheme_only = re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:(?!//)(.*)", url)
+    if scheme_only and not re.match(r"^\d+(/|$)", scheme_only.group(1)):
+        return None  # javascript:, mailto:, data: ... but allow host:port
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
         url = "https://" + url
     parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    if parsed.scheme not in ("http", "https"):
         return None
-    if any(c in parsed.netloc for c in " \t\r\n"):
+    host = parsed.hostname or ""
+    if not re.fullmatch(r"[A-Za-z0-9.-]+", host) or not (host == "localhost" or "." in host):
         return None
     return url
 
