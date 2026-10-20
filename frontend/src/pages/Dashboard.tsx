@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom';
 import { useEmailSummary } from '../hooks/useApi';
-import { Layout, PageHeader, Card } from '../components/Layout';
-import { cn, formatRelativeTime } from '../lib/utils';
+import { PageHeader, Card, Notice } from '../components/ui';
+import { cn, formatRelativeTime, isGmailSetupError } from '../lib/utils';
 import {
   Mail,
   TrendingUp,
@@ -15,16 +16,17 @@ import {
 
 export function Dashboard() {
   const { summary, loading, error, refetch } = useEmailSummary(7);
+  const count = (n: number | undefined) => (summary ? n ?? 0 : '–');
 
   const stats = [
-    { label: 'Total Emails', value: summary?.total_emails || 0, icon: Mail, color: 'text-[var(--accent-blue)]' },
-    { label: 'Cold Outreach', value: summary?.cold_emails || 0, icon: ArrowUpRight, color: 'text-[var(--accent-blue)]' },
-    { label: 'Replies Received', value: summary?.replies_received || 0, icon: CheckCircle, color: 'text-[var(--accent-green)]' },
-    { label: 'Positive Responses', value: summary?.positive_responses || 0, icon: TrendingUp, color: 'text-[var(--accent-amber)]' },
+    { label: 'Total Emails', value: count(summary?.total_emails), icon: Mail, color: 'text-[var(--accent-blue)]' },
+    { label: 'Cold Outreach', value: count(summary?.cold_emails), icon: ArrowUpRight, color: 'text-[var(--accent-blue)]' },
+    { label: 'Replies Received', value: count(summary?.replies_received), icon: CheckCircle, color: 'text-[var(--accent-green)]' },
+    { label: 'Positive Responses', value: count(summary?.positive_responses), icon: TrendingUp, color: 'text-[var(--accent-amber)]' },
   ];
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Dashboard"
         description="Overview of your email outreach and freelancing pipeline"
@@ -36,11 +38,26 @@ export function Dashboard() {
         }
       />
 
+      {error && (
+        <div className="mb-6">
+          <Notice
+            title="Couldn't load your email numbers"
+            action={
+              isGmailSetupError(error) ? (
+                <Link to="/settings" className="btn btn-secondary btn-sm shrink-0">Open Settings</Link>
+              ) : undefined
+            }
+          >
+            {error}
+          </Notice>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((stat, i) => (
-          <Card key={i} className="hover:shadow-lg transition-shadow">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="hover:shadow-lg transition-shadow">
             <div className="flex items-center gap-4">
-              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.color + '/10')}>
+              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', 'bg-[var(--bg-tertiary)]')}>
                 <stat.icon className={cn('size-6', stat.color)} />
               </div>
               <div>
@@ -58,8 +75,6 @@ export function Dashboard() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="size-8 animate-spin text-[var(--accent-blue)]" />
             </div>
-          ) : error ? (
-            <p className="text-[var(--accent-red)]">{error}</p>
           ) : summary?.top_topics && Object.keys(summary.top_topics).length > 0 ? (
             <div className="space-y-3">
               {Object.entries(summary.top_topics).map(([topic, count]) => (
@@ -86,7 +101,7 @@ export function Dashboard() {
           {summary?.action_items && summary.action_items.length > 0 ? (
             <ul className="space-y-3">
               {summary.action_items.slice(0, 8).map((item, i) => (
-                <li key={i} className="flex items-start gap-3 p-3 bg-[var(--bg-tertiary)] rounded-lg">
+                <li key={`${i}-${item}`} className="flex items-start gap-3 p-3 bg-[var(--bg-tertiary)] rounded-lg">
                   <Clock className="size-5 text-[var(--accent-amber)] flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-[var(--text-secondary)]">{item}</span>
                 </li>
@@ -131,18 +146,18 @@ export function Dashboard() {
 
         <Card title="Quick Start">
           <div className="space-y-3">
-            <button className="btn btn-primary w-full justify-start gap-3" onClick={() => window.location.href = '/email'}>
+            <Link to="/email?template=1" className="btn btn-primary w-full justify-start gap-3">
               <Sparkles className="size-5" />
               <span>Generate Cold Email Template</span>
-            </button>
-            <button className="btn btn-secondary w-full justify-start gap-3" onClick={() => window.location.href = '/email'}>
+            </Link>
+            <Link to="/email?compose=1" className="btn btn-secondary w-full justify-start gap-3">
               <Mail className="size-5" />
               <span>Compose New Email</span>
-            </button>
-            <button className="btn btn-secondary w-full justify-start gap-3" onClick={() => window.location.href = '/chat'}>
+            </Link>
+            <Link to="/chat" className="btn btn-secondary w-full justify-start gap-3">
               <Bot className="size-5" />
               <span>Chat with Tiga</span>
-            </button>
+            </Link>
             <div className="divider" />
             <p className="text-sm text-[var(--text-muted)]">
               Need help? Ask Tiga: <br />
@@ -151,6 +166,6 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
-    </Layout>
+    </>
   );
 }

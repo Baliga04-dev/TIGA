@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStatus } from '../hooks/useApi';
-import { Layout, PageHeader, Card } from '../components/Layout';
+import { PageHeader, Card } from '../components/ui';
 import { cn, copyToClipboard } from '../lib/utils';
 import {
   Mail,
@@ -86,7 +86,7 @@ export function Settings() {
   };
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Settings"
         description="Configure Tiga integrations and API keys"
@@ -291,6 +291,6 @@ export function Settings() {
           </div>
         </Card>
       </div>
-    </Layout>
+    </>
   );
 }

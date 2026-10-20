@@ -112,6 +112,9 @@ export interface ToolAction {
 }
 
 export interface StatusResponse {
+  name: string;
+  github_repository: string;
+  agents: string[];
   brain: string;
   tts: string;
   metrics_endpoint: boolean;
@@ -141,20 +144,27 @@ export interface AgentStatusResponse {
   };
 }
 
+export interface AgentCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
 export interface AgentRunResponse {
   ok: boolean;
   run_at: string;
   flow: string[];
-  manager: Record<string, unknown>;
-  dev: Record<string, unknown>;
-  tester: Record<string, unknown>;
+  manager: { status: string; responsibilities: string[]; next_actions: string[] };
+  dev: { status: string; responsibilities: string[] };
+  tester: { ok: boolean; status: string; checks: AgentCheck[] };
 }
 
 export interface GithubSyncResponse {
   ok: boolean;
+  pushed?: boolean;
+  commits?: number;
   repository?: string;
   branch?: string;
-  committed?: boolean;
   detail?: string;
   error?: string;
 }
@@ -168,13 +178,33 @@ export interface PromptGenerateRequest {
   research_topic: string;
 }
 
+export interface Lead {
+  source: string;
+  title: string;
+  url: string;
+  published: string;
+  client_signal: string;
+}
+
+export interface ResearchLeadsResponse {
+  ok: boolean;
+  topic: string;
+  searched_at: string;
+  sources: string[];
+  leads: Lead[];
+  errors: string[];
+  note: string;
+}
+
 export interface PromptGenerateResponse {
   ok: boolean;
-  prompt?: string;
-  questions?: string[];
-  research?: {
-    leads: Array<{ source: string; title: string; url: string; client_signal: string }>;
-    errors: string[];
-  };
-  error?: string;
+  generated_at: string;
+  prompt: string;
+  questions: string[];
+  research: ResearchLeadsResponse;
+}
+
+export interface DailyReportResponse {
+  report: AgentRunResponse;
+  delivery: { ok: boolean; error?: string; recipient?: string };
 }

@@ -1,5 +1,4 @@
-import { ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import {
   LayoutDashboard,
@@ -12,7 +11,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -46,7 +45,6 @@ export function Sidebar() {
           collapsed ? 'w-16' : 'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
-        aria-label="Main navigation"
       >
         <div className="flex flex-col h-full">
           <div className={cn('p-4 border-b border-[var(--border-color)]', collapsed && 'justify-center')}>
@@ -60,7 +58,7 @@ export function Sidebar() {
             )}
           </div>
 
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto" role="navigation" aria-label="Main">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="Main">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href ||
                 (item.href !== '/' && location.pathname.startsWith(item.href));
@@ -110,76 +108,15 @@ export function Sidebar() {
   );
 }
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-export function Layout({ children }: LayoutProps) {
-  const [darkMode, setDarkMode] = useState(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('darkMode');
-    if (saved !== null) {
-      setDarkMode(saved === 'true');
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('darkMode', String(darkMode));
-  }, [darkMode]);
-
+export function Layout() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <Sidebar />
-      <main
-        className={cn(
-          'lg:ml-64 min-h-screen transition-all duration-300',
-          'pb-20'
-        )}
-        role="main"
-      >
+      <main className="lg:ml-64 min-h-screen pb-20 transition-all duration-300">
         <div className="p-6 lg:p-8">
-          {children}
+          <Outlet />
         </div>
       </main>
-    </div>
-  );
-}
-
-export function PageHeader({ title, description, action }: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">{title}</h1>
-        {description && (
-          <p className="text-[var(--text-secondary)] mt-1">{description}</p>
-        )}
-      </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
-    </div>
-  );
-}
-
-export function Card({ title, children, action, className = '' }: {
-  title?: string;
-  children: ReactNode;
-  action?: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn('card', className)}>
-      {title && (
-        <div className="card-header">
-          <h3 className="font-semibold text-[var(--text-primary)]">{title}</h3>
-          {action && <div>{action}</div>}
-        </div>
-      )}
-      <div className="card-body">{children}</div>
     </div>
   );
 }

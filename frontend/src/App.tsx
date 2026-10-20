@@ -1,23 +1,32 @@
-import { Routes, Route } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { PageHeader } from './components/ui';
 import { Dashboard } from './pages/Dashboard';
 import { EmailBot } from './pages/EmailBot';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 
-function AppRoutes() {
+function NotFound() {
   return (
-    <Routes>
-      <Route path="/" element={<Layout><Dashboard /></Layout>} />
-      <Route path="/email" element={<Layout><EmailBot /></Layout>} />
-      <Route path="/chat" element={<Layout><Chat /></Layout>} />
-      <Route path="/settings" element={<Layout><Settings /></Layout>} />
-      <Route path="/agents" element={<Layout><Agents /></Layout>} />
-    </Routes>
+    <>
+      <PageHeader title="Page not found" description="That address doesn't match anything in Tiga." />
+      <Link to="/" className="btn btn-primary">Back to Dashboard</Link>
+    </>
   );
 }
 
 export default function App() {
-  return <AppRoutes />;
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/email" element={<EmailBot />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/agents" element={<Agents />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useChat, useStatus } from '../hooks/useApi';
-import { Layout, PageHeader, Card } from '../components/Layout';
+import { PageHeader, Card } from '../components/ui';
 import { cn, formatRelativeTime, speak } from '../lib/utils';
 import {
   Send,
@@ -81,7 +81,7 @@ export function Chat() {
   };
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Tiga Chat"
         description="Your AI assistant for email outreach, metrics, scheduling, and more"
@@ -314,6 +314,6 @@ export function Chat() {
           )}
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

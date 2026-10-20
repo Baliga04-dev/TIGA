@@ -38,6 +38,11 @@ export function formatRelativeTime(dateString: string): string {
   }
 }
 
+/** True when an error message is about Gmail not being connected or authorized. */
+export function isGmailSetupError(message: string | null | undefined): boolean {
+  return !!message && /gmail|credentials|authoriz/i.test(message);
+}
+
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 3) + '...';

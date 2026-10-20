@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useEmailSummary, useEmails } from '../hooks/useApi';
 import { api } from '../services/api';
 import type { ParsedEmail, SendEmailRequest, TemplateGenRequest, TemplateResponse } from '../types';
-import { Layout, PageHeader, Card } from '../components/Layout';
+import { PageHeader, Card } from '../components/ui';
 import { cn, formatRelativeTime, getSentimentColor, getSentimentLabel, copyToClipboard, speak } from '../lib/utils';
 import {
   RefreshCw,
@@ -165,7 +165,7 @@ export function EmailBot() {
   };
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Email Bot"
         description="Cold email outreach, inbox monitoring, and AI-powered summaries for freelancing"
@@ -745,7 +745,7 @@ export function EmailBot() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
 
