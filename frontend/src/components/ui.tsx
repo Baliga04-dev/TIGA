@@ -83,8 +83,12 @@ export function Field({ label, hint, className, children }: {
   );
 }
 
+function copyLabel(state: 'idle' | 'copied' | 'failed', label: string) {
+  return state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : label;
+}
+
 /** Copies text and says whether it worked. */
-export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+export function CopyButton({ text, label = 'Copy', iconOnly = false }: { text: string; label?: string; iconOnly?: boolean }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -101,9 +105,15 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
   };
 
   return (
-    <button type="button" className="btn btn-ghost btn-sm" onClick={copy}>
+    <button
+      type="button"
+      className={cn('btn btn-ghost btn-sm', iconOnly && 'p-1')}
+      onClick={copy}
+      aria-label={iconOnly ? copyLabel(state, label) : undefined}
+      title={iconOnly ? copyLabel(state, label) : undefined}
+    >
       {state === 'copied' ? <Check className="size-4" aria-hidden="true" /> : <Clipboard className="size-4" aria-hidden="true" />}
-      {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : label}
+      {!iconOnly && copyLabel(state, label)}
     </button>
   );
 }

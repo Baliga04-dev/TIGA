@@ -71,24 +71,31 @@ export function useChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const history = useRef<ChatMessage[]>([]);
+  const counter = useRef(0);
 
-  const append = useCallback((message: ChatMessage) => {
+  const append = useCallback((role: ChatMessage['role'], content: string) => {
+    const message: ChatMessage = { id: `m${++counter.current}`, role, content, timestamp: new Date() };
     history.current = [...history.current, message];
     setMessages(history.current);
   }, []);
 
-  /** Resolves to the reply, or null when the request failed (see `error`). */
+  /**
+   * Resolves to the reply, or null when the request failed (see `error`).
+   * A failed message is taken back out of the transcript so the caller can offer it for retry.
+   */
   const sendMessage = useCallback(
     async (text: string): Promise<ChatResponse | null> => {
       const prior = history.current;
-      append({ role: 'user', content: text, timestamp: new Date() });
+      append('user', text);
       setLoading(true);
       setError(null);
       try {
         const response = await api.chat(text, prior);
-        append({ role: 'assistant', content: response.reply, timestamp: new Date() });
+        append('assistant', response.reply);
         return response;
       } catch (e) {
+        history.current = prior;
+        setMessages(prior);
         setError(messageOf(e, 'Failed to send message'));
         return null;
       } finally {
