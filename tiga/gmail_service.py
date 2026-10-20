@@ -27,31 +27,47 @@ class GmailService:
     def __init__(self):
         self.service = None
         self._authenticated = False
+        self.last_error = ""
 
-    def authenticate(self) -> bool:
-        """Authenticate with Gmail API using OAuth2."""
+    def authenticate(self, interactive: bool = False) -> bool:
+        """Load Gmail credentials. The browser consent flow only runs when interactive.
+
+        HTTP requests must never start the OAuth flow (it blocks the server and
+        opens a browser); run `python gmail_auth.py` once instead.
+        """
         creds = None
+        dirty = False
 
         if os.path.exists(config.GMAIL_TOKEN_FILE):
             creds = Credentials.from_authorized_user_file(config.GMAIL_TOKEN_FILE, SCOPES)
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
+        if creds and not creds.valid:
+            if creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
+                    dirty = True
                 except Exception:
                     creds = None
-            if not creds:
-                if not os.path.exists(config.GMAIL_CREDENTIALS_FILE):
-                    raise FileNotFoundError(
-                        f"Credentials file not found: {config.GMAIL_CREDENTIALS_FILE}. "
-                        "Download from Google Cloud Console."
-                    )
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    config.GMAIL_CREDENTIALS_FILE, SCOPES
-                )
-                creds = flow.run_local_server(port=0)
+            else:
+                creds = None
 
+        if not creds:
+            if not interactive:
+                self.last_error = (
+                    "Gmail is not authorized yet. Run `python gmail_auth.py` from the tiga folder "
+                    "to authorize it (see GMAIL_SETUP.md)."
+                )
+                return False
+            if not os.path.exists(config.GMAIL_CREDENTIALS_FILE):
+                raise FileNotFoundError(
+                    f"Credentials file not found: {config.GMAIL_CREDENTIALS_FILE}. "
+                    "Download from Google Cloud Console."
+                )
+            flow = InstalledAppFlow.from_client_secrets_file(config.GMAIL_CREDENTIALS_FILE, SCOPES)
+            creds = flow.run_local_server(port=0)
+            dirty = True
+
+        if dirty:
             with open(config.GMAIL_TOKEN_FILE, "w") as token:
                 token.write(creds.to_json())
 
@@ -60,13 +76,13 @@ class GmailService:
             self._authenticated = True
             return True
         except Exception as e:
-            print(f"Gmail authentication failed: {e}")
+            self.last_error = f"Gmail authentication failed: {e}"
             return False
 
     def _ensure_authenticated(self):
         if not self._authenticated:
             if not self.authenticate():
-                raise RuntimeError("Gmail authentication failed")
+                raise RuntimeError(self.last_error or "Gmail authentication failed")
 
     def send_email(
         self,

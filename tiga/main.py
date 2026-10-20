@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 import brain
 import config
@@ -38,12 +38,12 @@ class EmailSendIn(BaseModel):
 
 class EmailFetchIn(BaseModel):
     query: str = ""
-    max_results: int = 20
-    days_back: int = 1
+    max_results: int = Field(default=20, ge=1, le=100)
+    days_back: int = Field(default=1, ge=0, le=365)
 
 
 class EmailSummaryIn(BaseModel):
-    days: int = 1
+    days: int = Field(default=1, ge=1, le=90)
 
 
 class TemplateGenIn(BaseModel):
@@ -54,11 +54,15 @@ class TemplateGenIn(BaseModel):
 
 
 class LeadResearchIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     topic: str = Field(min_length=2, max_length=200)
     limit: int = Field(default=10, ge=1, le=50)
 
 
 class PromptGenerateIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     idea: str = Field(min_length=3, max_length=4000)
     outcome: str = Field(min_length=3, max_length=1000)
     audience: str = Field(default="", max_length=1000)

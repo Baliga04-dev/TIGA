@@ -39,3 +39,43 @@ def google():
     gmail_service.gmail_service = svc
     yield svc.service
     gmail_service.gmail_service = original
+
+
+class HttpMock:
+    """Routes httpx requests by URL substring; anything unmatched fails the test."""
+
+    def __init__(self):
+        self.routes = []
+        self.requests = []
+
+    def add(self, url_part, *, json=None, text=None, status=200, exc=None):
+        self.routes.append((url_part, json, text, status, exc))
+
+    def handler(self, request):
+        import httpx
+
+        self.requests.append(request)
+        for url_part, json, text, status, exc in self.routes:
+            if url_part in str(request.url):
+                if exc:
+                    raise exc
+                if json is not None:
+                    return httpx.Response(status, json=json)
+                return httpx.Response(status, text=text or "")
+        raise AssertionError(f"unexpected network call: {request.method} {request.url}")
+
+
+@pytest.fixture
+def http(monkeypatch):
+    import httpx
+
+    mock = HttpMock()
+    real = httpx.AsyncClient
+
+    class Patched(real):
+        def __init__(self, *args, **kwargs):
+            kwargs["transport"] = httpx.MockTransport(mock.handler)
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", Patched)
+    return mock

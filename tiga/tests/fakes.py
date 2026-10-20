@@ -62,3 +62,12 @@ class FakeGoogleClient:
             return {"id": f"sent-{len(self.sent)}", "threadId": "t-sent"}
 
         return _Call(run)
+
+
+def rss(*items):
+    """items: (title, link) pairs -> a minimal RSS document."""
+    body = "".join(
+        f"<item><title>{t}</title><link>{l}</link><pubDate>Mon, 20 Oct 2026 09:00:00 GMT</pubDate></item>"
+        for t, l in items
+    )
+    return f'<?xml version="1.0"?><rss version="2.0"><channel><title>feed</title>{body}</channel></rss>'

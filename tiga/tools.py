@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import time
@@ -42,6 +43,8 @@ async def get_metrics() -> dict:
                 )
                 resp.raise_for_status()
                 data = resp.json()
+            if not isinstance(data, dict):
+                data = {"value": data}
             return {"ok": True, "source": "live", "data": data, "ms": _ms(started)}
         except Exception as exc:
             return {
@@ -82,7 +85,7 @@ async def open_tab(url: str) -> dict:
             "error": f"refusing to open unsafe URL: {url!r}",
             "ms": _ms(started),
         }
-    opened = webbrowser.open(normalized, new=2)
+    opened = await asyncio.to_thread(webbrowser.open, normalized, new=2)
     return {
         "ok": bool(opened),
         "source": "local",
@@ -118,6 +121,8 @@ async def book_call(
                     body = resp.json()
                 except Exception:
                     body = {"raw": resp.text[:200]}
+                if not isinstance(body, dict):
+                    body = {"response": body}
             return {
                 "ok": True,
                 "source": "live",
@@ -156,7 +161,9 @@ async def send_cold_email(
     """Send a cold email via Gmail."""
     started = time.perf_counter()
     try:
-        result = gmail_service.gmail_service.send_email(to, subject, body, cc, bcc, is_html)
+        result = await asyncio.to_thread(
+            gmail_service.gmail_service.send_email, to, subject, body, cc, bcc, is_html
+        )
         result["ms"] = _ms(started)
         return result
     except Exception as e:
@@ -175,7 +182,9 @@ async def fetch_recent_emails(
             since_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y/%m/%d")
             query = f"after:{since_date}"
 
-        emails = gmail_service.gmail_service.fetch_emails(query=query, max_results=max_results)
+        emails = await asyncio.to_thread(
+            gmail_service.gmail_service.fetch_emails, query=query, max_results=max_results
+        )
         parsed = [gmail_service.gmail_service.parse_email_content(e) for e in emails]
         return {"ok": True, "source": "live", "emails": parsed, "count": len(parsed), "ms": _ms(started)}
     except Exception as e:
@@ -186,7 +195,7 @@ async def get_email_summary(days: int = 1) -> dict:
     """Get daily/weekly email summary with insights."""
     started = time.perf_counter()
     try:
-        summary = gmail_service.gmail_service.get_daily_summary(days)
+        summary = await asyncio.to_thread(gmail_service.gmail_service.get_daily_summary, days)
         summary["ms"] = _ms(started)
         return {"ok": True, "source": "live", **summary}
     except Exception as e:

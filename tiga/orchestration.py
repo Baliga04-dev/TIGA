@@ -18,6 +18,8 @@ from typing import Any
 from urllib.parse import quote_plus
 from xml.etree import ElementTree
 
+from defusedxml import ElementTree as SafeElementTree
+
 import httpx
 
 import config
@@ -42,20 +44,21 @@ async def research_leads(topic: str, limit: int = 10) -> dict[str, Any]:
         ("Google News", f"https://news.google.com/rss/search?q={query}"),
         ("Hacker News", "https://hnrss.org/frontpage"),
     ]
-    leads: list[dict[str, str]] = []
+    per_feed: list[list[dict[str, str]]] = []
     errors: list[str] = []
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
         for source, url in feeds:
+            found: list[dict[str, str]] = []
             try:
                 response = await client.get(url, headers={"user-agent": "Tiga/1.0"})
                 response.raise_for_status()
-                root = ElementTree.fromstring(response.text)
-                for item in root.findall(".//item")[:limit]:
+                root = SafeElementTree.fromstring(response.text)
+                for item in root.findall(".//item"):
                     title = (item.findtext("title") or "").strip()
                     link = (item.findtext("link") or "").strip()
                     published = (item.findtext("pubDate") or "").strip()
                     if title and link:
-                        leads.append(
+                        found.append(
                             {
                                 "source": source,
                                 "title": title,
@@ -64,14 +67,24 @@ async def research_leads(topic: str, limit: int = 10) -> dict[str, Any]:
                                 "client_signal": _signal_for(title),
                             }
                         )
-            except (httpx.HTTPError, ElementTree.ParseError) as exc:
+            except (httpx.HTTPError, ElementTree.ParseError, ValueError) as exc:
                 errors.append(f"{source}: {type(exc).__name__}")
+            per_feed.append(found)
+
+    cap = max(1, min(limit, 50))
+    leads: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for rank in range(max((len(f) for f in per_feed), default=0)):
+        for found in per_feed:
+            if rank < len(found) and found[rank]["url"] not in seen and len(leads) < cap:
+                seen.add(found[rank]["url"])
+                leads.append(found[rank])
     return {
         "ok": bool(leads) or not errors,
         "topic": topic,
         "searched_at": _now(),
         "sources": [name for name, _ in feeds],
-        "leads": leads[: max(1, min(limit, 50))],
+        "leads": leads,
         "errors": errors,
         "note": "Only public feeds are searched; private Facebook data is not accessed.",
     }
