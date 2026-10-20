@@ -1,4 +1,5 @@
 import re
+from urllib.parse import quote
 
 import httpx
 
@@ -6,7 +7,7 @@ import config
 
 _API_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice}"
 
-_MARKDOWN_RE = re.compile(r"[*_`#>|]|\[|\]\([^)]*\)")
+_MARKDOWN_RE = re.compile(r"\]\([^)]*\)|[*_`#>|\[\]]")
 _WS_RE = re.compile(r"\s+")
 
 
@@ -28,7 +29,7 @@ async def synthesize(text: str) -> bytes | None:
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                _API_URL.format(voice=config.ELEVENLABS_VOICE_ID),
+                _API_URL.format(voice=quote(config.ELEVENLABS_VOICE_ID, safe="")),
                 json=payload,
                 headers=headers,
             )

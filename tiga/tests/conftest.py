@@ -49,18 +49,18 @@ class HttpMock:
         self.routes = []
         self.requests = []
 
-    def add(self, url_part, *, json=None, text=None, status=200, exc=None):
-        self.routes.append((url_part, json, text, status, exc))
+    def add(self, url_part, *, json=None, text=None, status=200, exc=None, headers=None, content=None):
+        self.routes.append((url_part, json, content if content is not None else text, status, exc, headers))
 
     def add_sequence(self, url_part, responses):
         """Answer successive calls to url_part with successive (status, json) pairs."""
-        self.routes.append((url_part, "SEQ", iter(responses), 0, None))
+        self.routes.append((url_part, "SEQ", iter(responses), 0, None, None))
 
     def handler(self, request):
         import httpx
 
         self.requests.append(request)
-        for url_part, json, text, status, exc in self.routes:
+        for url_part, json, text, status, exc, headers in self.routes:
             if url_part in str(request.url):
                 if exc:
                     raise exc
@@ -69,7 +69,9 @@ class HttpMock:
                     return httpx.Response(status, json=payload)
                 if json is not None:
                     return httpx.Response(status, json=json)
-                return httpx.Response(status, text=text or "")
+                if isinstance(text, bytes):
+                    return httpx.Response(status, content=text, headers=headers)
+                return httpx.Response(status, text=text or "", headers=headers)
         raise AssertionError(f"unexpected network call: {request.method} {request.url}")
 
 

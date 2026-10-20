@@ -1,8 +1,18 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+BASE_DIR = Path(__file__).parent
+
+
+def resolve_path(value: str) -> str:
+    """Relative file settings are anchored to the backend folder, not the cwd."""
+    path = Path(value)
+    return str(path if path.is_absolute() else BASE_DIR / path)
+
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "onwK4e9ZLuTAKqWW03F9")
@@ -16,8 +26,8 @@ METRICS_ENDPOINT = os.getenv("METRICS_ENDPOINT", "").strip()
 BOOKING_WEBHOOK = os.getenv("BOOKING_WEBHOOK", "").strip()
 
 # Gmail API Configuration
-GMAIL_CREDENTIALS_FILE = os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json")
-GMAIL_TOKEN_FILE = os.getenv("GMAIL_TOKEN_FILE", "token.json")
+GMAIL_CREDENTIALS_FILE = resolve_path(os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json"))
+GMAIL_TOKEN_FILE = resolve_path(os.getenv("GMAIL_TOKEN_FILE", "token.json"))
 GMAIL_USER_EMAIL = os.getenv("GMAIL_USER_EMAIL", "").strip()
 ADMIN_REPORT_EMAIL = os.getenv("ADMIN_REPORT_EMAIL", GMAIL_USER_EMAIL).strip()
 
