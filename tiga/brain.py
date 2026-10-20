@@ -81,29 +81,39 @@ RE_GREETING = re.compile(
 )
 
 RE_EMAIL_SUMMARY = re.compile(
-    r"\b(email|mail|inbox)\b[^.?!]*\b(summary|report|digest|overview|how many|check)\b"
-    r"|\b(check|show|give)\b[^.?!]*\b(email|mail|inbox)\b",
+    r"\b(emails?|mails?|inbox(?:es)?)\b[^.?!]*\b(summary|report|digest|overview|how many|check)\b"
+    r"|\b(check|show|give)\b[^.?!]*\b(emails?|mails?|inbox(?:es)?)\b",
     re.IGNORECASE,
 )
 RE_SEND_COLD_EMAIL = re.compile(
-    r"\b(send|write|draft|create)\b[^.?!]*\b(cold email|outreach|proposal)\b"
-    r"|\b(cold email|outreach)\b[^.?!]*\b(send|write|draft)\b",
+    r"\b(send|write|draft|create)\b[^.?!]*\b(cold emails?|outreach|proposal)\b"
+    r"|\b(cold emails?|outreach)\b[^.?!]*\b(send|write|draft)\b",
     re.IGNORECASE,
 )
 RE_FETCH_EMAILS = re.compile(
-    r"\b(fetch|get|show|read|check)\b[^.?!]*\b(email|mail|message|inbox)\b"
-    r"|\b(recent|latest|new)\b[^.?!]*\b(email|mail)\b",
+    r"\b(fetch|get|show|read|check)\b[^.?!]*\b(emails?|mails?|messages?|inbox(?:es)?)\b"
+    r"|\b(recent|latest|new)\b[^.?!]*\b(emails?|mails?)\b",
     re.IGNORECASE,
 )
 RE_GENERATE_TEMPLATE = re.compile(
-    r"\b(generate|create|draft|write)\b[^.?!]*\b(template|draft)\b[^.?!]*\b(cold email|outreach)\b"
-    r"|\b(cold email|outreach)\b[^.?!]*\b(template|draft)\b",
+    r"\b(generate|create|draft|write)\b[^.?!]*\b(template|draft)\b[^.?!]*\b(cold emails?|outreach)\b"
+    r"|\b(cold emails?|outreach)\b[^.?!]*\b(template|draft)\b",
     re.IGNORECASE,
 )
 
 
-def _signature(func):
-    return set(inspect.signature(func).parameters)
+def _coerce(value, annotation):
+    """Convert a tool argument to the type the tool function declares."""
+    if annotation is bool:
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y"}
+        return bool(value)
+    if annotation is int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return str(value)[:200]
 
 
 async def run_tool(name: str, args: dict) -> dict:
@@ -117,10 +127,12 @@ async def run_tool(name: str, args: dict) -> dict:
             "ms": 0,
         }
     params = {}
-    wanted = _signature(func)
+    wanted = inspect.signature(func).parameters
     for key, value in (args or {}).items():
         if key in wanted and value not in (None, ""):
-            params[key] = str(value)[:200]
+            coerced = _coerce(value, wanted[key].annotation)
+            if coerced is not None:
+                params[key] = coerced
     try:
         result = await func(**params) if params else await func()
     except Exception as exc:
@@ -156,23 +168,6 @@ async def _builtin_respond(text: str) -> dict:
         action = await run_tool("get_email_summary", {"days": days})
         return {"reply": _email_summary_reply(action), "actions": [action], "mode": "builtin"}
 
-    if RE_SEND_COLD_EMAIL.search(lowered):
-        email_m = EMAIL_RE.search(text)
-        subject_m = re.search(r"\b(?:subject|re:)\s*[:\-]?\s*([^.!?]+)", text, re.IGNORECASE)
-        to = email_m.group(0) if email_m else ""
-        subject = subject_m.group(1).strip() if subject_m else "Freelance proposal"
-        body = f"Cold email to {to} — please provide the full content, sir."
-        action = await run_tool("send_cold_email", {"to": to, "subject": subject, "body": body})
-        return {"reply": _send_email_reply(action), "actions": [action], "mode": "builtin"}
-
-    if RE_FETCH_EMAILS.search(lowered):
-        days_m = re.search(r"\b(\d+)\s*(day|week)s?\b", lowered)
-        days = int(days_m.group(1)) if days_m else 1
-        if days_m and "week" in days_m.group(2):
-            days *= 7
-        action = await run_tool("fetch_recent_emails", {"days_back": days, "max_results": 20})
-        return {"reply": _fetch_emails_reply(action), "actions": [action], "mode": "builtin"}
-
     if RE_GENERATE_TEMPLATE.search(lowered):
         service_type = "general"
         if "web" in lowered or "website" in lowered or "frontend" in lowered:
@@ -192,6 +187,23 @@ async def _builtin_respond(text: str) -> dict:
             },
         )
         return {"reply": _template_reply(action), "actions": [action], "mode": "builtin"}
+
+    if RE_SEND_COLD_EMAIL.search(lowered):
+        email_m = EMAIL_RE.search(text)
+        subject_m = re.search(r"\b(?:subject|re:)\s*[:\-]?\s*([^.!?]+)", text, re.IGNORECASE)
+        to = email_m.group(0) if email_m else ""
+        subject = subject_m.group(1).strip() if subject_m else "Freelance proposal"
+        body = f"Cold email to {to} — please provide the full content, sir."
+        action = await run_tool("send_cold_email", {"to": to, "subject": subject, "body": body})
+        return {"reply": _send_email_reply(action), "actions": [action], "mode": "builtin"}
+
+    if RE_FETCH_EMAILS.search(lowered):
+        days_m = re.search(r"\b(\d+)\s*(day|week)s?\b", lowered)
+        days = int(days_m.group(1)) if days_m else 1
+        if days_m and "week" in days_m.group(2):
+            days *= 7
+        action = await run_tool("fetch_recent_emails", {"days_back": days, "max_results": 20})
+        return {"reply": _fetch_emails_reply(action), "actions": [action], "mode": "builtin"}
 
     if RE_METRICS.search(lowered):
         action = await run_tool("get_metrics", {})
