@@ -73,7 +73,7 @@ export function TemplateDialog({ service, onClose, onUse }: {
             {(id) => <input id={id} type="url" className="input" value={form.portfolio_link} onChange={(e) => setForm({ ...form, portfolio_link: e.target.value })} placeholder="https://yourportfolio.com" />}
           </Field>
           {generate.error && <Notice title="Couldn't generate the template">{generate.error}</Notice>}
-          <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-color)]">
+          <div className="flex justify-end gap-2 pt-4 border-t border-rule">
             <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
             <button type="submit" disabled={generate.pending} className="btn btn-primary">
               {generate.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Sparkles className="size-4" aria-hidden="true" />}

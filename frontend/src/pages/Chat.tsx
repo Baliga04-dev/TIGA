@@ -26,7 +26,7 @@ const QUICK_ACTIONS = [
 function StatusRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-[var(--text-secondary)]">{label}</span>
+      <span className="text-sm text-ink-2">{label}</span>
       <span className={cn('badge', good ? 'badge-green' : 'badge-amber')}>{value}</span>
     </div>
   );
@@ -70,11 +70,11 @@ export function Chat() {
               <Trash2 className="size-4" aria-hidden="true" />
               Clear
             </button>
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-xs text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-wash text-xs text-ink-2">
               {status?.brain === 'openai' ? (
-                <Sparkles className="size-3.5 text-[var(--accent-purple)]" aria-hidden="true" />
+                <Sparkles className="size-3.5 text-pen" aria-hidden="true" />
               ) : (
-                <Bot className="size-3.5 text-[var(--accent-blue)]" aria-hidden="true" />
+                <Bot className="size-3.5 text-pen" aria-hidden="true" />
               )}
               <span>{brain}</span>
             </div>
@@ -84,11 +84,11 @@ export function Chat() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="flex flex-col h-[calc(100vh-280px)] min-h-[500px]">
+          <section aria-label="Chat" className="flex h-[calc(100vh-280px)] min-h-[500px] flex-col rounded-lg border border-rule bg-sheet shadow-sm">
             <div className="flex-1 overflow-y-auto p-4 space-y-6" role="log" aria-label="Conversation" aria-live="polite">
               {messages.length === 0 && (
                 <div>
-                  <p className="text-[var(--text-secondary)] mb-4">Try asking Tiga:</p>
+                  <p className="text-ink-2 mb-4">Try asking Tiga:</p>
                   <div className="flex flex-wrap gap-2">
                     {EXAMPLE_COMMANDS.map((cmd) => (
                       <button key={cmd} onClick={() => fillExample(cmd)} className="btn btn-ghost btn-sm text-xs">
@@ -105,8 +105,8 @@ export function Chat() {
                     className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
                       msg.role === 'assistant'
-                        ? 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)]'
-                        : 'bg-[var(--accent-purple)]/10 text-[var(--accent-purple)]',
+                        ? 'bg-pen/10 text-pen'
+                        : 'bg-pen/10 text-pen',
                     )}
                     aria-hidden="true"
                   >
@@ -117,14 +117,14 @@ export function Chat() {
                       className={cn(
                         'inline-block px-4 py-2 rounded-2xl text-left',
                         msg.role === 'assistant'
-                          ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
-                          : 'bg-[var(--accent-blue)] text-white',
+                          ? 'border border-rule bg-sheet font-serif text-[1.0625rem] text-ink'
+                          : 'bg-pen text-white',
                       )}
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     </div>
                     <div className={cn('flex items-center gap-1 mt-1', msg.role === 'user' && 'justify-end')}>
-                      <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(msg.timestamp.toISOString())}</span>
+                      <span className="text-xs text-ink-3">{formatRelativeTime(msg.timestamp.toISOString())}</span>
                       {speech.supported && (
                         <button
                           onClick={() => speech.toggle(msg.id, msg.content)}
@@ -141,8 +141,8 @@ export function Chat() {
               ))}
 
               {loading && (
-                <div role="status" className="flex gap-3 items-center text-sm text-[var(--text-secondary)]">
-                  <div className="w-8 h-8 rounded-full bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] flex items-center justify-center" aria-hidden="true">
+                <div role="status" className="flex gap-3 items-center text-sm text-ink-2">
+                  <div className="w-8 h-8 rounded-full bg-pen/10 text-pen flex items-center justify-center" aria-hidden="true">
                     <Bot size={16} />
                   </div>
                   Tiga is thinking…
@@ -157,7 +157,7 @@ export function Chat() {
                 e.preventDefault();
                 submit();
               }}
-              className="p-4 border-t border-[var(--border-color)] space-y-3"
+              className="p-4 border-t border-rule space-y-3"
             >
               {error && <Notice>{error}</Notice>}
               <div className="flex items-end gap-2">
@@ -182,10 +182,10 @@ export function Chat() {
                 </button>
               </div>
             </form>
-          </Card>
+          </section>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-8">
           <Card title="Quick Actions">
             <div className="space-y-2">
               {QUICK_ACTIONS.map(({ label, command, icon: Icon }) => (
@@ -205,7 +205,7 @@ export function Chat() {
               <StatusRow label="Metrics" value={status?.metrics_endpoint ? 'Live' : 'Demo'} good={status?.metrics_endpoint} />
               <StatusRow label="Booking" value={status?.booking_webhook ? 'Live' : 'Demo'} good={status?.booking_webhook} />
               <div className="divider" />
-              <div className="text-xs text-[var(--text-muted)]">v{status?.version ?? '…'}</div>
+              <div className="text-xs text-ink-3">v{status?.version ?? '…'}</div>
             </div>
           </Card>
         </div>

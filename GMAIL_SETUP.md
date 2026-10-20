@@ -20,7 +20,7 @@
    - User support email: your email
    - Developer contact: your email
 4. Save and continue through scopes (no additional scopes needed)
-5. Add test users: add `ymitigaa@gmail.com`
+5. Add test users: add the Gmail address you will send from
 6. Save and continue
 
 ### 4. Create OAuth 2.0 Credentials
@@ -50,31 +50,26 @@
    ```env
    GMAIL_CREDENTIALS_FILE=credentials.json
    GMAIL_TOKEN_FILE=token.json
-   GMAIL_USER_EMAIL=ymitigaa@gmail.com
+   GMAIL_USER_EMAIL=you@example.com
    ```
 
-### 6. First Authentication
-1. Start the backend:
-   ```bash
-   cd tiga
-   python main.py
-   ```
-2. Browser will open automatically for OAuth authorization
-3. Sign in with `ymitigaa@gmail.com`
-4. Grant permissions
-5. Token will be saved to `token.json` automatically
+### 6. Authorize once
+The server never opens a browser by itself. Authorize from a terminal, once:
+```bash
+cd tiga
+.venv/bin/python gmail_auth.py
+```
+1. A browser window opens for Google's consent screen
+2. Sign in with the Gmail address you added as a test user
+3. Grant permissions
+4. The token is saved to `token.json` (git-ignored); the command prints "Gmail authorized"
+
+Until this is done, email features answer "Gmail is not authorized yet" instead of hanging.
 
 ### 7. Verify Connection
 1. Start both backend and frontend:
    ```bash
-   # Terminal 1 - Backend
-   cd tiga
-   python main.py
-
-   # Terminal 2 - Frontend
-   cd frontend
-   npm install
-   npm run dev
+   ./start_dev.sh
    ```
 2. Open http://localhost:3000
 3. Go to **Settings** page
@@ -92,12 +87,11 @@
 - Or use the port shown in terminal during auth
 
 ### "Access blocked: Authorization Error"
-- Add `ymitigaa@gmail.com` as test user in OAuth consent screen
+- Add your Gmail address as a test user in the OAuth consent screen
 - Or publish the app (requires verification)
 
-### Token expired
-- Delete `token.json` and restart backend
-- Re-authorize in browser
+### Token expired or revoked
+- Delete `token.json` and run `.venv/bin/python gmail_auth.py` again
 
 ## Scopes Used
 The app requests these Gmail scopes:

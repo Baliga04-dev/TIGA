@@ -9,34 +9,37 @@ export function PageHeader({ title, description, action }: {
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">{title}</h1>
-        {description && (
-          <p className="text-[var(--text-secondary)] mt-1">{description}</p>
-        )}
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="max-w-2xl">
+        <h1 className="text-3xl font-semibold">{title}</h1>
+        {description && <p className="mt-1 text-ink-2">{description}</p>}
       </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }
 
-export function Card({ title, children, action, className = '' }: {
+/**
+ * A titled section. Plain sections sit on the page, separated by a rule;
+ * `raised` ones are a sheet of paper for things you work inside (a chat, a form).
+ */
+export function Card({ title, children, action, className = '', raised = false }: {
   title?: string;
   children: ReactNode;
   action?: ReactNode;
   className?: string;
+  raised?: boolean;
 }) {
   return (
-    <div className={cn('card', className)}>
+    <section className={cn(raised && 'rounded-lg border border-rule bg-sheet shadow-sm', className)}>
       {title && (
-        <div className="card-header">
-          <h3 className="font-semibold text-[var(--text-primary)]">{title}</h3>
+        <div className={cn('flex items-center justify-between gap-3 border-b border-rule pb-2', raised ? 'px-5 pt-4' : 'mb-4')}>
+          <h2 className="text-xl font-semibold">{title}</h2>
           {action && <div>{action}</div>}
         </div>
       )}
-      <div className="card-body">{children}</div>
-    </div>
+      <div className={cn(raised && 'p-5')}>{children}</div>
+    </section>
   );
 }
 
@@ -52,9 +55,7 @@ export function Notice({ tone = 'error', title, children, action }: {
       role={tone === 'error' ? 'alert' : 'status'}
       className={cn(
         'flex items-start justify-between gap-3 rounded-lg border p-3 text-sm',
-        tone === 'error'
-          ? 'border-[var(--accent-red)]/40 bg-[var(--accent-red)]/10 text-[var(--text-primary)]'
-          : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
+        tone === 'error' ? 'border-flag/50 bg-flag/10 text-ink' : 'border-rule bg-wash text-ink',
       )}
     >
       <div>
@@ -79,7 +80,7 @@ export function Field({ label, hint, className, children }: {
     <div className={className}>
       <label htmlFor={id} className="label">{label}</label>
       {children(id)}
-      {hint && <p className="mt-1 text-xs text-[var(--text-secondary)]">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-ink-2">{hint}</p>}
     </div>
   );
 }
@@ -169,7 +170,7 @@ export function Modal({ title, onClose, wide = false, children }: {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -181,11 +182,11 @@ export function Modal({ title, onClose, wide = false, children }: {
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'w-full max-h-[90vh] overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)] shadow-xl',
+          'w-full max-h-[90vh] animate-dialog-in overflow-hidden rounded-xl border border-rule bg-sheet shadow-xl',
           wide ? 'max-w-3xl' : 'max-w-2xl',
         )}
       >
-        <div className="flex items-center justify-between gap-4 p-4 border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between gap-4 p-4 border-b border-rule">
           <h2 id={titleId} className="font-semibold truncate">{title}</h2>
           <button type="button" onClick={onClose} className="btn btn-ghost p-1.5" aria-label="Close">
             <X size={20} aria-hidden="true" />
@@ -209,7 +210,7 @@ export function Toast({ message, onDone }: { message: string; onDone: () => void
   return (
     <div
       role="status"
-      className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-lg bg-[var(--accent-green)] px-4 py-3 text-sm font-medium text-[var(--bg-primary)] shadow-lg"
+      className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-lg bg-ledger px-4 py-3 text-sm font-medium text-white shadow-lg"
     >
       <Check className="size-4" aria-hidden="true" />
       {message}

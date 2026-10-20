@@ -340,7 +340,7 @@ def _booking_reply(action: dict) -> str:
     when = payload.get("preferred_time")
     topic = payload.get("topic")
     if not action["ok"]:
-        return f"My apologies, sir — the booking failed: {result.get('error', 'unknown error')}."
+        return f"My apologies, sir — the booking failed: {str(result.get('error', 'unknown error')).rstrip('.')}."
     ref = result.get("booking_id", "confirmed")
     parts = ["Done, sir."]
     if topic:
@@ -450,7 +450,7 @@ async def _llm_respond(user_text: str, history: list, actions: list) -> str:
 def _email_summary_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch the email summary, sir — {result.get('error', 'unknown error')}."
+        return f"I couldn't fetch the email summary, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
     total = result.get("total_emails", 0)
     cold = result.get("cold_emails", 0)
     replies = result.get("replies_received", 0)
@@ -470,14 +470,14 @@ def _email_summary_reply(action: dict) -> str:
 def _send_email_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"My apologies, sir — the email failed to send: {result.get('error', 'unknown error')}."
+        return f"My apologies, sir — the email failed to send: {str(result.get('error', 'unknown error')).rstrip('.')}."
     return f"Email sent, sir. Message ID: {result.get('message_id', 'unknown')}."
 
 
 def _fetch_emails_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch emails, sir — {result.get('error', 'unknown error')}."
+        return f"I couldn't fetch emails, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
     count = result.get("count", 0)
     emails = result.get("emails", [])
     cold = sum(1 for e in emails if e.get("is_cold_email"))
@@ -489,7 +489,7 @@ def _fetch_emails_reply(action: dict) -> str:
 def _template_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"Couldn't generate template, sir — {result.get('error', 'unknown error')}."
+        return f"Couldn't generate template, sir — {str(result.get('error', 'unknown error')).rstrip('.')}."
     template = result.get("template", {})
     subject = template.get("subject", "")
     return f"Template ready, sir. Subject: {subject}. Check the UI for the full draft."

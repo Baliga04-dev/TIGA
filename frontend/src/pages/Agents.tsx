@@ -11,22 +11,22 @@ function CycleReport({ report }: { report: AgentRunResponse }) {
   return (
     <section aria-label="Cycle report" className="mt-4 space-y-3 text-sm">
       <p className="flex items-center gap-2">
-        {passed ? <CheckCircle2 className="size-4 text-[var(--accent-green)]" aria-hidden="true" /> : <XCircle className="size-4 text-[var(--accent-red)]" aria-hidden="true" />}
+        {passed ? <CheckCircle2 className="size-4 text-ledger" aria-hidden="true" /> : <XCircle className="size-4 text-flag" aria-hidden="true" />}
         <span data-status className="font-medium">{passed ? 'Passed' : 'Failed'}</span>
-        <span className="text-[var(--text-muted)]">{new Date(report.run_at).toLocaleString()}</span>
+        <span className="text-ink-3">{new Date(report.run_at).toLocaleString()}</span>
       </p>
       <ul className="space-y-1">
         {report.tester.checks.map((check) => (
           <li key={check.name} className="flex items-baseline gap-2">
-            <span className={cn('font-mono', check.ok ? 'text-[var(--text-primary)]' : 'text-[var(--accent-red)]')}>{check.name}</span>
-            <span className="text-[var(--text-secondary)]">{check.detail}</span>
+            <span className={cn('font-mono', check.ok ? 'text-ink' : 'text-flag')}>{check.name}</span>
+            <span className="text-ink-2">{check.detail}</span>
           </li>
         ))}
       </ul>
       {report.manager.next_actions.length > 0 && (
         <div>
           <p className="font-medium">Next actions</p>
-          <ul className="list-disc pl-5 text-[var(--text-secondary)]">
+          <ul className="list-disc pl-5 text-ink-2">
             {report.manager.next_actions.map((action) => <li key={action}>{action}</li>)}
           </ul>
         </div>
@@ -87,10 +87,10 @@ export function Agents() {
         {status?.agents.map((agent) => (
           <Card key={agent.name}>
             <div className="flex items-start gap-3">
-              <Bot className="size-5 text-[var(--accent-blue)]" aria-hidden="true" />
+              <Bot className="size-5 text-pen" aria-hidden="true" />
               <div>
                 <h2 className="font-semibold capitalize">{agent.name}</h2>
-                <p className="text-sm text-[var(--text-secondary)]">{agent.role}</p>
+                <p className="text-sm text-ink-2">{agent.role}</p>
                 <span className="badge badge-green mt-2">{agent.status}</span>
               </div>
             </div>
@@ -99,8 +99,8 @@ export function Agents() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Agent cycle">
-          <p className="text-sm text-[var(--text-secondary)] mb-4">
+        <Card raised title="Agent cycle">
+          <p className="text-sm text-ink-2 mb-4">
             Manager triages, dev reports readiness, and tester runs the backend checks and test suite.
           </p>
           <button className="btn btn-primary" onClick={() => cycle.run()} disabled={cycle.pending}>
@@ -111,7 +111,7 @@ export function Agents() {
           {cycle.result && <CycleReport report={cycle.result} />}
 
           <div className="divider" />
-          <p className="text-sm text-[var(--text-secondary)] mb-3">
+          <p className="text-sm text-ink-2 mb-3">
             Pushes commits you have already made to {status?.github.repository || 'GitHub'} ({status?.github.branch ?? 'main'}).
             It never commits for you.{' '}
             <span>{dirty === 0 ? 'Working tree clean.' : `${dirty} uncommitted change${dirty === 1 ? '' : 's'}.`}</span>
@@ -132,7 +132,7 @@ export function Agents() {
           )}
         </Card>
 
-        <Card title="Public lead research">
+        <Card raised title="Public lead research">
           <Field label="Research topic" className="mb-3">
             {(id) => (
               <input id={id} className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="What client signal should Tiga research?" />
@@ -145,7 +145,7 @@ export function Agents() {
           {research.error && <div className="mt-3"><Notice>{research.error}</Notice></div>}
         </Card>
 
-        <Card title="Prompt generator">
+        <Card raised title="Prompt generator">
           <div className="space-y-3">
             <Field label="Idea">
               {(id) => (
@@ -169,13 +169,13 @@ export function Agents() {
           </div>
         </Card>
 
-        <Card title="Research results and generated prompt">
+        <Card raised title="Research results and generated prompt">
           {generate.result && (
             <div className="mb-4">
               <CopyButton text={generate.result.prompt} label="Copy prompt" />
-              <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap text-xs">{generate.result.prompt}</pre>
+              <pre tabIndex={0} aria-label="Generated prompt" className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded bg-wash p-3 text-xs">{generate.result.prompt}</pre>
               <p className="mt-3 text-sm font-medium">Questions to answer first</p>
-              <ul className="list-disc pl-5 text-sm text-[var(--text-secondary)]">
+              <ul className="list-disc pl-5 text-sm text-ink-2">
                 {generate.result.questions.map((q) => <li key={q}>{q}</li>)}
               </ul>
             </div>
@@ -191,13 +191,13 @@ export function Agents() {
                     <ExternalLink className="size-3" aria-hidden="true" />
                     {lead.title}
                   </a>
-                  <p className="text-xs text-[var(--text-muted)]">{lead.source} · <span>{lead.client_signal}</span></p>
+                  <p className="text-xs text-ink-3">{lead.source} · <span>{lead.client_signal}</span></p>
                 </li>
               ))}
             </ul>
           )}
-          {researched && leads.length === 0 && <p className="text-sm text-[var(--text-muted)]">No public signals found for that topic.</p>}
-          {!generate.result && !researched && <p className="text-sm text-[var(--text-muted)]">Results will appear here.</p>}
+          {researched && leads.length === 0 && <p className="text-sm text-ink-3">No public signals found for that topic.</p>}
+          {!generate.result && !researched && <p className="text-sm text-ink-3">Results will appear here.</p>}
         </Card>
       </div>
     </>

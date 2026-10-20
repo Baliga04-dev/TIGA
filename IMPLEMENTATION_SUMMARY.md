@@ -154,7 +154,7 @@ This project demonstrates:
 ```
 Project Root/
 ├── GMAIL_SETUP.md          # Detailed setup guide
-├── start_dev.ps1           # Dev launcher script
+├── start_dev.sh            # Dev launcher (WSL/Linux); start_dev.ps1 is the legacy Windows launcher
 ├── tiga/                 # Backend (Python)
 │   ├── gmail_service.py    # Study this for Gmail API
 │   ├── brain.py            # Study for command parsing
@@ -179,4 +179,4 @@ Your email: `ymitigaa@gmail.com` is configured as the sender.
 
 ---
 
-Run `.\start_dev.ps1 -InstallDeps` after installing Node.js to start everything.
+Run `./start_dev.sh --install` once, then `./start_dev.sh` to start everything (see README.md).

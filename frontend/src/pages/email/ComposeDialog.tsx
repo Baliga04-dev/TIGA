@@ -37,11 +37,11 @@ export function ComposeDialog({ draft, onClose, onSent }: {
           {(id) => <textarea id={id} className="input min-h-[200px] resize-y font-mono text-sm" value={form.body} onChange={set('body')} required />}
         </Field>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={html} onChange={(e) => setHtml(e.target.checked)} className="size-4 accent-[var(--accent-blue)]" />
+          <input type="checkbox" checked={html} onChange={(e) => setHtml(e.target.checked)} className="size-4 accent-pen" />
           Send as HTML
         </label>
         {send.error && <Notice title="The email was not sent">{send.error}</Notice>}
-        <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-color)]">
+        <div className="flex justify-end gap-2 pt-4 border-t border-rule">
           <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button type="submit" disabled={send.pending} className="btn btn-success">
             {send.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}

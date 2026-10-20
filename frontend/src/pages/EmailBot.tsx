@@ -108,48 +108,36 @@ export function EmailBot() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card title="Today's summary">
-          {summary ? (
-            <dl className="grid grid-cols-2 gap-3">
-              {[
-                ['Total emails', summary.total_emails],
-                ['Cold outreach', summary.cold_emails],
-                ['Replies', summary.replies_received],
-                ['Positive', summary.positive_responses],
-              ].map(([label, value]) => (
-                <div key={label} className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
-                  <dd className="text-2xl font-bold">{value}</dd>
-                  <dt className="text-xs text-[var(--text-muted)]">{label}</dt>
-                </div>
-              ))}
-            </dl>
-          ) : (
-            <p className="text-sm text-[var(--text-muted)]">{summaryLoading ? 'Loading…' : 'Summary unavailable.'}</p>
-          )}
-        </Card>
-
-        <Card title="Quick actions" className="lg:col-span-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {SHORTCUTS.map(({ title, hint, icon: Icon }) => (
-              <button key={title} onClick={() => runShortcut(title)} className="btn btn-secondary text-left p-4">
-                <span className="flex items-start gap-3">
-                  <Icon className="size-5 mt-0.5 text-[var(--accent-blue)]" aria-hidden="true" />
-                  <span>
-                    <span className="block font-medium">{title}</span>
-                    <span className="block text-xs text-[var(--text-muted)]">{hint}</span>
-                  </span>
-                </span>
-              </button>
-            ))}
+      <dl aria-label="Today's summary" className="mb-8 flex flex-wrap gap-x-10 gap-y-3 border-y border-rule py-4">
+        {[
+          ['Total emails', summary?.total_emails],
+          ['Cold outreach', summary?.cold_emails],
+          ['Replies', summary?.replies_received],
+          ['Positive', summary?.positive_responses],
+        ].map(([label, value]) => (
+          <div key={label} className="flex items-baseline gap-2">
+            <dd className="font-serif text-3xl font-semibold tabular-nums">{summary ? value : '–'}</dd>
+            <dt className="text-sm text-ink-2">{label}</dt>
           </div>
-        </Card>
+        ))}
+      </dl>
+
+      <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {SHORTCUTS.map(({ title, hint, icon: Icon }) => (
+          <button key={title} onClick={() => runShortcut(title)} className="btn btn-secondary items-start justify-start p-4 text-left">
+            <Icon className="mt-0.5 size-4 shrink-0 text-pen" aria-hidden="true" />
+            <span>
+              <span className="block font-medium">{title}</span>
+              <span className="block text-xs font-normal text-ink-2">{hint}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
       <Card title="Inbox">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-3" aria-hidden="true" />
             <input
               type="search"
               aria-label="Search emails"
@@ -167,10 +155,10 @@ export function EmailBot() {
           </select>
         </div>
 
-        <div className="border border-[var(--border-color)] rounded-lg overflow-x-auto">
+        <div className="border border-rule rounded-lg overflow-x-auto">
           <table className="w-full text-sm" aria-busy={inboxLoading}>
             <thead>
-              <tr className="bg-[var(--bg-tertiary)] border-b border-[var(--border-color)] text-left text-[var(--text-secondary)]">
+              <tr className="bg-wash border-b border-rule text-left text-ink-2">
                 <th scope="col" className="px-4 py-3 font-medium">Subject</th>
                 <th scope="col" className="px-4 py-3 font-medium">From</th>
                 <th scope="col" className="px-4 py-3 font-medium w-32">Received</th>
@@ -182,14 +170,14 @@ export function EmailBot() {
             <tbody>
               {inboxLoading && !emails ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
-                    <Loader2 className="size-6 animate-spin mx-auto mb-2 text-[var(--accent-blue)]" aria-hidden="true" />
+                  <td colSpan={6} className="px-4 py-8 text-center text-ink-3">
+                    <Loader2 className="size-6 animate-spin mx-auto mb-2 text-pen" aria-hidden="true" />
                     Loading emails…
                   </td>
                 </tr>
               ) : visible.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--text-muted)]">
+                  <td colSpan={6} className="px-4 py-8 text-center text-ink-3">
                     {inboxError
                       ? 'Nothing to show until the inbox loads.'
                       : emails && emails.emails.length > 0
@@ -199,7 +187,7 @@ export function EmailBot() {
                 </tr>
               ) : (
                 visible.map((item) => (
-                  <tr key={item.email.id} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-tertiary)]">
+                  <tr key={item.email.id} className="border-b border-rule hover:bg-wash">
                     <td className="px-4 py-3 max-w-xs">
                       <button
                         onClick={() => setDialog({ kind: 'message', email: item })}
@@ -208,10 +196,10 @@ export function EmailBot() {
                       >
                         {item.email.subject || '(no subject)'}
                       </button>
-                      <div className="text-xs text-[var(--text-muted)] truncate">{item.summary}</div>
+                      <div className="text-xs text-ink-3 truncate">{item.summary}</div>
                     </td>
                     <td className="px-4 py-3 max-w-xs truncate" title={item.email.from}>{item.email.from}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatRelativeTime(item.email.date)}</td>
+                    <td className="px-4 py-3 text-ink-3">{formatRelativeTime(item.email.date)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {item.is_cold_email && <span className="badge badge-blue text-xs">Cold</span>}

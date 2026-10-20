@@ -1,4 +1,11 @@
+import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
+
+// Optional: Chromium libraries unpacked without sudo (see README, "Browser tests").
+const userLibs = join(homedir(), '.local/chromium-libs/root/usr/lib/x86_64-linux-gnu')
+if (existsSync(userLibs)) process.env.LD_LIBRARY_PATH = `${userLibs}:${process.env.LD_LIBRARY_PATH ?? ''}`
 
 const API_PORT = 8765
 const WEB_PORT = 3100
@@ -28,7 +35,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /responsive\.spec\.ts/ },
     { name: 'mobile', use: { ...devices['Pixel 5'] }, testMatch: /responsive\.spec\.ts/ },
   ],
   webServer: [

@@ -37,3 +37,16 @@ def test_check_my_emails_fetches_the_inbox(client, google):
 def test_summary_over_several_days_uses_that_period(client, google):
     body = chat(client, "email summary for the last 3 days")
     assert body["actions"][0]["result"]["period_days"] == 3
+
+
+def test_error_replies_do_not_end_with_double_punctuation(client, tmp_path, monkeypatch):
+    import config
+    import gmail_service
+
+    monkeypatch.setattr(config, "GMAIL_CREDENTIALS_FILE", str(tmp_path / "credentials.json"))
+    monkeypatch.setattr(config, "GMAIL_TOKEN_FILE", str(tmp_path / "token.json"))
+    monkeypatch.setattr(gmail_service, "gmail_service", gmail_service.GmailService())
+    (tmp_path / "credentials.json").write_text("{}")
+    reply = chat(client, "give me an email summary")["reply"]
+    assert "authorize" in reply.lower()
+    assert ".." not in reply

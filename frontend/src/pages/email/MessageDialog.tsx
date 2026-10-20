@@ -20,28 +20,28 @@ export function MessageDialog({ parsed, onClose, onReply }: {
   return (
     <Modal title={email.subject || '(no subject)'} onClose={onClose} wide>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm mb-3">
-        <dt className="text-[var(--text-muted)]">From</dt>
+        <dt className="text-ink-3">From</dt>
         <dd className="font-medium">{email.from}</dd>
-        <dt className="text-[var(--text-muted)]">To</dt>
+        <dt className="text-ink-3">To</dt>
         <dd>{email.to}</dd>
-        <dt className="text-[var(--text-muted)]">Date</dt>
+        <dt className="text-ink-3">Date</dt>
         <dd>{formatDate(email.date)}</dd>
       </dl>
-      <div className="flex flex-wrap gap-2 pb-4 mb-4 border-b border-[var(--border-color)]">
+      <div className="flex flex-wrap gap-2 pb-4 mb-4 border-b border-rule">
         {parsed.is_cold_email && <span className="badge badge-blue">Cold email</span>}
         {parsed.is_reply && <span className="badge badge-amber">Reply</span>}
         <span className={cn('badge', getSentimentColor(parsed.sentiment))}>{getSentimentLabel(parsed.sentiment)}</span>
         {parsed.key_topics.map((t) => <span key={t} className="badge badge-gray">{topicLabel(t)}</span>)}
       </div>
 
-      <div className="whitespace-pre-wrap text-sm">{email.body}</div>
+      <div className="whitespace-pre-wrap font-serif text-[1.0625rem] leading-relaxed">{email.body}</div>
 
       {parsed.action_items.length > 0 && (
-        <section className="mt-4 pt-4 border-t border-[var(--border-color)]">
+        <section className="mt-4 pt-4 border-t border-rule">
           <h3 className="font-medium mb-2">Action items</h3>
           <ul className="space-y-1">
             {parsed.action_items.map((item) => (
-              <li key={item} className="text-sm text-[var(--text-secondary)] flex items-start gap-2">
+              <li key={item} className="text-sm text-ink-2 flex items-start gap-2">
                 <Clock className="size-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
                 <span>{item}</span>
               </li>
@@ -51,7 +51,7 @@ export function MessageDialog({ parsed, onClose, onReply }: {
       )}
 
       {hasContact && (
-        <section className="mt-4 pt-4 border-t border-[var(--border-color)]">
+        <section className="mt-4 pt-4 border-t border-rule">
           <h3 className="font-medium mb-2">Contact details</h3>
           <div className="flex flex-wrap gap-2">
             {contact.emails.map((value) => <span key={value} className="badge badge-gray text-xs">{value}</span>)}

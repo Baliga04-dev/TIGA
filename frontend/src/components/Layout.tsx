@@ -1,121 +1,77 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { cn } from '../lib/utils';
-import {
-  LayoutDashboard,
-  Mail,
-  Bot,
-  Settings,
-  Workflow,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
-} from 'lucide-react';
 import { useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Email Bot', href: '/email', icon: Mail },
-  { name: 'Tiga Chat', href: '/chat', icon: Bot },
-  { name: 'Agents', href: '/agents', icon: Workflow },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/' },
+  { name: 'Email Bot', href: '/email' },
+  { name: 'Tiga Chat', href: '/chat' },
+  { name: 'Agents', href: '/agents' },
+  { name: 'Settings', href: '/settings' },
 ];
 
-export function Sidebar() {
-  const location = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+function Header() {
+  const [open, setOpen] = useState(false);
 
   return (
-    <>
-      <button
-        className={cn(
-          'fixed top-4 left-4 z-50 lg:hidden btn btn-ghost p-2',
-          mobileOpen && 'left-64'
-        )}
-        onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-      >
-        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      <aside
-        className={cn(
-          'fixed top-0 left-0 z-40 h-screen bg-[var(--bg-secondary)] border-r border-[var(--border-color)] transition-all duration-300 lg:translate-x-0',
-          collapsed ? 'w-16' : 'w-64',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        )}
-      >
-        <div className="flex flex-col h-full">
-          <div className={cn('p-4 border-b border-[var(--border-color)]', collapsed && 'justify-center')}>
-            {!collapsed && (
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[var(--accent-blue)] flex items-center justify-center">
-                  <Bot size={16} className="text-white" />
-                </div>
-                <span className="font-bold text-lg">TIGA</span>
-              </div>
-            )}
-          </div>
-
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto" aria-label="Main">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href ||
-                (item.href !== '/' && location.pathname.startsWith(item.href));
-              return (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:ring-offset-2 focus:ring-offset-[var(--bg-secondary)]',
-                    isActive
-                      ? 'bg-[var(--accent-blue)]/10 text-[var(--accent-blue)]'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]',
-                    collapsed && 'justify-center'
-                  )}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <item.icon size={20} aria-hidden="true" />
-                  {!collapsed && <span>{item.name}</span>}
-                </NavLink>
-              );
-            })}
-          </nav>
-
-          <div className={cn('p-3 border-t border-[var(--border-color)]', collapsed && 'justify-center')}>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className={cn('btn btn-ghost w-full justify-center', collapsed && 'p-2')}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              aria-expanded={!collapsed}
-            >
-              {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-            </button>
-          </div>
+    <header className="border-b border-rule bg-wash">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-x-6 px-5 pt-4 sm:px-8">
+        <div className="flex w-full items-center justify-between pb-3 md:w-auto md:pb-0 md:pr-4">
+          <span className="font-serif text-2xl font-semibold tracking-tight">Tiga</span>
+          <button
+            type="button"
+            className="btn btn-ghost p-2 md:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
+            aria-controls="main-nav"
+          >
+            {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
+          </button>
         </div>
-      </aside>
 
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-    </>
+        <nav
+          id="main-nav"
+          aria-label="Main"
+          className={cn('w-full flex-col gap-1 pb-3 md:flex md:w-auto md:flex-1 md:flex-row md:gap-1 md:pb-0', open ? 'flex' : 'hidden')}
+        >
+          {navigation.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              end={item.href === '/'}
+              onClick={() => setOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'px-4 py-2 text-sm font-medium transition-colors md:rounded-t-lg md:border md:border-b-0 md:-mb-px',
+                  isActive
+                    ? 'bg-paper text-ink md:border-rule md:pb-2.5'
+                    : 'text-ink-2 hover:bg-paper/60 hover:text-ink md:border-transparent',
+                )
+              }
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </header>
   );
 }
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <Sidebar />
-      <main className="lg:ml-64 min-h-screen pb-20 transition-all duration-300">
-        <div className="p-6 lg:p-8">
-          <Outlet />
-        </div>
+    <div className="min-h-screen">
+      <a
+        href="#main"
+        className="sr-only rounded bg-sheet px-3 py-2 text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50"
+      >
+        Skip to content
+      </a>
+      <Header />
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-5 pb-20 pt-8 outline-none sm:px-8">
+        <Outlet />
       </main>
     </div>
   );
