@@ -1,294 +1,142 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Download, Key, Loader2, Mail } from 'lucide-react';
 import { useStatus } from '../hooks/useApi';
-import { PageHeader, Card } from '../components/ui';
-import { cn, copyToClipboard } from '../lib/utils';
-import {
-  Mail,
-  Key,
-  AlertCircle,
-  Loader2,
-  Copy,
-  Terminal,
-  CheckCircle,
-} from 'lucide-react';
+import { useAction } from '../hooks/useAction';
+import { PageHeader, Card, Notice, CopyButton } from '../components/ui';
+import { api } from '../services/api';
+import { cn, downloadAsFile } from '../lib/utils';
+
+function StatusRow({ label, value, good }: { label: string; value: string; good?: boolean }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-[var(--text-secondary)]">{label}</span>
+      <span className={cn('badge', good ? 'badge-green' : 'badge-amber')}>{value}</span>
+    </div>
+  );
+}
 
 export function Settings() {
   const { status } = useStatus();
-  const [gmailConfigured, setGmailConfigured] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [envContent, setEnvContent] = useState('');
+  const [envTemplate, setEnvTemplate] = useState('');
+  const [envError, setEnvError] = useState<string | null>(null);
+  const credentialsFound = status?.gmail_configured ?? false;
 
   useEffect(() => {
-    checkGmailConfig();
-    loadEnvExample();
+    let cancelled = false;
+    api
+      .getEnvExample()
+      .then((text) => !cancelled && setEnvTemplate(text))
+      .catch((e: Error) => !cancelled && setEnvError(e.message));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const checkGmailConfig = async () => {
-    try {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      setGmailConfigured(data.gmail_configured);
-    } catch {
-      setGmailConfigured(false);
-    }
-  };
-
-  const loadEnvExample = async () => {
-    try {
-      const res = await fetch('/.env.example');
-      if (res.ok) {
-        const text = await res.text();
-        setEnvContent(text);
-      }
-    } catch {
-      setEnvContent('# Could not load .env.example');
-    }
-  };
-
-  const testGmailConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch('/api/email/summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: 1 }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setTestResult({ success: true, message: `Connected! Fetched ${data.total_emails} emails from last 24h.` });
-      } else {
-        setTestResult({ success: false, message: data.error || 'Connection failed' });
-      }
-    } catch (e) {
-      setTestResult({ success: false, message: e instanceof Error ? e.message : 'Connection failed' });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const copyEnvExample = async () => {
-    await copyToClipboard(envContent);
-    alert('Copied to clipboard! Create a .env file in the backend directory with these values.');
-  };
-
-  const downloadEnvExample = () => {
-    const blob = new Blob([envContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '.env.example';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const test = useAction(() => api.getEmailSummary(1));
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        description="Configure Tiga integrations and API keys"
-      />
+      <PageHeader title="Settings" description="Connect Gmail and see which integrations are active" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="Gmail API Configuration">
+        <Card title="Gmail">
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-[var(--bg-tertiary)] rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[var(--accent-blue)]/10 flex items-center justify-center">
-                  <Mail className="size-5 text-[var(--accent-blue)]" />
-                </div>
+                <Mail className="size-5 text-[var(--accent-blue)]" aria-hidden="true" />
                 <div>
                   <p className="font-medium">Gmail API</p>
-                  <p className="text-sm text-[var(--text-muted)]">Send, read, and analyze emails</p>
+                  <p className="text-sm text-[var(--text-muted)]">Send, read and analyze email</p>
                 </div>
               </div>
-              <span className={cn('badge', gmailConfigured ? 'badge-green' : 'badge-red')}>
-                {gmailConfigured ? 'Connected' : 'Not Configured'}
-              </span>
+              {status && (
+                <span className={cn('badge', credentialsFound ? 'badge-amber' : 'badge-red')}>
+                  {credentialsFound ? 'Credentials found' : 'Credentials file missing'}
+                </span>
+              )}
             </div>
 
-            {!gmailConfigured && (
-              <div className="space-y-3 p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
-                <h4 className="font-medium">Setup Required</h4>
-                <ol className="space-y-2 text-sm text-[var(--text-secondary)] list-decimal list-inside">
-                  <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-blue)] hover:underline">Google Cloud Console</a></li>
-                  <li>Create a project or select existing</li>
-                  <li>Enable Gmail API</li>
-                  <li>Create OAuth 2.0 credentials (Desktop app)</li>
-                  <li>Download <code>credentials.json</code> to the backend directory</li>
-                  <li>Add to <code>.env</code>: <code>GMAIL_CREDENTIALS_FILE=credentials.json</code></li>
-                  <li>Restart the backend server</li>
-                </ol>
-              </div>
-            )}
+            <ol className="space-y-2 text-sm text-[var(--text-secondary)] list-decimal list-inside">
+              <li>
+                Create an OAuth client (Desktop app) in the{' '}
+                <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline">
+                  Google Cloud Console
+                </a>{' '}
+                with the Gmail API enabled.
+              </li>
+              <li>Download it as <code>credentials.json</code> into the <code>tiga</code> folder.</li>
+              <li>
+                Authorize once: run <code>python gmail_auth.py</code> in the <code>tiga</code> folder and approve access in the browser.
+              </li>
+              <li>Press Test connection below.</li>
+            </ol>
 
-            <div className="flex gap-2">
-              <button
-                onClick={testGmailConnection}
-                disabled={testing || !gmailConfigured}
-                className="btn btn-primary flex-1"
-              >
-                {testing ? <Loader2 className="size-4 animate-spin" /> : <Key className="size-4" />}
-                {testing ? 'Testing...' : 'Test Connection'}
+            <div className="flex items-center gap-3">
+              <button onClick={() => test.run()} disabled={test.pending || !credentialsFound} className="btn btn-primary">
+                {test.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Key className="size-4" aria-hidden="true" />}
+                {test.pending ? 'Testing…' : 'Test connection'}
               </button>
-              <button onClick={copyEnvExample} className="btn btn-secondary">
-                <Copy className="size-4" />
-                Copy .env.example
-              </button>
-              <button onClick={downloadEnvExample} className="btn btn-secondary">
-                <Terminal className="size-4" />
-                Download
-              </button>
+              {status && !credentialsFound && <span className="text-sm text-[var(--text-muted)]">Add credentials.json first.</span>}
             </div>
 
-            {testResult && (
-              <div className={cn(
-                'p-3 rounded-lg text-sm flex items-center gap-2',
-                testResult.success
-                  ? 'bg-[var(--accent-green)]/10 text-[var(--accent-green)] border border-[var(--accent-green)]/20'
-                  : 'bg-[var(--accent-red)]/10 text-[var(--accent-red)] border border-[var(--accent-red)]/20'
-              )}>
-                {testResult.success ? <CheckCircle className="size-4" /> : <AlertCircle className="size-4" />}
-                <span>{testResult.message}</span>
-              </div>
+            {test.error && <Notice>{test.error}</Notice>}
+            {test.result && (
+              <Notice tone="info">{`Connected. Read ${test.result.total_emails} emails from the last 24 hours.`}</Notice>
             )}
           </div>
         </Card>
 
-        <Card title="Environment Variables">
-          <div className="space-y-4">
-            <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg">
-              <h4 className="font-medium mb-3">Required Variables</h4>
-              <dl className="space-y-3 text-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">GMAIL_CREDENTIALS_FILE</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">credentials.json</dd>
+        <Card title="Integrations">
+          <div className="space-y-2 text-sm">
+            {status ? (
+              <>
+                <StatusRow label="Brain" value={status.brain === 'openai' ? 'OpenAI-compatible model' : 'Built-in rules'} good={status.brain === 'openai'} />
+                <StatusRow label="Speech" value={status.tts === 'elevenlabs' ? 'ElevenLabs' : 'Browser voice'} good={status.tts === 'elevenlabs'} />
+                <StatusRow label="Metrics" value={status.metrics_endpoint ? 'Live endpoint' : 'Demo data'} good={status.metrics_endpoint} />
+                <StatusRow label="Booking" value={status.booking_webhook ? 'Live webhook' : 'Demo mode'} good={status.booking_webhook} />
+                <div className="flex justify-between items-center">
+                  <span className="text-[var(--text-secondary)]">Repository</span>
+                  <span className="font-mono">{status.github_repository || 'not set'}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">GMAIL_TOKEN_FILE</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">token.json</dd>
+                <div className="flex justify-between items-center">
+                  <span className="text-[var(--text-secondary)]">Version</span>
+                  <span className="font-mono">{status.version}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">GMAIL_USER_EMAIL</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">ymitigaa@gmail.com</dd>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">OPENAI_API_KEY</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">(optional)</dd>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">ELEVENLABS_API_KEY</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">(optional)</dd>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">METRICS_ENDPOINT</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">(optional)</dd>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <dt className="text-[var(--text-secondary)]">BOOKING_WEBHOOK</dt>
-                  <dd className="font-mono text-[var(--text-primary)] bg-[var(--bg-secondary)] px-2 py-1 rounded">(optional)</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg">
-              <h4 className="font-medium mb-3">Current Status</h4>
-              <dl className="space-y-2 text-sm">
-                {status && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">Brain</span>
-                      <span className={cn('badge', status.brain === 'openai' ? 'badge-green' : 'badge-amber')}>
-                        {status.brain === 'openai' ? 'OpenAI (GPT-4o-mini)' : 'Built-in Demo'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">TTS</span>
-                      <span className={cn('badge', status.tts === 'elevenlabs' ? 'badge-green' : 'badge-amber')}>
-                        {status.tts === 'elevenlabs' ? 'ElevenLabs' : 'Browser SpeechSynthesis'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">Gmail</span>
-                      <span className={cn('badge', status.gmail_configured ? 'badge-green' : 'badge-red')}>
-                        {status.gmail_configured ? 'Configured' : 'Not Configured'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">Metrics</span>
-                      <span className={cn('badge', status.metrics_endpoint ? 'badge-green' : 'badge-amber')}>
-                        {status.metrics_endpoint ? 'Live Endpoint' : 'Demo Data'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">Booking</span>
-                      <span className={cn('badge', status.booking_webhook ? 'badge-green' : 'badge-amber')}>
-                        {status.booking_webhook ? 'Live Webhook' : 'Demo Mode'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--text-secondary)]">Version</span>
-                      <span className="font-mono">{status.version}</span>
-                    </div>
-                  </>
-                )}
-              </dl>
-            </div>
+              </>
+            ) : (
+              <p className="text-[var(--text-muted)]">Loading integration status…</p>
+            )}
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card title="Gmail OAuth Setup Guide">
-          <div className="space-y-4 text-sm text-[var(--text-secondary)]">
-            <h4 className="font-medium text-[var(--text-primary)]">Step-by-step</h4>
-            <ol className="space-y-3 list-decimal list-inside">
-              <li>
-                <strong>Create Google Cloud Project</strong>
-                <br />Visit <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-blue)]">console.cloud.google.com</a>
-              </li>
-              <li>
-                <strong>Enable Gmail API</strong>
-                <br />APIs & Services → Library → Search "Gmail API" → Enable
-              </li>
-              <li>
-                <strong>Configure OAuth Consent Screen</strong>
-                <br />APIs & Services → OAuth consent screen → External → Fill required fields
-              </li>
-              <li>
-                <strong>Create Credentials</strong>
-                <br />APIs & Services → Credentials → Create Credentials → OAuth client ID → Desktop app
-              </li>
-              <li>
-                <strong>Download & Place</strong>
-                <br />Download JSON → Rename to <code>credentials.json</code> → Place in the backend folder
-              </li>
-              <li>
-                <strong>First Run</strong>
-                <br />Start backend → Browser opens for OAuth → Authorize → Token saved to <code>token.json</code>
-              </li>
-            </ol>
-          </div>
-        </Card>
-
-        <Card title="Freelancing Email Templates">
-          <div className="space-y-3 text-sm text-[var(--text-secondary)]">
-            <p>The email bot includes built-in templates for:</p>
-            <ul className="space-y-2 list-disc list-inside">
-              <li><strong>Web Development</strong> - React, Next.js, Vue, custom websites</li>
-              <li><strong>Software Development</strong> - Custom apps, APIs, automation, backends</li>
-              <li><strong>General Freelance</strong> - Adaptable for any service</li>
-            </ul>
-            <p className="pt-2">Generate templates via:</p>
-            <ul className="space-y-1 list-disc list-inside ml-4">
-              <li>Email Bot page → "New Template" button</li>
-              <li>Tiga chat: <code className="font-mono bg-[var(--bg-tertiary)] px-1 py-0.5 rounded">"Generate a cold email template for web development"</code></li>
-              <li>API: <code>POST /api/email/template</code></li>
-            </ul>
-          </div>
+      <div className="mt-6">
+        <Card
+          title="Environment template"
+          action={
+            <div className="flex gap-2">
+              <CopyButton text={envTemplate} label="Copy .env.example" />
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => downloadAsFile(envTemplate, '.env.example')}
+                disabled={!envTemplate}
+              >
+                <Download className="size-4" aria-hidden="true" />
+                Download
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm text-[var(--text-secondary)] mb-3">
+            Copy this to <code>tiga/.env</code> and fill in the keys you use. Secret values are never shown here.
+          </p>
+          {envError ? (
+            <Notice title="Couldn't load .env.example">{envError}</Notice>
+          ) : (
+            <pre aria-label="Environment template" className="max-h-80 overflow-auto rounded-lg bg-[var(--bg-tertiary)] p-4 text-xs">
+              {envTemplate || 'Loading…'}
+            </pre>
+          )}
         </Card>
       </div>
     </>
