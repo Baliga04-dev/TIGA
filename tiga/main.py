@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 import brain
 import config
+import learn
 import tts as tts_mod
 import orchestration
 import asyncio
@@ -55,6 +56,13 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Tiga", version="0.2.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.include_router(learn.router)
+
+
+@app.get("/api/features")
+def features() -> dict:
+    """Which optional, private services the UI should show."""
+    return {"learn": config.LEARN_ENABLED}
 
 
 def _origin_allowed(origin: str) -> bool:

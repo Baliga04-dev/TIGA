@@ -41,3 +41,10 @@ PORT = int(os.getenv("PORT", "8000"))
 
 # Extra browser origins allowed to call state-changing API routes (comma separated).
 ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
+# SQLite file for issues, outreach, suppressions and the audit log.
+DB_PATH = resolve_path(os.getenv("TIGA_DB_PATH", "tiga.db"))
+
+# The Learn service is private to you: off unless explicitly enabled in your own .env.
+LEARN_ENABLED = os.getenv("TIGA_LEARN_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+LEARN_DIR = resolve_path(os.getenv("TIGA_LEARN_DIR", "../learn_workspace"))

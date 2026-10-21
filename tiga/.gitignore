@@ -40,3 +40,7 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+# Local bot database (leads, recipients, audit log)
+*.db
+*.db-wal
+*.db-shm
