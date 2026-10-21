@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS outreach (
     parent_id INTEGER, sent_at TEXT NOT NULL DEFAULT '', replied_at TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, report_date TEXT NOT NULL,
+    subject TEXT NOT NULL, body TEXT NOT NULL, recipient TEXT NOT NULL,
+    created_at TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
     action TEXT NOT NULL, entity TEXT NOT NULL, entity_id TEXT NOT NULL,
@@ -195,6 +200,30 @@ class Store:
         unknown = set(fields) - self._OUTREACH_FIELDS
         if unknown:
             raise ValueError(f"unknown outreach field(s): {', '.join(sorted(unknown))}")
+
+    # --- reports ----------------------------------------------------------
+    def save_report(self, kind: str, report_date: str, subject: str, body: str, recipient: str) -> int:
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "INSERT INTO reports (kind, report_date, subject, body, recipient, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (kind, report_date, subject, body, recipient, _now()),
+            )
+            return cur.lastrowid
+
+    def mark_report_sent(self, report_id: int) -> None:
+        with self._lock, self._db:
+            self._db.execute("UPDATE reports SET sent_at = ? WHERE id = ?", (_now(), report_id))
+
+    def list_reports(self, kind: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM reports", ()
+        if kind:
+            sql, args = sql + " WHERE kind = ?", (kind,)
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY id DESC", args)]
+
+    def delete_report(self, report_id: int) -> None:
+        with self._lock, self._db:
+            self._db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
 
     # --- suppressions ---------------------------------------------------
     def suppress(self, address: str, *, reason: str) -> None:
