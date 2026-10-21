@@ -11,6 +11,7 @@ _ISOLATED_ENV = {
     "GITHUB_TOKEN": "",
     "GITHUB_SYNC_INTERVAL_MINUTES": "0",
     "TIGA_ANALYST_TICK_MINUTES": "0",
+    "TIGA_AI_PROVIDER": "off",  # never spend the owner's Claude limits from tests
     "GMAIL_CREDENTIALS_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-credentials.json"),
     "GMAIL_TOKEN_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-token.json"),
     "TIGA_TESTER_CHILD": "1",  # the tester agent must not recursively run this suite

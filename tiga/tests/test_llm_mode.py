@@ -21,6 +21,7 @@ def final(text):
 @pytest.fixture(autouse=True)
 def llm_key(monkeypatch):
     monkeypatch.setattr(config, "OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(config, "AI_PROVIDER", "openai")
     monkeypatch.setattr(config, "OPENAI_BASE_URL", "https://llm.example/v1")
 
 

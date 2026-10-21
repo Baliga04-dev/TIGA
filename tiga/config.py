@@ -64,3 +64,8 @@ OFFER = os.getenv("TIGA_OFFER", "websites and custom software for small business
 ANALYST_TICK_MINUTES = int(os.getenv("TIGA_ANALYST_TICK_MINUTES", "20"))
 ANALYST_DRAFTS_PER_MORNING = int(os.getenv("TIGA_ANALYST_DRAFTS_PER_MORNING", "15"))
 TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")
+
+# Which AI Tiga uses: auto (your Claude subscription via the claude CLI if installed, else an OpenAI-compatible
+# key, else the free built-in rules), claude, openai, or off.
+AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()
+CLAUDE_MODEL = os.getenv("TIGA_CLAUDE_MODEL", "sonnet").strip()

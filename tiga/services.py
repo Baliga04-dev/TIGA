@@ -57,22 +57,22 @@ def get_skills() -> Skills:
 
 
 def llm_complete():
-    """A `complete(system, user) -> str` for the drafter when an OpenAI-compatible key is set, else None."""
-    if not config.OPENAI_API_KEY:
-        return None
+    """The configured AI as `complete(system, user) -> str` (Claude subscription first), or None for rules only."""
+    import ai
 
-    def complete(system: str, user: str) -> str:
-        response = httpx.post(
-            f"{config.OPENAI_BASE_URL}/chat/completions",
-            headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
-            json={"model": config.OPENAI_MODEL, "temperature": 0.4,
-                  "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+    return ai.completer()
 
-    return complete
+
+def openai_complete(system: str, user: str) -> str:
+    response = httpx.post(
+        f"{config.OPENAI_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
+        json={"model": config.OPENAI_MODEL, "temperature": 0.4,
+              "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
 
 
 def write_draft(lead: dict) -> dict:
