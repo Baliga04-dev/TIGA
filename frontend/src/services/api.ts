@@ -127,6 +127,9 @@ export const api = {
 
   createDraft: (data: NewDraft) => post<{ ok: true; draft: OutreachItem }>('/outreach/drafts', data),
 
+  autoDraft: (data: { email: string; lead_title?: string; lead_url?: string; signals?: string[]; company?: string; source_note?: string }) =>
+    post<{ ok: true; draft: OutreachItem }>('/outreach/auto-draft', data),
+
   editDraft: (id: number, changes: { subject?: string; body?: string }) =>
     request<{ ok: true; draft: OutreachItem }>(`/outreach/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
 

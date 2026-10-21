@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, Mail, RefreshCw, Search, Send, X } from 'lucide-react';
+import { Check, Loader2, Mail, RefreshCw, Search, Send, Sparkles, X } from 'lucide-react';
 import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
@@ -94,6 +94,7 @@ export function Outreach() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [topics, setTopics] = useState('startup raises seed, website redesign, hiring web developer');
   const [draft, setDraft] = useState<NewDraft>(EMPTY_DRAFT);
+  const [activeLead, setActiveLead] = useState<FoundLead | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -114,6 +115,16 @@ export function Outreach() {
     await refresh();
     setToast('Draft saved. Review it below, then approve.');
   });
+  const autoWrite = useAction(async () => {
+    await api.autoDraft({
+      email: draft.email, company: draft.company, source_note: draft.source_note, lead_url: draft.lead_url,
+      lead_title: activeLead?.title ?? '', signals: activeLead?.signals ?? [],
+    });
+    setDraft(EMPTY_DRAFT);
+    setActiveLead(null);
+    await refresh();
+    setToast('Draft written. Read it below, edit if you like, then approve.');
+  });
   const send = useAction(async () => {
     const { sent } = await api.sendNext();
     await refresh();
@@ -131,8 +142,9 @@ export function Outreach() {
   });
 
   const startDraftFrom = (lead: FoundLead) => {
+    setActiveLead(lead);
     setDraft({ ...EMPTY_DRAFT, lead_url: lead.url, subject: '', body: '', source_note: `${lead.source}: ${lead.title}` });
-    setToast('Lead copied into the draft form. Add the contact email you found on their own site.');
+    setToast('Lead selected. Add the contact email you found on their own site, then let Tiga write the email.');
   };
 
   const drafts = items.filter((i) => i.status === 'drafted');
@@ -179,7 +191,7 @@ export function Outreach() {
             </ul>
           </Card>
 
-          <Card title="New draft" raised>
+          <Card title="New email" raised>
             <form
               className="space-y-3"
               onSubmit={(e) => { e.preventDefault(); create.run(); }}
@@ -195,11 +207,17 @@ export function Outreach() {
               <Field label="Where you found this address" hint="Kept as your record of the source.">
                 {(id) => <input id={id} className="input" value={draft.source_note} onChange={(e) => setDraft({ ...draft, source_note: e.target.value })} />}
               </Field>
+              <button type="button" className="btn btn-primary" disabled={autoWrite.pending || !draft.email} onClick={() => autoWrite.run()}>
+                {autoWrite.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Sparkles className="size-4" aria-hidden="true" />}
+                Write it for me
+              </button>
+              {autoWrite.error && <Notice>{autoWrite.error}</Notice>}
+              <p className="text-xs text-ink-3">Or write it yourself:</p>
               <Field label="Subject">
-                {(id) => <input id={id} required className="input" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />}
+                {(id) => <input id={id} required={false} className="input" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />}
               </Field>
               <Field label="Message">
-                {(id) => <textarea id={id} required className="input min-h-28" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />}
+                {(id) => <textarea id={id} className="input min-h-28" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />}
               </Field>
               <button className="btn btn-primary" type="submit" disabled={create.pending}>
                 {create.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Mail className="size-4" aria-hidden="true" />}

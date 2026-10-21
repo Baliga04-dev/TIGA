@@ -1,6 +1,8 @@
 """Process-wide singletons (store, mailer) built lazily from config, resettable for tests."""
 import threading
 
+import httpx
+
 import config
 import gmail_service
 from mailer import Mailer
@@ -47,3 +49,22 @@ def reset() -> None:
 
 def get_skills() -> Skills:
     return Skills(config.SKILLS_DIR)
+
+
+def llm_complete():
+    """A `complete(system, user) -> str` for the drafter when an OpenAI-compatible key is set, else None."""
+    if not config.OPENAI_API_KEY:
+        return None
+
+    def complete(system: str, user: str) -> str:
+        response = httpx.post(
+            f"{config.OPENAI_BASE_URL}/chat/completions",
+            headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
+            json={"model": config.OPENAI_MODEL, "temperature": 0.4,
+                  "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+
+    return complete

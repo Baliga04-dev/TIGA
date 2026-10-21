@@ -84,3 +84,25 @@ def test_find_leads_endpoint_returns_ranked_leads(client, http):
 
 def test_find_leads_validates_topics(client):
     assert client.post("/api/leads/find", json={"topics": []}).status_code == 422
+
+
+def test_auto_draft_writes_a_draft_that_still_needs_approval(client, monkeypatch):
+    monkeypatch.setattr(config, "SENDER_NAME", "Jo")
+    out = client.post("/api/outreach/auto-draft", json={
+        "email": "owner@acme.io", "lead_title": "Acme raises seed", "signals": ["funding"], "company": "Acme",
+        "lead_url": "https://n.example/a", "source_note": "Google News: Acme raises seed"}).json()
+    assert out["ok"] and out["draft"]["status"] == "drafted"
+    assert "Acme" in out["draft"]["body"] and out["draft"]["body"].rstrip().endswith("Jo")
+
+
+def test_auto_draft_asks_for_a_sender_name_first(client, monkeypatch):
+    monkeypatch.setattr(config, "SENDER_NAME", "")
+    out = client.post("/api/outreach/auto-draft", json={"email": "owner@acme.io"}).json()
+    assert out["ok"] is False and "TIGA_SENDER_NAME" in out["error"]
+
+
+def test_auto_draft_respects_the_suppression_list(client, monkeypatch):
+    monkeypatch.setattr(config, "SENDER_NAME", "Jo")
+    client.post("/api/suppressions", json={"address": "owner@acme.io"})
+    out = client.post("/api/outreach/auto-draft", json={"email": "owner@acme.io"}).json()
+    assert out["ok"] is False and "suppressed" in out["error"]

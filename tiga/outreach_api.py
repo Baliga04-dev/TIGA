@@ -8,6 +8,8 @@ import asyncio
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
+import config
+import drafter
 import leads
 import services
 from mailer import MailerError
@@ -30,6 +32,16 @@ class DraftIn(_In):
     body: str = Field(min_length=1, max_length=5000)
     company: str = Field(default="", max_length=200)
     lead_url: str = Field(default="", max_length=1000)
+    source_note: str = Field(default="", max_length=300)
+    region: str = Field(default="", max_length=40)
+
+
+class AutoDraftIn(_In):
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    lead_title: str = Field(default="", max_length=300)
+    lead_url: str = Field(default="", max_length=1000)
+    signals: list[str] = Field(default_factory=list, max_length=10)
+    company: str = Field(default="", max_length=200)
     source_note: str = Field(default="", max_length=300)
     region: str = Field(default="", max_length=40)
 
@@ -67,6 +79,21 @@ async def find_leads(body: LeadFindIn) -> dict:
 @router.post("/outreach/drafts")
 def create_draft(body: DraftIn) -> dict:
     return _guard(lambda: {"ok": True, "draft": services.get_mailer().draft(**body.model_dump())})
+
+
+@router.post("/outreach/auto-draft")
+async def auto_draft(body: AutoDraftIn) -> dict:
+    """The bot writes the email; it is saved as a draft that still needs your approval."""
+    if not config.SENDER_NAME:
+        return {"ok": False, "error": "Set TIGA_SENDER_NAME in tiga/.env so drafts can be signed"}
+    lead = {"title": body.lead_title, "signals": body.signals, "company": body.company}
+    text = await asyncio.to_thread(
+        drafter.write_draft, lead, sender_name=config.SENDER_NAME, offer=config.OFFER,
+        complete=services.llm_complete(),
+    )
+    return _guard(lambda: {"ok": True, "draft": services.get_mailer().draft(
+        email=body.email, subject=text["subject"], body=text["body"], company=body.company,
+        lead_url=body.lead_url, source_note=body.source_note, region=body.region)})
 
 
 @router.get("/outreach")
@@ -108,8 +135,6 @@ async def send_next() -> dict:
 
 @router.post("/outreach/check-replies")
 async def check_replies() -> dict:
-    import config
-
     try:
         changed = await asyncio.to_thread(
             services.get_mailer().check_replies, services.fetch_thread, own_address=config.GMAIL_USER_EMAIL

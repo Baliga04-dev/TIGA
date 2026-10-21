@@ -55,3 +55,7 @@ OUTREACH_DAILY_CAP = int(os.getenv("TIGA_OUTREACH_DAILY_CAP", "25"))
 
 # Per-bot instructions (SKILL.md files) that the UI can edit.
 SKILLS_DIR = resolve_path(os.getenv("TIGA_SKILLS_DIR", "skills"))
+
+# Who the drafts are signed by and what they offer (the bot writes the drafts; you approve them).
+SENDER_NAME = os.getenv("TIGA_SENDER_NAME", "").strip()
+OFFER = os.getenv("TIGA_OFFER", "websites and custom software for small businesses").strip()

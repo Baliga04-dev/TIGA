@@ -102,4 +102,23 @@ describe('Outreach', () => {
     renderApp('/outreach')
     expect(await screen.findByRole('alert')).toHaveTextContent('database locked')
   })
+
+  it('lets Tiga write the email for a lead, leaving only approval to you', async () => {
+    load([])
+    mock.post('/leads/find', {
+      ok: true, errors: [],
+      leads: [{ title: 'Acme raises seed', url: 'https://n.example/a', source: 'Google News', published: '', score: 7, signals: ['funding'] }],
+    })
+    const sent = mock.record('/outreach/auto-draft', { ok: true, draft: item() })
+    const user = userEvent.setup()
+    renderApp('/outreach')
+    await user.click(await screen.findByRole('button', { name: /find leads/i }))
+    await user.click(await screen.findByRole('button', { name: /draft email/i }))
+    const write = screen.getByRole('button', { name: /write it for me/i })
+    expect(write).toBeDisabled()
+    await user.type(screen.getByLabelText(/contact email/i), 'owner@acme.io')
+    await user.click(write)
+    await waitFor(() => expect(sent).toHaveLength(1))
+    expect(sent[0]).toMatchObject({ email: 'owner@acme.io', lead_title: 'Acme raises seed', signals: ['funding'] })
+  })
 })
