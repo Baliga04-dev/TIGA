@@ -12,6 +12,7 @@ from typing import Awaitable, Callable
 import config
 import orchestration
 import reports
+import rnd
 import services
 from mailer import Mailer
 from store import Store
@@ -69,7 +70,7 @@ async def run_configured_daily() -> dict:
 
     to = config.ADMIN_REPORT_EMAIL or config.GMAIL_USER_EMAIL
     gmail_ready = bool(to) and Path(config.GMAIL_CREDENTIALS_FILE).exists()
-    return await run_daily(
+    outcome = await run_daily(
         store=services.get_store(),
         mailer=services.get_mailer(),
         fetch_thread=services.fetch_thread,
@@ -80,3 +81,12 @@ async def run_configured_daily() -> dict:
         today=datetime.date.today(),
         own_address=config.GMAIL_USER_EMAIL,
     )
+    if gmail_ready:  # idempotent per ISO week: the first daily run of a week sends the R&D report
+        try:
+            outcome["rnd"] = await asyncio.to_thread(
+                rnd.run_weekly, services.get_store(), services.get_mailer().scorecard(), services.send_email, to,
+                datetime.date.today(),
+            )
+        except Exception as exc:
+            outcome["errors"].append(f"R&D report failed: {exc}")
+    return outcome

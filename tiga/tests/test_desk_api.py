@@ -44,3 +44,21 @@ def test_run_daily_now_reports_why_it_cannot_send(client, monkeypatch):
     monkeypatch.setattr(config, "ADMIN_REPORT_EMAIL", "")
     out = client.post("/api/reports/daily/run").json()
     assert out["ok"] is False and "not configured" in out["error"]
+
+
+def test_skills_can_be_listed_read_and_edited_from_the_ui(client, tmp_path, monkeypatch):
+    (tmp_path / "mailer").mkdir()
+    (tmp_path / "mailer" / "SKILL.md").write_text("---\nname: mailer\n---\nold")
+    monkeypatch.setattr(config, "SKILLS_DIR", str(tmp_path))
+    assert client.get("/api/skills").json()["items"] == ["mailer"]
+    assert client.get("/api/skills/mailer").json()["text"].endswith("old")
+    assert client.put("/api/skills/mailer", json={"text": "new"}).json() == {"ok": True}
+    assert (tmp_path / "mailer" / "SKILL.md").read_text() == "new"
+    assert client.put("/api/skills/ghost", json={"text": "x"}).json()["ok"] is False
+    assert any(e["action"] == "skill.edit" for e in client.get("/api/audit").json()["items"])
+
+
+def test_rnd_run_needs_a_configured_mailbox(client, monkeypatch):
+    monkeypatch.setattr(config, "GMAIL_USER_EMAIL", "")
+    monkeypatch.setattr(config, "ADMIN_REPORT_EMAIL", "")
+    assert client.post("/api/rnd/run").json()["ok"] is False

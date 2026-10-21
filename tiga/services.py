@@ -4,6 +4,7 @@ import threading
 import config
 import gmail_service
 from mailer import Mailer
+from skills import Skills
 from store import Store
 
 _lock = threading.Lock()
@@ -42,3 +43,7 @@ def reset() -> None:
         if _store is not None:
             _store.close()
         _store = _mailer = None
+
+
+def get_skills() -> Skills:
+    return Skills(config.SKILLS_DIR)
