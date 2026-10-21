@@ -41,12 +41,22 @@ class FakeGoogleClient:
         self.messages_by_id = {m["id"]: m for m in messages}
         self.sent = []
         self.list_queries = []
+        self.threads_by_id = {}  # thread id -> list of raw messages
 
     def users(self):
         return self
 
     def messages(self):
         return self
+
+    def threads(self):
+        fake = self
+
+        class _Threads:
+            def get(self, userId, id, format="full"):
+                return _Call(lambda: {"id": id, "messages": fake.threads_by_id.get(id, [])})
+
+        return _Threads()
 
     def list(self, userId, q="", maxResults=50, labelIds=None):
         self.list_queries.append(q)

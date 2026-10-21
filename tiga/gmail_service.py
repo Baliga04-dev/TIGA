@@ -155,6 +155,20 @@ class GmailService:
             print(f"Error fetching emails: {e}")
             return []
 
+    def thread_messages(self, thread_id: str) -> list[dict]:
+        """Every message in a thread as {from, body}, oldest first (used to detect replies)."""
+        self._ensure_authenticated()
+        try:
+            thread = self.service.users().threads().get(userId="me", id=thread_id, format="full").execute()
+        except HttpError as e:
+            print(f"Error getting thread {thread_id}: {e}")
+            return []
+        out = []
+        for msg in thread.get("messages", []):
+            headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            out.append({"from": headers.get("from", ""), "body": self._extract_body(msg.get("payload", {}))})
+        return out
+
     def _get_message_details(self, message_id: str) -> dict | None:
         """Get full message details including body."""
         try:

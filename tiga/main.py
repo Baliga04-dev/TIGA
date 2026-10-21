@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import brain
 import config
 import learn
+import outreach_api
 import tts as tts_mod
 import orchestration
 import asyncio
@@ -57,6 +58,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Tiga", version="0.2.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(learn.router)
+app.include_router(outreach_api.router)
 
 
 @app.get("/api/features")

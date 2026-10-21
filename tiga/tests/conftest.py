@@ -22,6 +22,18 @@ from fastapi.testclient import TestClient
 import main
 
 
+@pytest.fixture(autouse=True)
+def fresh_services(tmp_path, monkeypatch):
+    """Every test gets its own empty database and no leftover store/mailer."""
+    import config
+    import services
+
+    monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "tiga-test.db"))
+    services.reset()
+    yield
+    services.reset()
+
+
 @pytest.fixture
 def client():
     return TestClient(main.app)

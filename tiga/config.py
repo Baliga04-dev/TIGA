@@ -48,3 +48,7 @@ DB_PATH = resolve_path(os.getenv("TIGA_DB_PATH", "tiga.db"))
 # The Learn service is private to you: off unless explicitly enabled in your own .env.
 LEARN_ENABLED = os.getenv("TIGA_LEARN_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
 LEARN_DIR = resolve_path(os.getenv("TIGA_LEARN_DIR", "../learn_workspace"))
+
+# Cold-email compliance and pacing (CAN-SPAM needs a real postal address in every mail).
+POSTAL_ADDRESS = os.getenv("TIGA_POSTAL_ADDRESS", "").strip()
+OUTREACH_DAILY_CAP = int(os.getenv("TIGA_OUTREACH_DAILY_CAP", "25"))
