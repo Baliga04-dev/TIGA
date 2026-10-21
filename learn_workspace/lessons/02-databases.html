@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>02 Databases from the ground up</title><style>
+:root{--bg:#fbfaf6;--ink:#1d2a24;--mute:#55635b;--rule:#d9d6c8;--acc:#1f5f4a;--code:#f0eee4}
+@media (prefers-color-scheme:dark){:root{--bg:#161b18;--ink:#e8ece9;--mute:#9fb0a7;--rule:#2e3a34;--acc:#7cc5a8;--code:#202823}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1{font-size:2rem;line-height:1.2}h2{margin-top:2.2rem;border-bottom:1px solid var(--rule);padding-bottom:.3rem}
+code,pre{font-family:ui-monospace,Menlo,monospace;font-size:.88rem;background:var(--code);border-radius:4px}
+code{padding:.1rem .3rem}pre{padding:.8rem 1rem;overflow:auto}
+.note{border-left:4px solid var(--acc);padding:.2rem 1rem;background:var(--code)}
+.q{border:1px solid var(--rule);border-radius:6px;padding:.6rem 1rem;margin:.8rem 0}
+ol li,ul li{margin:.3rem 0}.mute{color:var(--mute)}
+</style></head><body><main>
+<p class="mute">Lesson 2 of 12 · Data · about 60 minutes</p>
+<h1>Databases from the ground up, using <code>tiga/store.py</code></h1>
+<p>Tiga remembers leads, drafts, suppressions, issues and reports in one SQLite file. This lesson walks the data model from first principles and shows why each design choice exists.</p>
+
+<h2>1. What a database is for</h2>
+<p>Memory vanishes on restart and files do not protect you from two writers at once. A database gives you <b>durability</b> (data survives crashes), <b>concurrency control</b> (writers do not corrupt each other) and <b>queries</b> (ask questions without scanning by hand). SQLite is a full relational database in a single file with no server, which is perfect for one user and a good way to learn the model.</p>
+
+<h2>2. Tables, rows, keys</h2>
+<pre>CREATE TABLE issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  dedupe_key TEXT NOT NULL UNIQUE,
+  occurrences INTEGER NOT NULL DEFAULT 1 );</pre>
+<ul><li><b>Primary key</b>: identifies a row. <code>id</code> here.</li>
+<li><b>NOT NULL / DEFAULT</b>: the database refuses bad data, so code does not have to re-check everywhere.</li>
+<li><b>UNIQUE</b>: <code>dedupe_key</code> means the same bug cannot be filed twice. The rule lives in one place and holds even if two requests race.</li></ul>
+
+<h2>3. Constraints beat "check in code first"</h2>
+<p>A common beginner pattern is <code>if not exists: insert</code>. With two concurrent callers both see "not exists" and both insert. A <code>UNIQUE</code> constraint makes the database decide atomically. Look at <code>claim_job</code>:</p>
+<pre>INSERT OR IGNORE INTO job_runs (job_name, run_date, claimed_at) VALUES (?, ?, ?)
+-- rowcount == 1  -> you got the claim
+-- rowcount == 0  -> someone already has it</pre>
+<p>That one statement is why a restart or double fire cannot send two daily reports. It is the <b>idempotency</b> pattern: do the claim first, then the work; release the claim if the work fails so it can be retried.</p>
+
+<h2>4. Transactions and ACID</h2>
+<p>A transaction groups statements so they all happen or none do. ACID: <b>Atomic</b> (all or nothing), <b>Consistent</b> (constraints hold), <b>Isolated</b> (concurrent transactions do not see each other's half-done work), <b>Durable</b> (committed means on disk). In <code>store.py</code> every write uses <code>with self._db:</code>, which commits on success and rolls back on an exception. <code>transition_issue</code> reads the status, checks the allowed move, updates and writes the audit row inside one transaction, so the audit log can never disagree with the data.</p>
+
+<h2>5. State machines in data</h2>
+<p><code>ISSUE_FLOW</code> is a dictionary of allowed moves (open to triaged to approved and so on). Putting the only status-changing function in the store gives <b>locality</b>: every rule about statuses lives in one place, so a bug cannot hide in some route handler. The test <code>test_dev_cannot_start_before_user_approval</code> pins the rule that matters most.</p>
+
+<h2>6. Indexes</h2>
+<p>An index is a sorted side-structure (a B-tree) that lets the database find rows without scanning the whole table. Primary keys and UNIQUE columns get one automatically. Add an index when a query filters or sorts on a column and the table is large; every index slows writes and uses space. For <code>outreach</code>, searching by <code>email</code> and <code>status</code> would justify one once there are tens of thousands of rows. Use <code>EXPLAIN QUERY PLAN SELECT ...</code> to see whether the database scans or searches.</p>
+
+<h2>7. Concurrency in SQLite: WAL</h2>
+<p>By default a writer blocks readers. <b>Write-ahead logging</b> (<code>PRAGMA journal_mode=WAL</code>) appends changes to a log, so readers keep reading the last committed state while one writer writes. It is still one writer at a time, which is a real limit: it is why a multi-user hosted Tiga would move to PostgreSQL, which adds row-level locking and many concurrent writers.</p>
+
+<h2>8. SQL injection and parameters</h2>
+<p>Notice <code>VALUES (?, ?, ?)</code> everywhere. Values are passed separately from the SQL text, so a recipient named <code>x'); DROP TABLE outreach;--</code> is just a string. Column names cannot be parameters, which is why <code>update_outreach</code> checks field names against a whitelist before building the statement.</p>
+
+<h2>9. Normalisation and trade-offs</h2>
+<p>Normalising means storing each fact once. We keep <code>company</code> inside each <code>outreach</code> row, which is mildly denormalised: simple, and fine at this size, but if the same company had many contacts you would add a <code>companies</code> table and a foreign key. Knowing when to denormalise, and saying why, is a senior-level answer.</p>
+
+<h2>Try it yourself</h2>
+<div class="q"><b>Exercise 1.</b> Open a Python shell in <code>tiga/</code>: <code>from store import Store; s = Store(':memory:')</code>. Call <code>s.claim_job('x','d')</code> twice. Then explain, using the SQL, why the second returns False.</div>
+<div class="q"><b>Exercise 2.</b> Run <code>sqlite3 tiga/tiga.db '.schema'</code> after using the app. List every UNIQUE constraint and say what bug each one prevents.</div>
+<div class="q"><b>Exercise 3.</b> Add an index on <code>outreach(status)</code>, insert 100,000 rows with a script, and compare <code>EXPLAIN QUERY PLAN</code> before and after.</div>
+<div class="q"><b>Exercise 4 (interview).</b> Design the schema for a multi-user version of Tiga (users, leads, outreach, suppressions). Where do you put <code>user_id</code>? What is unique per user versus globally? How do you make sure one user's unsubscribe list never leaks into another's?</div>
+<div class="q"><b>Exercise 5 (interview).</b> Two workers both try to send the same approved email at the same time. Walk through how you would prevent a double send with a status column and a conditional <code>UPDATE ... WHERE status = 'approved'</code>.</div>
+</main></body></html>

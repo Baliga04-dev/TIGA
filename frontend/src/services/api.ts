@@ -171,6 +171,12 @@ export const api = {
 
   runRnd: () => post<{ ok: true; proposals?: number; skipped?: string }>('/rnd/run'),
 
+  getFeatures: () => request<{ learn: boolean }>('/features'),
+
+  listLessons: () => request<{ lessons: { name: string; title: string }[] }>('/learn/lessons'),
+
+  getMission: () => request<{ text: string }>('/learn/mission'),
+
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 
   async getEnvExample(): Promise<string> {

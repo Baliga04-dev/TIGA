@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { api } from '../services/api';
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -17,6 +18,12 @@ const navigation = [
 
 function Header() {
   const [open, setOpen] = useState(false);
+  const [learn, setLearn] = useState(false);
+  // The Learn tab exists only when the owner enabled it; any failure leaves it hidden.
+  useEffect(() => {
+    api.getFeatures().then((f) => setLearn(f.learn)).catch(() => setLearn(false));
+  }, []);
+  const items = learn ? [...navigation, { name: 'Learn', href: '/learn' }] : navigation;
 
   return (
     <header className="border-b border-rule bg-wash">
@@ -40,7 +47,7 @@ function Header() {
           aria-label="Main"
           className={cn('w-full flex-col gap-1 pb-3 md:flex md:w-auto md:flex-1 md:flex-row md:gap-1 md:pb-0', open ? 'flex' : 'hidden')}
         >
-          {navigation.map((item) => (
+          {items.map((item) => (
             <NavLink
               key={item.href}
               to={item.href}

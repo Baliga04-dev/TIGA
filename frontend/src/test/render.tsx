@@ -6,6 +6,7 @@ import { statusOk, summaryOk } from './fixtures'
 
 /** Answer the calls every page makes on mount, so a test only overrides what it cares about. */
 export function mockMountCalls() {
+  mock.get('/features', { learn: false })
   mock.get('/status', statusOk as never)
   mock.post('/email/summary', summaryOk as never)
   mock.post('/email/fetch', { ok: true, source: 'live', emails: [], count: 0, ms: 1 })

@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>01 The network path</title><style>
+:root{--bg:#fbfaf6;--ink:#1d2a24;--mute:#55635b;--rule:#d9d6c8;--acc:#1f5f4a;--code:#f0eee4}
+@media (prefers-color-scheme:dark){:root{--bg:#161b18;--ink:#e8ece9;--mute:#9fb0a7;--rule:#2e3a34;--acc:#7cc5a8;--code:#202823}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Georgia,serif}
+main{max-width:46rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1{font-size:2rem;line-height:1.2}h2{margin-top:2.2rem;border-bottom:1px solid var(--rule);padding-bottom:.3rem}
+code,pre{font-family:ui-monospace,Menlo,monospace;font-size:.88rem;background:var(--code);border-radius:4px}
+code{padding:.1rem .3rem}pre{padding:.8rem 1rem;overflow:auto}
+.note{border-left:4px solid var(--acc);padding:.2rem 1rem;background:var(--code)}
+.q{border:1px solid var(--rule);border-radius:6px;padding:.6rem 1rem;margin:.8rem 0}
+ol li,ul li{margin:.3rem 0}.mute{color:var(--mute)}
+</style></head><body><main>
+<p class="mute">Lesson 1 of 12 · Networking · about 45 minutes</p>
+<h1>The network path: what happens when you click "Send next"</h1>
+<p>On the Outreach page you click <em>Send next</em>. Eventually an email leaves your Gmail account. Between those two moments, a request crosses six layers. If you can narrate each one and say how it fails, you can answer the classic interview question "what happens when you type a URL and press Enter" with real depth.</p>
+
+<h2>1. The request leaves the browser</h2>
+<p>The page calls <code>fetch('/api/outreach/send-next', {method:'POST'})</code> (see <code>frontend/src/services/api.ts</code>). The path is relative, so the browser sends it to the page's own origin: <code>http://localhost:3000</code> in development.</p>
+<div class="note">An <b>origin</b> is scheme + host + port. The browser's same-origin policy lets a page read responses only from its own origin. That is why origins matter for everything below.</div>
+
+<h2>2. DNS: names to addresses</h2>
+<p>The browser needs an IP address for <code>localhost</code>. It checks its cache, then the OS (<code>/etc/hosts</code> maps <code>localhost</code> to <code>127.0.0.1</code> and <code>::1</code>), and for real sites asks a recursive resolver, which walks root, <code>.com</code> and the site's authoritative servers. Answers carry a TTL so they can be cached.</p>
+<ul><li>Failure mode: stale cache after a server move; a resolver that is down looks like "site down".</li>
+<li>Where it shows up here: <code>tiga/config.py</code> defaults <code>HOST</code> to <code>127.0.0.1</code>, not <code>0.0.0.0</code>, so only your machine can reach the API.</li></ul>
+
+<h2>3. TCP: a reliable connection</h2>
+<p>TCP builds a connection with a three-way handshake: <code>SYN</code>, <code>SYN-ACK</code>, <code>ACK</code>. It then numbers bytes, retransmits losses, and slows down when the network is congested. The cost is one round trip before any data flows, which is why browsers reuse connections (keep-alive) and why HTTP/3 moved to QUIC over UDP.</p>
+<ul><li>A <b>port</b> picks the program on the host: 3000 (Vite), 8000 (FastAPI).</li>
+<li>Failure modes: <code>connection refused</code> (nothing listening, your API is not running), timeouts (packets dropped), resets.</li></ul>
+
+<h2>4. TLS: privacy and identity (in production)</h2>
+<p>Locally we use plain HTTP. On a real host, TLS runs after TCP: the server presents a certificate proving it owns the name, both sides agree on keys, and everything after is encrypted and tamper-evident. It is why a logged-in session cookie can safely cross a coffee-shop network.</p>
+<ul><li>Failure modes: expired certificate, name mismatch, clock skew.</li></ul>
+
+<h2>5. HTTP: the conversation</h2>
+<pre>POST /api/outreach/send-next HTTP/1.1
+Host: localhost:3000
+Origin: http://localhost:3000
+Content-Type: application/json</pre>
+<p>A method (<code>POST</code> means "do something"), a path, headers, an optional body; the response has a status code (<code>200</code>, <code>403</code>, <code>422</code>, <code>500</code>), headers and a body. Idempotent methods (GET, PUT, DELETE) can be safely retried; POST cannot, which is exactly why Tiga's daily report uses a database claim to stay at-most-once (lesson 2).</p>
+
+<h2>6. The Vite proxy, then FastAPI</h2>
+<p>Port 3000 is the Vite dev server. It serves the React app and <b>proxies</b> <code>/api/*</code> to <code>127.0.0.1:8000</code> (see <code>frontend/vite.config.ts</code>). A reverse proxy is the same idea you will meet in production as nginx, a load balancer or a CDN: one public entrance, many private services behind it.</p>
+<p>FastAPI (running on uvicorn, an ASGI server) matches the path to <code>send_next</code> in <code>tiga/outreach_api.py</code>. Before that, a middleware in <code>main.py</code> checks the <code>Origin</code> header on every state-changing request.</p>
+
+<h2>7. CORS and CSRF: two different problems</h2>
+<ul>
+<li><b>CORS</b> relaxes the same-origin policy: the <em>server</em> tells the browser which other origins may <em>read</em> its responses. It protects reads.</li>
+<li><b>CSRF</b> is a malicious page making your browser <em>send</em> a state-changing request to a site where you are logged in. CORS does not stop the request from being sent. Tiga's <code>refuse_cross_site_writes</code> rejects any write whose <code>Origin</code> is not local or explicitly allowed (<code>ALLOWED_ORIGINS</code>).</li></ul>
+<div class="note">Interview trap: "we have CORS so we're safe from CSRF" is wrong. Say why.</div>
+
+<h2>8. Out to Gmail</h2>
+<p>The handler runs <code>mailer.send_next</code> in a worker thread (<code>asyncio.to_thread</code>) because the Google client library blocks. That thread makes its own outbound HTTPS call to <code>gmail.googleapis.com</code>: DNS, TCP, TLS, HTTP again, authenticated with an OAuth access token. Gmail then delivers by SMTP between mail servers, where SPF, DKIM and DMARC decide whether the receiver trusts it (lesson 9).</p>
+
+<h2>Where each step can fail</h2>
+<table border="1" cellpadding="6" style="border-collapse:collapse;border-color:var(--rule)">
+<tr><th>Layer</th><th>Symptom</th><th>Where to look</th></tr>
+<tr><td>DNS</td><td>name not found</td><td><code>dig</code>, resolver</td></tr>
+<tr><td>TCP</td><td>refused / timeout</td><td>is the API running? <code>ss -ltnp</code></td></tr>
+<tr><td>TLS</td><td>certificate error</td><td>cert expiry, hostname</td></tr>
+<tr><td>HTTP</td><td>4xx / 5xx</td><td>status code, response body</td></tr>
+<tr><td>App</td><td><code>ok:false</code> with an error</td><td>Tiga's error convention in <code>CLAUDE.md</code></td></tr>
+<tr><td>Gmail</td><td><code>invalid_grant</code>, quota</td><td>token expiry, daily limits</td></tr></table>
+
+<h2>Try it yourself</h2>
+<div class="q"><b>Exercise 1.</b> Run <code>./start_dev.sh</code>. In another terminal run <code>curl -i -X POST http://127.0.0.1:8000/api/outreach/send-next</code>. Then repeat with <code>-H 'Origin: https://evil.example'</code>. What changes, and which line of code caused it?</div>
+<div class="q"><b>Exercise 2.</b> Use <code>ss -ltnp</code> to find which ports Tiga listens on, then stop the API and click a button in the UI. Which error do you see, at which layer?</div>
+<div class="q"><b>Exercise 3 (interview).</b> Explain, in two minutes and without notes, what happens from pressing Enter on <code>https://example.com</code> to the page rendering. Mention DNS, TCP, TLS, HTTP and what can be cached at each step.</div>
+<div class="q"><b>Exercise 4 (design).</b> Tiga is now used by 10,000 people. Where does a load balancer go? What must change about sessions, and what must become shared state?</div>
+</main></body></html>
