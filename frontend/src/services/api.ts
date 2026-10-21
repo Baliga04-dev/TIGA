@@ -23,6 +23,8 @@ import type {
   Issue,
   AuditEntry,
   Interview,
+  Prospect,
+  AnalystStatus,
 } from '../types';
 
 const API_BASE = '/api';
@@ -179,6 +181,19 @@ export const api = {
   listLessons: () => request<{ lessons: { name: string; title: string }[] }>('/learn/lessons'),
 
   getMission: () => request<{ text: string }>('/learn/mission'),
+
+  listProspects: (status = '') =>
+    request<{ ok: true; items: Prospect[]; counts: Record<string, number> }>(`/prospects${status ? `?status=${status}` : ''}`),
+
+  addProspectEmail: (id: number, email: string) =>
+    post<{ ok: true; draft: OutreachItem }>(`/prospects/${id}/contact`, { email }),
+
+  skipProspect: (id: number) => post<{ ok: true }>(`/prospects/${id}/skip`),
+
+  getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),
+
+  runAnalyst: (phase: 'collect' | 'write') =>
+    post<{ ok: true; result: { phase: string; drafted?: number; new?: number; checked?: number; errors: string[] } }>('/analyst/run', { phase }),
 
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 

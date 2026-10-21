@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 const PAGES = [
   { path: '/', heading: 'Dashboard' },
   { path: '/email', heading: 'Email Bot' },
+  { path: '/prospects', heading: 'Prospects' },
   { path: '/outreach', heading: 'Outreach' },
   { path: '/reports', heading: 'Reports' },
   { path: '/crew', heading: 'Crew' },

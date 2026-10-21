@@ -8,6 +8,7 @@ import { useTheme } from '../hooks/useTheme';
 const navigation = [
   { name: 'Dashboard', href: '/' },
   { name: 'Email Bot', href: '/email' },
+  { name: 'Prospects', href: '/prospects' },
   { name: 'Outreach', href: '/outreach' },
   { name: 'Reports', href: '/reports' },
   { name: 'Crew', href: '/crew' },

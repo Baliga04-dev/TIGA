@@ -313,3 +313,30 @@ export interface Interview {
   status: 'asking' | 'ready';
   question: { slot: string; text: string } | null;
 }
+
+export interface Prospect {
+  id: number;
+  source: 'osm' | 'news';
+  name: string;
+  category: string;
+  website: string;
+  email: string;
+  email_source: string;
+  phone: string;
+  address: string;
+  link: string;
+  title: string;
+  signals: string[];
+  problems: string[];
+  score: number;
+  status: string;
+  note: string;
+}
+
+export interface AnalystStatus {
+  ok: true;
+  counts: Record<string, number>;
+  last: { phase: string; at: string; drafted?: number; new?: number; checked?: number; category?: string; errors: string[] } | null;
+  schedule: string;
+  enabled: boolean;
+}
