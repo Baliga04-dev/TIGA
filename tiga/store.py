@@ -35,6 +35,17 @@ CREATE TABLE IF NOT EXISTS issues (
 CREATE TABLE IF NOT EXISTS suppressions (
     address TEXT PRIMARY KEY, reason TEXT NOT NULL, added_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS outreach (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL, company TEXT NOT NULL DEFAULT '', lead_url TEXT NOT NULL DEFAULT '',
+    source_note TEXT NOT NULL DEFAULT '', region TEXT NOT NULL DEFAULT '',
+    subject TEXT NOT NULL, body TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'drafted', warnings TEXT NOT NULL DEFAULT '',
+    last_error TEXT NOT NULL DEFAULT '', message_id TEXT NOT NULL DEFAULT '',
+    thread_id TEXT NOT NULL DEFAULT '', followup_n INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER, sent_at TEXT NOT NULL DEFAULT '', replied_at TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
     action TEXT NOT NULL, entity TEXT NOT NULL, entity_id TEXT NOT NULL,
@@ -131,6 +142,59 @@ class Store:
             sql, args = sql + " WHERE status = ?", (status,)
         with self._lock:
             return [dict(r) for r in self._db.execute(sql + " ORDER BY id", args)]
+
+    # --- outreach -------------------------------------------------------
+    _OUTREACH_FIELDS = {
+        "company", "lead_url", "source_note", "region", "subject", "body", "status", "warnings",
+        "last_error", "message_id", "thread_id", "followup_n", "parent_id", "sent_at", "replied_at",
+    }
+
+    def add_outreach(self, email: str, subject: str, body: str, **fields) -> dict:
+        self._check_outreach_fields(fields)
+        columns = ["email", "subject", "body", "created_at", "updated_at", *fields]
+        values = [email.strip().lower(), subject, body, _now(), _now(), *fields.values()]
+        with self._lock, self._db:
+            cur = self._db.execute(
+                f"INSERT INTO outreach ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})", values
+            )
+            self._write_audit("system", "outreach.add", "outreach", str(cur.lastrowid), email)
+            return self.get_outreach(cur.lastrowid)
+
+    def update_outreach(self, outreach_id: int, *, actor: str = "system", **fields) -> dict:
+        self._check_outreach_fields(fields)
+        assignments = ", ".join(f"{name} = ?" for name in [*fields, "updated_at"])
+        with self._lock, self._db:
+            cur = self._db.execute(
+                f"UPDATE outreach SET {assignments} WHERE id = ?", [*fields.values(), _now(), outreach_id]
+            )
+            if cur.rowcount == 0:
+                raise KeyError(f"no outreach {outreach_id}")
+            if "status" in fields:
+                self._write_audit(actor, "outreach.status", "outreach", str(outreach_id), fields["status"])
+        return self.get_outreach(outreach_id)
+
+    def get_outreach(self, outreach_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM outreach WHERE id = ?", (outreach_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no outreach {outreach_id}")
+        return dict(row)
+
+    def list_outreach(self, *statuses: str, email: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM outreach WHERE 1=1", []
+        if statuses:
+            sql += f" AND status IN ({', '.join('?' * len(statuses))})"
+            args += statuses
+        if email:
+            sql += " AND email = ?"
+            args.append(email.strip().lower())
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY id", args)]
+
+    def _check_outreach_fields(self, fields: dict) -> None:
+        unknown = set(fields) - self._OUTREACH_FIELDS
+        if unknown:
+            raise ValueError(f"unknown outreach field(s): {', '.join(sorted(unknown))}")
 
     # --- suppressions ---------------------------------------------------
     def suppress(self, address: str, *, reason: str) -> None:
