@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Outreach', href: '/outreach' },
   { name: 'Reports', href: '/reports' },
   { name: 'Crew', href: '/crew' },
+  { name: 'Prompts', href: '/prompts' },
   { name: 'Tiga Chat', href: '/chat' },
   { name: 'Agents', href: '/agents' },
   { name: 'Settings', href: '/settings' },

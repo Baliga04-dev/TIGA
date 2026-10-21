@@ -22,6 +22,7 @@ import type {
   ReportPreview,
   Issue,
   AuditEntry,
+  Interview,
 } from '../types';
 
 const API_BASE = '/api';
@@ -153,6 +154,13 @@ export const api = {
     post<{ ok: true; issue: Issue }>(`/issues/${id}/transition`, { status }),
 
   getAudit: () => request<{ ok: true; items: AuditEntry[] }>('/audit'),
+
+  startInterview: (idea: string) => post<{ ok: true; interview: Interview }>('/interviews', { idea }),
+
+  answerInterview: (id: string, text: string) =>
+    post<{ ok: true; interview: Interview }>(`/interviews/${id}/answer`, { text }),
+
+  generateInterviewPrompt: (id: string) => post<{ ok: true; prompt: string }>(`/interviews/${id}/generate`),
 
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 

@@ -6,6 +6,7 @@ const PAGES = [
   { path: '/outreach', heading: 'Outreach' },
   { path: '/reports', heading: 'Reports' },
   { path: '/crew', heading: 'Crew' },
+  { path: '/prompts', heading: 'Prompt Studio' },
   { path: '/chat', heading: 'Tiga Chat' },
   { path: '/agents', heading: 'Tiga Agents' },
   { path: '/settings', heading: 'Settings' },

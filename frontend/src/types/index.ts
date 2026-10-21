@@ -304,3 +304,11 @@ export interface AuditEntry {
   entity_id: string;
   detail: string;
 }
+
+export interface Interview {
+  id: string;
+  slots: Record<string, string>;
+  asked: string[];
+  status: 'asking' | 'ready';
+  question: { slot: string; text: string } | null;
+}
