@@ -264,3 +264,43 @@ export interface Scorecard {
   daily_cap: number;
   pipeline: Record<string, number>;
 }
+
+export interface ReportRow {
+  id: number;
+  kind: string;
+  report_date: string;
+  subject: string;
+  body: string;
+  recipient: string;
+  sent_at: string;
+}
+
+export interface ReportPreview {
+  ok: true;
+  status: 'red' | 'amber' | 'green';
+  subject: string;
+  body: string;
+  date: string;
+}
+
+export interface Issue {
+  id: number;
+  kind: 'bug' | 'improvement';
+  title: string;
+  body: string;
+  status: string;
+  severity: string;
+  source: string;
+  occurrences: number;
+  updated_at: string;
+}
+
+export interface AuditEntry {
+  id: number;
+  ts: string;
+  actor: string;
+  action: string;
+  entity: string;
+  entity_id: string;
+  detail: string;
+}

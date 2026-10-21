@@ -18,6 +18,10 @@ import type {
   OutreachItem,
   NewDraft,
   Scorecard,
+  ReportRow,
+  ReportPreview,
+  Issue,
+  AuditEntry,
 } from '../types';
 
 const API_BASE = '/api';
@@ -136,6 +140,19 @@ export const api = {
   draftFollowups: () => post<{ ok: true; drafts: OutreachItem[] }>('/outreach/followups'),
 
   getScorecard: () => request<{ ok: true; scorecard: Scorecard }>('/outreach/scorecard'),
+
+  listReports: () => request<{ ok: true; items: ReportRow[] }>('/reports'),
+
+  previewReport: () => request<ReportPreview>('/reports/preview'),
+
+  runDailyNow: () => post<{ ok: true }>('/reports/daily/run'),
+
+  listIssues: () => request<{ ok: true; items: Issue[] }>('/issues'),
+
+  transitionIssue: (id: number, status: string) =>
+    post<{ ok: true; issue: Issue }>(`/issues/${id}/transition`, { status }),
+
+  getAudit: () => request<{ ok: true; items: AuditEntry[] }>('/audit'),
 
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 

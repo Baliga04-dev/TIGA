@@ -16,7 +16,7 @@ describe('app shell', () => {
     renderApp('/')
     const nav = await screen.findByRole('navigation')
     const names = within(nav).getAllByRole('link').map((a) => a.textContent)
-    expect(names).toEqual(['Dashboard', 'Email Bot', 'Outreach', 'Tiga Chat', 'Agents', 'Settings'])
+    expect(names).toEqual(['Dashboard', 'Email Bot', 'Outreach', 'Reports', 'Crew', 'Tiga Chat', 'Agents', 'Settings'])
   })
 
   it('marks the current page in the navigation', async () => {

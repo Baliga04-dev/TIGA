@@ -7,6 +7,8 @@ import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { Outreach } from './pages/Outreach';
+import { Reports } from './pages/Reports';
+import { Crew } from './pages/Crew';
 
 function NotFound() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/email" element={<EmailBot />} />
         <Route path="/outreach" element={<Outreach />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/crew" element={<Crew />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />
