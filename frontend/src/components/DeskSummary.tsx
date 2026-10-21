@@ -33,7 +33,7 @@ export function DeskSummary() {
         {report ? (
           <>
             <p className="font-medium">{report.subject}</p>
-            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-sm text-ink-2">{report.body}</pre>
+            <pre tabIndex={0} aria-label="Latest report text" className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-sm text-ink-2">{report.body}</pre>
             <Link to="/reports" className="mt-2 inline-block text-sm text-pen underline">All reports</Link>
           </>
         ) : (

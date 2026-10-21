@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/tiga-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply the saved theme before first paint so the page never flashes the wrong colours.
+      try { var t = localStorage.getItem('tiga-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
     <title>Tiga - AI Assistant & Email Bot</title>
   </head>
   <body>

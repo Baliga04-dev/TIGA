@@ -7,6 +7,7 @@ export default {
     extend: {
       colors: {
         paper: token('paper'),
+        'on-accent': token('on-accent'),
         sheet: token('sheet'),
         wash: token('wash'),
         rule: token('rule'),

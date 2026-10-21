@@ -210,7 +210,7 @@ export function Toast({ message, onDone }: { message: string; onDone: () => void
   return (
     <div
       role="status"
-      className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-lg bg-ledger px-4 py-3 text-sm font-medium text-white shadow-lg"
+      className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-lg bg-ledger px-4 py-3 text-sm font-medium text-on-accent shadow-lg"
     >
       <Check className="size-4" aria-hidden="true" />
       {message}

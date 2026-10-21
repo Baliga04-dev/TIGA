@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../services/api';
+import { useTheme } from '../hooks/useTheme';
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -16,9 +17,19 @@ const navigation = [
   { name: 'Settings', href: '/settings' },
 ];
 
+function ThemeButton({ theme, toggle, className }: { theme: 'light' | 'dark'; toggle: () => void; className?: string }) {
+  const next = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button type="button" className={cn('btn btn-ghost p-2', className)} onClick={toggle} aria-label={`Switch to ${next} theme`} title={`Switch to ${next} theme`}>
+      {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+    </button>
+  );
+}
+
 function Header() {
   const [open, setOpen] = useState(false);
   const [learn, setLearn] = useState(false);
+  const { theme, toggle } = useTheme();
   // The Learn tab exists only when the owner enabled it; any failure leaves it hidden.
   useEffect(() => {
     api.getFeatures().then((f) => setLearn(f.learn)).catch(() => setLearn(false));
@@ -30,6 +41,7 @@ function Header() {
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-x-6 px-5 pt-4 sm:px-8">
         <div className="flex w-full items-center justify-between pb-3 md:w-auto md:pb-0 md:pr-4">
           <span className="font-serif text-2xl font-semibold tracking-tight">Tiga</span>
+          <ThemeButton theme={theme} toggle={toggle} className="ml-auto mr-1 md:hidden" />
           <button
             type="button"
             className="btn btn-ghost p-2 md:hidden"
@@ -66,6 +78,7 @@ function Header() {
             </NavLink>
           ))}
         </nav>
+        <ThemeButton theme={theme} toggle={toggle} className="mb-2 hidden md:inline-flex" />
       </div>
     </header>
   );

@@ -109,7 +109,7 @@ export function Chat() {
                         'inline-block px-4 py-2 rounded-2xl text-left',
                         msg.role === 'assistant'
                           ? 'border border-rule bg-sheet font-serif text-[1.0625rem] text-ink'
-                          : 'bg-pen text-white',
+                          : 'bg-pen text-on-accent',
                       )}
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>

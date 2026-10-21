@@ -38,3 +38,17 @@ describe('app shell', () => {
     expect(screen.getByRole('link', { name: /back to dashboard/i })).toHaveAttribute('href', '/')
   })
 })
+
+describe('theme', () => {
+  it('toggles dark mode, remembers it, and can switch back', async () => {
+    const user = userEvent.setup()
+    localStorage.removeItem('tiga-theme')
+    renderApp('/')
+    const toDark = (await screen.findAllByRole('button', { name: /switch to dark theme/i }))[0]
+    await user.click(toDark)
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(localStorage.getItem('tiga-theme')).toBe('dark')
+    await user.click(screen.getAllByRole('button', { name: /switch to light theme/i })[0])
+    expect(document.documentElement.dataset.theme).toBe('light')
+  })
+})

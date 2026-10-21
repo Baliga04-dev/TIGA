@@ -49,6 +49,42 @@
   --ledger: 31 107 71;    /* #1F6B47 positive */
   --flag: 168 50 42;      /* #A8322A negative */
   --mark: 244 217 91;     /* #F4D95B highlighter: what to do next */
+  --on-accent: 255 255 255;
+  color-scheme: light;
+}
+
+/* Night ledger: same roles, lifted for a dark page. System preference unless the toggle chose one. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: 17 23 20;      /* #111714 */
+    --sheet: 26 34 30;      /* #1A221E */
+    --wash: 34 44 39;       /* #222C27 */
+    --rule: 56 70 63;       /* #38463F */
+    --ink: 230 235 231;     /* #E6EBE7 */
+    --ink-2: 176 189 181;   /* #B0BDB5 */
+    --ink-3: 150 164 156;   /* #96A49C */
+    --pen: 143 178 240;     /* #8FB2F0 */
+    --ledger: 110 196 150;  /* #6EC496 */
+    --flag: 240 128 116;    /* #F08074 */
+    --mark: 122 104 22;     /* #7A6816 */
+    --on-accent: 13 20 17;  /* text on pen/ledger/flag fills */
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: 17 23 20;      /* #111714 */
+  --sheet: 26 34 30;      /* #1A221E */
+  --wash: 34 44 39;       /* #222C27 */
+  --rule: 56 70 63;       /* #38463F */
+  --ink: 230 235 231;     /* #E6EBE7 */
+  --ink-2: 176 189 181;   /* #B0BDB5 */
+  --ink-3: 150 164 156;   /* #96A49C */
+  --pen: 143 178 240;     /* #8FB2F0 */
+  --ledger: 110 196 150;  /* #6EC496 */
+  --flag: 240 128 116;    /* #F08074 */
+  --mark: 122 104 22;     /* #7A6816 */
+  --on-accent: 13 20 17;  /* text on pen/ledger/flag fills */
+  color-scheme: dark;
 }
 
 @layer base {
@@ -98,12 +134,12 @@
   .btn:disabled { @apply cursor-not-allowed opacity-50; }
   .btn-sm { @apply px-2.5 py-1.5 text-[0.8125rem]; }
   .btn-lg { @apply px-5 py-3 text-base; }
-  .btn-primary { @apply bg-pen text-white hover:bg-pen/90; }
-  .btn-success { @apply bg-ledger text-white hover:bg-ledger/90; }
-  .btn-danger { @apply bg-flag text-white hover:bg-flag/90; }
+  .btn-primary { @apply bg-pen text-on-accent hover:bg-pen/90; }
+  .btn-success { @apply bg-ledger text-on-accent hover:bg-ledger/90; }
+  .btn-danger { @apply bg-flag text-on-accent hover:bg-flag/90; }
   .btn-secondary { @apply border-rule bg-sheet text-ink hover:bg-wash; }
   .btn-ghost { @apply text-ink-2 hover:bg-wash hover:text-ink; }
-  a.btn-primary, a.btn-success, a.btn-danger { @apply text-white; }
+  a.btn-primary, a.btn-success, a.btn-danger { @apply text-on-accent; }
   a.btn-secondary, a.btn-ghost { @apply text-ink; }
 
   /* Form fields */
@@ -121,6 +157,18 @@
   .badge-amber { background: #f4e6a3; color: #4a3b00; }
   .badge-blue { background: #d9e1f2; color: #1f3f7a; }
   .badge-gray { background: #dadfd3; color: #2f3d36; }
+  :root[data-theme="dark"] .badge-green { background: #1f3d2c; color: #b9e3c8; }
+  :root[data-theme="dark"] .badge-red { background: #4a2220; color: #f4c2bc; }
+  :root[data-theme="dark"] .badge-amber { background: #4a3d0f; color: #f3e09a; }
+  :root[data-theme="dark"] .badge-blue { background: #1e2c4a; color: #c4d4f5; }
+  :root[data-theme="dark"] .badge-gray { background: #2c3530; color: #cbd5ce; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .badge-green { background: #1f3d2c; color: #b9e3c8; }
+    :root:not([data-theme="light"]) .badge-red { background: #4a2220; color: #f4c2bc; }
+    :root:not([data-theme="light"]) .badge-amber { background: #4a3d0f; color: #f3e09a; }
+    :root:not([data-theme="light"]) .badge-blue { background: #1e2c4a; color: #c4d4f5; }
+    :root:not([data-theme="light"]) .badge-gray { background: #2c3530; color: #cbd5ce; }
+  }
 
   .divider { @apply my-4 border-t border-rule; }
 }
