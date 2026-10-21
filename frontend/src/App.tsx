@@ -6,6 +6,7 @@ import { EmailBot } from './pages/EmailBot';
 import { Chat } from './pages/Chat';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
+import { Outreach } from './pages/Outreach';
 
 function NotFound() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/email" element={<EmailBot />} />
+        <Route path="/outreach" element={<Outreach />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />

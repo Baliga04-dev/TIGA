@@ -205,3 +205,62 @@ export interface PromptGenerateResponse {
   research: ResearchLeadsResponse;
 }
 
+
+export interface FoundLead {
+  title: string;
+  url: string;
+  source: string;
+  published: string;
+  score: number;
+  signals: string[];
+}
+
+export interface FindLeadsResponse {
+  ok: boolean;
+  leads: FoundLead[];
+  errors: string[];
+}
+
+export type OutreachStatus =
+  | 'drafted' | 'approved' | 'sent' | 'replied' | 'interested'
+  | 'declined' | 'unsubscribed' | 'bounced' | 'rejected';
+
+export interface OutreachItem {
+  id: number;
+  email: string;
+  company: string;
+  lead_url: string;
+  source_note: string;
+  subject: string;
+  body: string;
+  status: OutreachStatus;
+  warnings: string;
+  last_error: string;
+  thread_id: string;
+  followup_n: number;
+  sent_at: string;
+  replied_at: string;
+}
+
+export interface NewDraft {
+  email: string;
+  subject: string;
+  body: string;
+  company?: string;
+  lead_url?: string;
+  source_note?: string;
+}
+
+export interface Scorecard {
+  sent_today: number;
+  sent_week: number;
+  replies: number;
+  interested: number;
+  declined: number;
+  unsubscribed: number;
+  bounced: number;
+  followups_sent: number;
+  awaiting_approval: number;
+  daily_cap: number;
+  pipeline: Record<string, number>;
+}

@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 const PAGES = [
   { path: '/', heading: 'Dashboard' },
   { path: '/email', heading: 'Email Bot' },
+  { path: '/outreach', heading: 'Outreach' },
   { path: '/chat', heading: 'Tiga Chat' },
   { path: '/agents', heading: 'Tiga Agents' },
   { path: '/settings', heading: 'Settings' },

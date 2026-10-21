@@ -14,6 +14,10 @@ import type {
   PromptGenerateResponse,
   GithubSyncResponse,
   ResearchLeadsResponse,
+  FindLeadsResponse,
+  OutreachItem,
+  NewDraft,
+  Scorecard,
 } from '../types';
 
 const API_BASE = '/api';
@@ -111,6 +115,27 @@ export const api = {
 
   researchLeads: (topic: string, limit = 10) =>
     post<ResearchLeadsResponse>('/research/leads', { topic, limit }),
+
+  findLeads: (topics: string[], limit = 30) => post<FindLeadsResponse>('/leads/find', { topics, limit }),
+
+  listOutreach: (status = '') => request<{ ok: true; items: OutreachItem[] }>(`/outreach${status ? `?status=${status}` : ''}`),
+
+  createDraft: (data: NewDraft) => post<{ ok: true; draft: OutreachItem }>('/outreach/drafts', data),
+
+  editDraft: (id: number, changes: { subject?: string; body?: string }) =>
+    request<{ ok: true; draft: OutreachItem }>(`/outreach/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+
+  approveDraft: (id: number) => post<{ ok: true; draft: OutreachItem }>(`/outreach/${id}/approve`),
+
+  rejectDraft: (id: number) => post<{ ok: true; draft: OutreachItem }>(`/outreach/${id}/reject`),
+
+  sendNext: () => post<{ ok: true; sent: OutreachItem | null }>('/outreach/send-next'),
+
+  checkReplies: () => post<{ ok: true; changed: number }>('/outreach/check-replies'),
+
+  draftFollowups: () => post<{ ok: true; drafts: OutreachItem[] }>('/outreach/followups'),
+
+  getScorecard: () => request<{ ok: true; scorecard: Scorecard }>('/outreach/scorecard'),
 
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 

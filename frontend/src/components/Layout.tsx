@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/' },
   { name: 'Email Bot', href: '/email' },
+  { name: 'Outreach', href: '/outreach' },
   { name: 'Tiga Chat', href: '/chat' },
   { name: 'Agents', href: '/agents' },
   { name: 'Settings', href: '/settings' },

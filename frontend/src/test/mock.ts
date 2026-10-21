@@ -3,7 +3,7 @@ import { server } from './server'
 
 type Json = Record<string, unknown> | unknown[]
 
-function on(method: 'get' | 'post', path: string, body: Json | (() => Json), status = 200) {
+function on(method: 'get' | 'post' | 'patch', path: string, body: Json | (() => Json), status = 200) {
   server.use(
     http[method](`*/api${path}`, async () => {
       await delay(0)
@@ -16,6 +16,7 @@ function on(method: 'get' | 'post', path: string, body: Json | (() => Json), sta
 export const mock = {
   get: (path: string, body: Json | (() => Json), status = 200) => on('get', path, body, status),
   post: (path: string, body: Json | (() => Json), status = 200) => on('post', path, body, status),
+  patch: (path: string, body: Json | (() => Json), status = 200) => on('patch', path, body, status),
   /** Record request bodies for a POST route while answering with `body`. */
   record: (path: string, body: Json, status = 200) => {
     const bodies: unknown[] = []
