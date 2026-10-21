@@ -11,8 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 import brain
 import config
+import desk_api
+import jobs
 import learn
 import outreach_api
+import services
 import tts as tts_mod
 import orchestration
 import asyncio
@@ -26,32 +29,47 @@ logger = logging.getLogger("tiga")
 _sleep = asyncio.sleep
 
 
+async def _maintenance_once() -> dict:
+    return await jobs.run_configured_daily()
+
+
 async def _daily_maintenance() -> None:
     while True:
         await _sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
         try:
-            report = await orchestration.run_agent_cycle()
-            if Path(config.GMAIL_CREDENTIALS_FILE).exists():
-                delivery = await orchestration.send_daily_report(report)
-                if not delivery.get("ok"):
-                    logger.warning("Daily report not sent: %s", delivery.get("error"))
-            if config.GITHUB_TOKEN:
-                pushed = await orchestration.github_sync_push()
-                if not pushed.get("ok"):
-                    logger.warning("Scheduled push skipped: %s", pushed.get("error"))
+            outcome = await _maintenance_once()
+            if not outcome["report"].get("ok"):
+                logger.warning("Daily report not sent: %s", outcome["report"].get("error"))
+            for error in outcome["errors"]:
+                logger.warning("Daily run step failed: %s", error)
         except Exception:
             logger.exception("Daily maintenance run failed; will retry next interval")
 
 
+OUTREACH_TICK_SECONDS = 300
+
+
+async def _outreach_loop() -> None:
+    """Send approved mail as limits allow (weekday hours, daily cap, gaps between sends)."""
+    while True:
+        await _sleep(OUTREACH_TICK_SECONDS)
+        try:
+            await asyncio.to_thread(services.get_mailer().send_next)
+        except Exception:
+            logger.exception("Outreach send tick failed; will retry")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    task = None
+    tasks = []
     if config.GITHUB_SYNC_INTERVAL_MINUTES > 0 and (
         config.GITHUB_TOKEN or Path(config.GMAIL_CREDENTIALS_FILE).exists()
     ):
-        task = asyncio.create_task(_daily_maintenance())
+        tasks.append(asyncio.create_task(_daily_maintenance()))
+        if Path(config.GMAIL_CREDENTIALS_FILE).exists():
+            tasks.append(asyncio.create_task(_outreach_loop()))
     yield
-    if task:
+    for task in tasks:
         task.cancel()
 
 
@@ -59,6 +77,7 @@ app = FastAPI(title="Tiga", version="0.2.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(learn.router)
 app.include_router(outreach_api.router)
+app.include_router(desk_api.router)
 
 
 @app.get("/api/features")

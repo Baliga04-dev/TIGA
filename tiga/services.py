@@ -11,7 +11,7 @@ _store: Store | None = None
 _mailer: Mailer | None = None
 
 
-def _send(to: str, subject: str, body: str) -> dict:
+def send_email(to: str, subject: str, body: str) -> dict:
     return gmail_service.gmail_service.send_email(to, subject, body)
 
 
@@ -32,7 +32,7 @@ def get_mailer() -> Mailer:
     store = get_store()
     with _lock:
         if _mailer is None:
-            _mailer = Mailer(store, _send, postal_address=config.POSTAL_ADDRESS, hard_cap=config.OUTREACH_DAILY_CAP)
+            _mailer = Mailer(store, send_email, postal_address=config.POSTAL_ADDRESS, hard_cap=config.OUTREACH_DAILY_CAP)
         return _mailer
 
 
