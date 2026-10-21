@@ -15,6 +15,7 @@ import desk_api
 import jobs
 import learn
 import outreach_api
+import prompt_api
 import services
 import tts as tts_mod
 import orchestration
@@ -78,6 +79,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(learn.router)
 app.include_router(outreach_api.router)
 app.include_router(desk_api.router)
+app.include_router(prompt_api.router)
 
 
 @app.get("/api/features")

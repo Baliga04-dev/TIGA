@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS reports (
     subject TEXT NOT NULL, body TEXT NOT NULL, recipient TEXT NOT NULL,
     created_at TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS interviews (
+    id TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
     action TEXT NOT NULL, entity TEXT NOT NULL, entity_id TEXT NOT NULL,
@@ -200,6 +203,22 @@ class Store:
         unknown = set(fields) - self._OUTREACH_FIELDS
         if unknown:
             raise ValueError(f"unknown outreach field(s): {', '.join(sorted(unknown))}")
+
+    # --- interviews (opaque JSON state owned by interview.py) ---------------
+    def save_interview(self, interview_id: str, state: str) -> None:
+        with self._lock, self._db:
+            self._db.execute(
+                "INSERT INTO interviews (id, state, updated_at) VALUES (?, ?, ?)"
+                " ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",
+                (interview_id, state, _now()),
+            )
+
+    def load_interview(self, interview_id: str) -> str:
+        with self._lock:
+            row = self._db.execute("SELECT state FROM interviews WHERE id = ?", (interview_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no interview {interview_id}")
+        return row["state"]
 
     # --- reports ----------------------------------------------------------
     def save_report(self, kind: str, report_date: str, subject: str, body: str, recipient: str) -> int:
