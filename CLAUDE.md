@@ -47,7 +47,13 @@ Playwright needs Chromium's system libraries; see README.md ("Browser tests").
 
 **Frontend:** five routes under one `Layout` (`<Outlet/>`), pages in `src/pages` (EmailBot's dialogs live in `src/pages/email/`), all network calls through `src/services/api.ts`. Hooks: `useApi.ts` (data loading, chat), `useAction.ts` (user-triggered calls with pending/error/result; always calls the latest handler), `useSpeech.ts`. Shared primitives (Modal, Field, Notice, Card, CopyButton, Toast, StatusRow) are in `src/components/ui.tsx`. Styling is Tailwind 3 with semantic tokens (`paper`, `sheet`, `ink`, `pen`, `ledger`, `flag`, `mark`) defined as RGB channels in `src/index.css` and mapped in `tailwind.config.js`; fonts are bundled locally. Dialogs must use `Modal` (focus trap, Escape, focus return).
 
+## Outreach desk and bots (deep modules, flat imports)
+
+`store.py` (SQLite: job claims, issue state machine, outreach, suppressions, reports, interviews, audit) is the only place statuses change. `leads.py` finds and scores leads from Google News / Hacker News / GDELT. `mailer.py` is the only thing that sends cold mail: drafts need `approve`, then `send_next` enforces suppression, the postal-address footer, weekday hours, a ramping daily cap and gaps; `check_replies` classifies replies, `due_followups` drafts (never sends) follow-ups. `reports.py` builds the daily mail (outreach scorecard first); `jobs.py` runs each daily step in isolation; `rnd.py` files improvement proposals and the weekly report; `codesync.py` pushes a dated `tiga/daily-DATE` branch (never main) after a secret scan; `interview.py` is the prompt-interview state machine; `learn.py` serves `learn_workspace/` only when `TIGA_LEARN_ENABLED` is set. Routes: `outreach_api.py`, `desk_api.py`, `prompt_api.py`. `services.py` holds the lazy store/mailer singletons (tests reset them in an autouse fixture). Bot instructions live in `tiga/skills/<bot>/SKILL.md`, editable on the Crew page. Not built yet: the autonomous Dev bot (worktree + draft PR).
+
 ## Gotchas
+
+- Never add a path that sends mail without going through `Mailer.approve` -> `send_next`.
 
 - `config.py` calls `load_dotenv()` at import. `tests/conftest.py` sets safe env vars before importing anything; keep new test modules importing through it. Override later with `monkeypatch.setattr(config, ...)`.
 - Relative file settings (`GMAIL_CREDENTIALS_FILE`, `GMAIL_TOKEN_FILE`) resolve next to `config.py`, not the cwd.
