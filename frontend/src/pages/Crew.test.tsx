@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../test/server'
 import { mock } from '../test/mock'
 import { mockMountCalls, renderApp } from '../test/render'
 
@@ -9,7 +11,7 @@ const issue = (over = {}) => ({
   severity: 'high', source: 'tester', occurrences: 3, updated_at: 'x', ...over,
 })
 
-beforeEach(() => mockMountCalls())
+beforeEach(() => { mockMountCalls(); mock.get('/skills', { ok: true, items: [] }) })
 
 describe('Crew', () => {
   it('shows open issues with who filed them and how often', async () => {
@@ -46,5 +48,35 @@ describe('Crew', () => {
     renderApp('/crew')
     expect(await screen.findByText(/triaged -> approved/)).toBeInTheDocument()
     expect(screen.getByText(/nothing open/i)).toBeInTheDocument()
+  })
+
+  it('edits a bot skill and saves it', async () => {
+    mock.get('/issues', { ok: true, items: [] })
+    mock.get('/audit', { ok: true, items: [] })
+    mock.get('/skills', { ok: true, items: ['mailer', 'dev'] })
+    mock.get('/skills/mailer', { ok: true, name: 'mailer', text: 'old rules' })
+    const saved: unknown[] = []
+    server.use(http.put('*/api/skills/mailer', async ({ request }) => { saved.push(await request.json()); return HttpResponse.json({ ok: true }) }))
+    const user = userEvent.setup()
+    renderApp('/crew')
+    await screen.findByRole('option', { name: 'mailer' })
+    await user.selectOptions(screen.getByLabelText('Skill'), 'mailer')
+    const box = await screen.findByLabelText('Instructions for mailer')
+    expect(box).toHaveValue('old rules')
+    expect(screen.getByRole('button', { name: /save skill/i })).toBeDisabled()
+    await user.type(box, ' plus more')
+    await user.click(screen.getByRole('button', { name: /save skill/i }))
+    expect(saved).toEqual([{ text: 'old rules plus more' }])
+  })
+
+  it('runs the R&D bot on demand', async () => {
+    mock.get('/issues', { ok: true, items: [] })
+    mock.get('/audit', { ok: true, items: [] })
+    mock.get('/skills', { ok: true, items: [] })
+    mock.post('/rnd/run', { ok: true, proposals: 3 })
+    const user = userEvent.setup()
+    renderApp('/crew')
+    await user.click(await screen.findByRole('button', { name: /run r&d now/i }))
+    expect(await screen.findByText(/sent with 3 proposals/i)).toBeInTheDocument()
   })
 })

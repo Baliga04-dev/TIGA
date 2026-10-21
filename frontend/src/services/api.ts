@@ -162,6 +162,15 @@ export const api = {
 
   generateInterviewPrompt: (id: string) => post<{ ok: true; prompt: string }>(`/interviews/${id}/generate`),
 
+  listSkills: () => request<{ ok: true; items: string[] }>('/skills'),
+
+  readSkill: (name: string) => request<{ ok: true; name: string; text: string }>(`/skills/${name}`),
+
+  saveSkill: (name: string, text: string) =>
+    request<{ ok: true }>(`/skills/${name}`, { method: 'PUT', body: JSON.stringify({ text }) }),
+
+  runRnd: () => post<{ ok: true; proposals?: number; skipped?: string }>('/rnd/run'),
+
   generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 
   async getEnvExample(): Promise<string> {

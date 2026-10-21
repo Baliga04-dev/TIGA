@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { PageHeader, Card, Notice } from '../components/ui';
+import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
+import { useAction } from '../hooks/useAction';
 import { api } from '../services/api';
 import { cn } from '../lib/utils';
 import type { AuditEntry, Issue } from '../types';
@@ -17,6 +18,11 @@ export function Crew() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [skillNames, setSkillNames] = useState<string[]>([]);
+  const [skill, setSkill] = useState('');
+  const [skillText, setSkillText] = useState('');
+  const [savedText, setSavedText] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -29,6 +35,32 @@ export function Crew() {
     }
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    api.listSkills().then((r) => setSkillNames(r.items)).catch(() => setSkillNames([]));
+  }, []);
+
+  const pick = async (name: string) => {
+    setSkill(name);
+    if (!name) return;
+    try {
+      const { text } = await api.readSkill(name);
+      setSkillText(text);
+      setSavedText(text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load that skill");
+    }
+  };
+  const save = useAction(async () => {
+    await api.saveSkill(skill, skillText);
+    setSavedText(skillText);
+    setToast(`Saved the ${skill} skill. The bot uses it from its next run.`);
+    await refresh();
+  });
+  const rnd = useAction(async () => {
+    const out = await api.runRnd();
+    await refresh();
+    setToast(out.skipped ? 'This week’s R&D report already went out.' : `R&D report sent with ${out.proposals ?? 0} proposals.`);
+  });
 
   const move = async (issue: Issue, status: string) => {
     try {
@@ -49,6 +81,12 @@ export function Crew() {
         description="Bugs and improvements the Manager, Tester and R&D bots have found. Dev only starts on what you approve."
       />
       {error && <div className="mb-6"><Notice title="Something went wrong">{error}</Notice></div>}
+
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <button className="btn btn-secondary" onClick={() => rnd.run()} disabled={rnd.pending}>Run R&amp;D now</button>
+        <span className="text-xs text-ink-3">Studies the outreach numbers and the board, files proposals, and mails the weekly report.</span>
+      </div>
+      {rnd.error && <div className="mb-6"><Notice>{rnd.error}</Notice></div>}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card title={`Open (${open.length})`} raised>
@@ -80,6 +118,27 @@ export function Crew() {
           {closed.length > 0 && <p className="mt-4 text-xs text-ink-3">{closed.length} closed</p>}
         </Card>
 
+        <Card title="Bot skills" raised>
+          <p className="mb-3 text-sm text-ink-2">Each bot follows its skill. Edit one to change how that bot behaves.</p>
+          <Field label="Skill">
+            {(id) => (
+              <select id={id} className="input" value={skill} onChange={(e) => pick(e.target.value)}>
+                <option value="">Choose a bot…</option>
+                {skillNames.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            )}
+          </Field>
+          {skill && (
+            <div className="mt-3 space-y-3">
+              <Field label={`Instructions for ${skill}`}>
+                {(id) => <textarea id={id} className="input min-h-64 font-mono text-sm" value={skillText} onChange={(e) => setSkillText(e.target.value)} />}
+              </Field>
+              <button className="btn btn-primary" onClick={() => save.run()} disabled={save.pending || skillText === savedText}>Save skill</button>
+              {save.error && <Notice>{save.error}</Notice>}
+            </div>
+          )}
+        </Card>
+
         <Card title="Recent activity">
           {audit.length === 0 ? (
             <p className="text-sm text-ink-2">No activity yet.</p>
@@ -95,6 +154,7 @@ export function Crew() {
           )}
         </Card>
       </div>
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </>
   );
 }
