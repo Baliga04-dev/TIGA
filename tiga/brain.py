@@ -74,6 +74,17 @@ RE_BOOK = re.compile(
     r"|\b(call|meeting)\b[^.?!]*\b(book|schedule|arrange|set ?up)\b",
     re.IGNORECASE,
 )
+RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
+
+
+def _play_query(text: str) -> str:
+    """'open youtube and play lo-fi music' -> 'lo-fi music'."""
+    query = re.split(r"\bplay\b", text, maxsplit=1, flags=re.IGNORECASE)[-1]
+    query = re.sub(r"\b(?:on|in|from)\s+(?:youtube|yt)\b|\bsome\b|\bfor me\b|\bplease\b", " ", query, flags=re.IGNORECASE)
+    query = re.sub(r"\bsongs?\b(?=\s*$)", "songs", query, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", query).strip(" .!?,")
+
+
 RE_OPEN = re.compile(
     r"^\s*(?:(?:hey|ok|okay|please|tiga|can you|could you|would you)[,\s]+)*"
     r"(open|launch|pull up|bring up|go to|show me|visit)\b(.*)",
@@ -159,7 +170,7 @@ async def run_tool(name: str, args: dict) -> dict:
 # tools that act on the outside world. Once the first has run in a turn, the
 # second are refused for the rest of that turn.
 READS_UNTRUSTED = {"fetch_recent_emails", "get_email_summary"}
-ACTS_ON_WORLD = {"send_cold_email", "open_tab"}
+ACTS_ON_WORLD = {"send_cold_email", "open_tab", "play_youtube"}
 
 
 async def respond(user_text: str, history: list) -> dict:
@@ -341,6 +352,15 @@ async def _builtin_respond(text: str) -> dict:
         }
         action = await run_tool("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
+
+    if RE_PLAY.search(lowered):
+        query = _play_query(text)
+        action = await run_tool("play_youtube", {"query": query})
+        if action["ok"]:
+            reply = f"Playing {action['result'].get('title') or query} on YouTube, sir."
+        else:
+            reply = f"I couldn't start YouTube, sir: {_err(action['result'])}."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     if RE_METRICS.search(lowered):
         action = await run_tool("get_metrics", {})

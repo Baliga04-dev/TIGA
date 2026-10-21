@@ -25,6 +25,16 @@ import main
 
 
 @pytest.fixture(autouse=True)
+def opened(monkeypatch):
+    """No test may open a real browser (in WSL that would launch Windows tabs). Records URLs instead."""
+    import desktop
+
+    urls = []
+    monkeypatch.setattr(desktop, "open_url", lambda url, **kw: urls.append(url) or True)
+    return urls
+
+
+@pytest.fixture(autouse=True)
 def fresh_services(tmp_path, monkeypatch):
     """Every test gets its own empty database and no leftover store/mailer."""
     import config

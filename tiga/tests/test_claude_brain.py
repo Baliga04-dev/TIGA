@@ -27,15 +27,13 @@ def chat(client, text):
     return client.post("/api/chat", json={"text": text, "history": [{"role": "user", "content": "earlier"}]}).json()
 
 
-def test_claude_calls_a_tool_then_answers(client, claude, monkeypatch):
-    import tools
+def test_claude_calls_a_tool_then_answers(client, claude, opened):
     replies, prompts = claude
-    monkeypatch.setattr(tools.webbrowser, "open", lambda url: True)
     replies += [json.dumps({"tool": "open_tab", "args": {"url": "https://youtube.com"}}),
                 json.dumps({"reply": "YouTube is open, sir."})]
     body = chat(client, "open youtube")
     assert body["mode"] == "claude" and body["reply"] == "YouTube is open, sir."
-    assert body["actions"][0]["tool"] == "open_tab"
+    assert body["actions"][0]["tool"] == "open_tab" and opened == ["https://youtube.com"]
     system, second = prompts[1]
     assert "open_tab" in system and "<tool_result" in second and "earlier" in second
 

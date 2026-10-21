@@ -11,9 +11,7 @@ def chat(client, text):
 
 
 @pytest.fixture
-def browser(monkeypatch):
-    opened = []
-    monkeypatch.setattr(tools.webbrowser, "open", lambda url, new=0: opened.append(url) or True)
+def browser(opened):
     return opened
 
 
@@ -91,3 +89,11 @@ def test_sending_without_content_asks_for_it(client, google):
 def test_sending_with_explicit_content_sends_it(client, google):
     chat(client, "send a cold email to bob@example.com saying I build fast websites")
     assert len(google.sent) == 1
+
+
+def test_open_youtube_and_play_resolves_and_opens_the_video(client, opened, monkeypatch):
+    monkeypatch.setattr(tools, "_youtube_search", lambda q: {"id": "jfKfPfyJRdk", "title": "lofi hip hop radio"})
+    body = client.post("/api/chat", json={"text": "open youtube and play lo-fi music"}).json()
+    assert body["actions"][0]["tool"] == "play_youtube" and body["actions"][0]["args"] == {"query": "lo-fi music"}
+    assert opened == ["https://www.youtube.com/watch?v=jfKfPfyJRdk"]
+    assert "lofi hip hop radio" in body["reply"]

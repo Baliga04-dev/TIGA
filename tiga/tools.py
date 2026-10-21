@@ -3,13 +3,13 @@ import json
 import re
 import time
 import uuid
-import webbrowser
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 import httpx
 
 import config
+import desktop
 import gmail_service
 
 HTTP_TIMEOUT = 8.0
@@ -85,13 +85,44 @@ async def open_tab(url: str) -> dict:
             "error": f"refusing to open unsafe URL: {url!r}",
             "ms": _ms(started),
         }
-    opened = await asyncio.to_thread(webbrowser.open, normalized, new=2)
+    opened = await asyncio.to_thread(desktop.open_url, normalized)
     return {
         "ok": bool(opened),
         "source": "local",
         "url": normalized,
         "error": None if opened else "browser refused to open tab",
         "ms": _ms(started),
+    }
+
+
+def _youtube_search(query: str) -> dict | None:
+    """First YouTube result for a query (metadata only, nothing downloaded), or None."""
+    try:
+        import yt_dlp
+
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": True, "skip_download": True}) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}", download=False)
+        entry = (info or {}).get("entries", [None])[0]
+        return {"id": entry["id"], "title": entry.get("title", "")} if entry and entry.get("id") else None
+    except Exception:
+        return None
+
+
+async def play_youtube(query: str) -> dict:
+    """Find a YouTube video for the request and open its page so it starts playing."""
+    started = time.perf_counter()
+    query = (query or "").strip()[:200]
+    if not query:
+        return {"ok": False, "source": "local", "error": "say what to play", "ms": _ms(started)}
+    found = await asyncio.to_thread(_youtube_search, query)
+    if found:
+        url = f"https://www.youtube.com/watch?v={found['id']}"
+    else:
+        url = f"https://www.youtube.com/results?search_query={quote_plus(query)}"
+    opened = await asyncio.to_thread(desktop.open_url, url)
+    return {
+        "ok": bool(opened), "source": "local", "url": url, "title": (found or {}).get("title", ""),
+        "fallback": found is None, "error": None if opened else "could not open the browser", "ms": _ms(started),
     }
 
 
@@ -225,6 +256,7 @@ async def generate_cold_email_template(
 TOOL_FUNCS = {
     "get_metrics": get_metrics,
     "open_tab": open_tab,
+    "play_youtube": play_youtube,
     "book_call": book_call,
     "send_cold_email": send_cold_email,
     "fetch_recent_emails": fetch_recent_emails,
@@ -233,6 +265,15 @@ TOOL_FUNCS = {
 }
 
 TOOL_SPECS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "play_youtube",
+            "description": "Play something on YouTube in the user's browser (music, a video, a channel).",
+            "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "what to play"}},
+                           "required": ["query"]},
+        },
+    },
     {
         "type": "function",
         "function": {
