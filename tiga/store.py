@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS outreach (
 CREATE TABLE IF NOT EXISTS reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, report_date TEXT NOT NULL,
     subject TEXT NOT NULL, body TEXT NOT NULL, recipient TEXT NOT NULL,
-    created_at TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT ''
+    created_at TEXT NOT NULL, sent_at TEXT NOT NULL DEFAULT '', delivery_error TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS interviews (
     id TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -79,6 +79,9 @@ class Store:
             if path != ":memory:":
                 self._db.execute("PRAGMA journal_mode=WAL")
             self._db.executescript(SCHEMA)
+            columns = {row["name"] for row in self._db.execute("PRAGMA table_info(reports)")}
+            if "delivery_error" not in columns:  # databases created before in-app reports
+                self._db.execute("ALTER TABLE reports ADD COLUMN delivery_error TEXT NOT NULL DEFAULT ''")
 
     def close(self) -> None:
         with self._lock:
@@ -222,7 +225,14 @@ class Store:
 
     # --- reports ----------------------------------------------------------
     def save_report(self, kind: str, report_date: str, subject: str, body: str, recipient: str) -> int:
+        """One archived report per (kind, date); saving again refreshes its text."""
         with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT id FROM reports WHERE kind = ? AND report_date = ?", (kind, report_date)).fetchone()
+            if row:
+                self._db.execute("UPDATE reports SET subject = ?, body = ?, recipient = ? WHERE id = ?",
+                                 (subject, body, recipient, row["id"]))
+                return row["id"]
             cur = self._db.execute(
                 "INSERT INTO reports (kind, report_date, subject, body, recipient, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (kind, report_date, subject, body, recipient, _now()),
@@ -231,7 +241,11 @@ class Store:
 
     def mark_report_sent(self, report_id: int) -> None:
         with self._lock, self._db:
-            self._db.execute("UPDATE reports SET sent_at = ? WHERE id = ?", (_now(), report_id))
+            self._db.execute("UPDATE reports SET sent_at = ?, delivery_error = '' WHERE id = ?", (_now(), report_id))
+
+    def mark_report_unsent(self, report_id: int, error: str) -> None:
+        with self._lock, self._db:
+            self._db.execute("UPDATE reports SET delivery_error = ? WHERE id = ?", (error[:300], report_id))
 
     def list_reports(self, kind: str | None = None) -> list[dict]:
         sql, args = "SELECT * FROM reports", ()
@@ -239,10 +253,6 @@ class Store:
             sql, args = sql + " WHERE kind = ?", (kind,)
         with self._lock:
             return [dict(r) for r in self._db.execute(sql + " ORDER BY id DESC", args)]
-
-    def delete_report(self, report_id: int) -> None:
-        with self._lock, self._db:
-            self._db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
 
     # --- suppressions ---------------------------------------------------
     def suppress(self, address: str, *, reason: str) -> None:

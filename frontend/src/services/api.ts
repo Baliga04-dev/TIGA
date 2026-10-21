@@ -149,7 +149,7 @@ export const api = {
 
   previewReport: () => request<ReportPreview>('/reports/preview'),
 
-  runDailyNow: () => post<{ ok: true }>('/reports/daily/run'),
+  runDailyNow: () => post<{ ok: true; emailed: boolean; email_error: string }>('/reports/daily/run'),
 
   listIssues: () => request<{ ok: true; items: Issue[] }>('/issues'),
 

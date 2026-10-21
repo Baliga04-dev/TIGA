@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { mock } from '../test/mock'
 import { mockMountCalls, renderApp } from '../test/render'
 
-const row = { id: 1, kind: 'daily', report_date: '2026-10-20', subject: '[OK] Tiga daily report 2026-10-20', body: 'OUTREACH\nSent today: 3', recipient: 'me@work.io', sent_at: 'x' }
+const row = { id: 1, kind: 'daily', report_date: '2026-10-20', subject: '[OK] Tiga daily report 2026-10-20', body: 'OUTREACH\nSent today: 3', recipient: 'me@work.io', sent_at: 'x', delivery_error: '' }
 
 beforeEach(() => mockMountCalls())
 
@@ -26,21 +26,21 @@ describe('Reports', () => {
     expect(await screen.findByLabelText('Report preview')).toHaveTextContent('Waiting for your approval: 5')
   })
 
-  it('tells you why sending failed', async () => {
+  it('saves the report in the app and says why it was not emailed', async () => {
     mock.get('/reports', { ok: true, items: [] })
-    mock.post('/reports/daily/run', { ok: false, error: 'Gmail is not configured: set GMAIL_USER_EMAIL in tiga/.env' })
+    mock.post('/reports/daily/run', { ok: true, emailed: false, email_error: 'Gmail is not configured' })
     const user = userEvent.setup()
     renderApp('/reports')
-    await user.click(await screen.findByRole('button', { name: /send now/i }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not configured/i)
+    await user.click(await screen.findByRole('button', { name: /build and send now/i }))
+    expect(await screen.findByText(/saved here\. it was not emailed: gmail is not configured/i)).toBeInTheDocument()
   })
 
   it('confirms when a report went out', async () => {
     mock.get('/reports', { ok: true, items: [] })
-    mock.post('/reports/daily/run', { ok: true })
+    mock.post('/reports/daily/run', { ok: true, emailed: true, email_error: '' })
     const user = userEvent.setup()
     renderApp('/reports')
-    await user.click(await screen.findByRole('button', { name: /send now/i }))
-    await waitFor(() => expect(screen.getByText(/report was sent/i)).toBeInTheDocument())
+    await user.click(await screen.findByRole('button', { name: /build and send now/i }))
+    await waitFor(() => expect(screen.getByText(/emailed and saved here/i)).toBeInTheDocument())
   })
 })

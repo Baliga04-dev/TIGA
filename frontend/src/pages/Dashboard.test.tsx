@@ -64,4 +64,13 @@ describe('Dashboard', () => {
     await userEvent.click(screen.getByRole('button', { name: /refresh/i }))
     await waitFor(() => expect(within(stat('Total Emails')).getByText('99')).toBeInTheDocument())
   })
+
+  it('shows the outreach numbers and latest report even when Gmail is not connected', async () => {
+    mock.post('/email/summary', { ok: false, error: 'Gmail is not connected' }, 200)
+    mock.get('/outreach/scorecard', { ok: true, scorecard: { sent_today: 2, sent_week: 5, replies: 3, interested: 1, declined: 0, unsubscribed: 0, bounced: 0, followups_sent: 0, awaiting_approval: 4, daily_cap: 5, pipeline: {} } })
+    mock.get('/reports', { ok: true, items: [{ id: 1, kind: 'daily', report_date: '2026-10-21', subject: '[ACTION] Tiga daily report 2026-10-21', body: 'OUTREACH\nSent today: 2', recipient: '', sent_at: '', delivery_error: 'Gmail is not configured' }] })
+    renderApp('/')
+    expect(await screen.findByText(/4 drafts waiting for your approval/i)).toBeInTheDocument()
+    expect(screen.getByText('[ACTION] Tiga daily report 2026-10-21')).toBeInTheDocument()
+  })
 })

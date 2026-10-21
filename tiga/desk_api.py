@@ -35,14 +35,11 @@ def preview_report() -> dict:
 
 @router.post("/reports/daily/run")
 async def run_daily_now() -> dict:
-    import config
-
-    if not (config.ADMIN_REPORT_EMAIL or config.GMAIL_USER_EMAIL):
-        return {"ok": False, "error": "Gmail is not configured: set GMAIL_USER_EMAIL in tiga/.env"}
+    """Build today's report (always saved in the app) and email it if Gmail is available."""
     outcome = await jobs.run_configured_daily()
     delivery = outcome["report"]
-    return {"ok": bool(delivery.get("ok")), **({"error": delivery["error"]} if not delivery.get("ok") else {}),
-            "outcome": outcome}
+    emailed = bool(delivery.get("ok")) and "skipped" not in delivery
+    return {"ok": True, "emailed": emailed, "email_error": delivery.get("error", ""), "outcome": outcome}
 
 
 @router.get("/issues")

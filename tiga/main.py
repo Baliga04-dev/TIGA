@@ -63,9 +63,8 @@ async def _outreach_loop() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     tasks = []
-    if config.GITHUB_SYNC_INTERVAL_MINUTES > 0 and (
-        config.GITHUB_TOKEN or Path(config.GMAIL_CREDENTIALS_FILE).exists()
-    ):
+    if config.GITHUB_SYNC_INTERVAL_MINUTES > 0:
+        # Reports are archived in the app even with no Gmail or GitHub, so the daily run always starts.
         tasks.append(asyncio.create_task(_daily_maintenance()))
         if Path(config.GMAIL_CREDENTIALS_FILE).exists():
             tasks.append(asyncio.create_task(_outreach_loop()))

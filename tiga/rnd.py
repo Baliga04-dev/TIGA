@@ -57,10 +57,14 @@ def run_weekly(store: Store, card: dict, send: Callable[[str, str, str], dict], 
     lines += [f"- {p['title']}: {p['body']}" for p in proposals] or ["- None: the numbers look healthy."]
     subject, body = f"Tiga weekly R&D report {key}", "\n".join(lines)
     report_id = store.save_report("weekly", key, subject, body, to)
-    result = send(to, subject, body)
+    try:
+        result = send(to, subject, body)
+    except Exception as exc:
+        result = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
     if not result.get("ok"):
-        store.delete_report(report_id)
+        error = result.get("error", "send failed")
+        store.mark_report_unsent(report_id, error)
         store.release_job("rnd_weekly", key)
-        return {"ok": False, "error": result.get("error", "send failed")}
+        return {"ok": False, "error": error, "archived": True, "proposals": len(proposals)}
     store.mark_report_sent(report_id)
     return {"ok": True, "proposals": len(proposals)}

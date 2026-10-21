@@ -273,6 +273,7 @@ export interface ReportRow {
   body: string;
   recipient: string;
   sent_at: string;
+  delivery_error: string;
 }
 
 export interface ReportPreview {

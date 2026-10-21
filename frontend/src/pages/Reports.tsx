@@ -26,9 +26,9 @@ export function Reports() {
 
   const preview = useAction<[], ReportPreview>(() => api.previewReport());
   const run = useAction(async () => {
-    await api.runDailyNow();
+    const out = await api.runDailyNow();
     await refresh();
-    setToast("Today's report was sent, or it had already gone out.");
+    setToast(out.emailed ? "Today's report was emailed and saved here." : 'Report saved here. It was not emailed: ' + (out.email_error || 'already sent today') + '.');
   });
 
   const open = rows.find((r) => r.id === openId);
@@ -37,7 +37,7 @@ export function Reports() {
     <>
       <PageHeader
         title="Reports"
-        description="The daily mail, with the outreach numbers first. Preview it, send it now, or read any past one."
+        description="Every daily and weekly report is saved here, whether or not email works. Outreach numbers come first."
       />
       {loadError && <div className="mb-6"><Notice title="Couldn't load reports">{loadError}</Notice></div>}
 
@@ -50,7 +50,7 @@ export function Reports() {
             </button>
             <button className="btn btn-primary" onClick={() => run.run()} disabled={run.pending}>
               {run.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
-              Send now
+              Build and send now
             </button>
           </div>
           <p className="mt-2 text-xs text-ink-3">Sending runs the reply check, the tests and the sync first. Each day's report goes out once.</p>
@@ -77,7 +77,11 @@ export function Reports() {
                   <button className="w-full text-left text-pen underline" onClick={() => setOpenId(r.id === openId ? null : r.id)} aria-expanded={r.id === openId}>
                     {r.subject}
                   </button>
-                  <span className="ml-2 text-xs text-ink-3">sent to {r.recipient}</span>
+                  {r.sent_at ? (
+                    <span className="ml-2 text-xs text-ink-3">emailed to {r.recipient}</span>
+                  ) : (
+                    <span className="ml-2 text-xs text-ink-3">not emailed{r.delivery_error ? `: ${r.delivery_error}` : ''}</span>
+                  )}
                 </li>
               ))}
             </ul>

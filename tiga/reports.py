@@ -53,18 +53,23 @@ def build_daily_report(*, scorecard: dict, followups_due: int, issues: list[dict
 
 
 def send_daily(store: Store, send: Callable[[str, str, str], dict], to: str, report: dict) -> dict:
-    """Send once per date. A failed send releases the claim so the next run retries."""
+    """Archive the report (always viewable in the app), then email it once per date.
+
+    A failed or unavailable email never loses the report: it stays in the archive with the reason,
+    and the claim is released so the next run retries.
+    """
     day = report["date"]
-    if not store.claim_job("daily_report", day):
-        return {"ok": True, "skipped": f"already sent for {day}"}
     report_id = store.save_report("daily", day, report["subject"], report["body"], to)
+    if not store.claim_job("daily_report", day):
+        return {"ok": True, "skipped": f"already sent for {day}", "report_id": report_id}
     try:
         result = send(to, report["subject"], report["body"])
     except Exception as exc:  # the claim must be released whatever the sender raised
         result = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
     if not result.get("ok"):
-        store.delete_report(report_id)
+        error = result.get("error", "send failed")
+        store.mark_report_unsent(report_id, error)
         store.release_job("daily_report", day)
-        return {"ok": False, "error": result.get("error", "send failed")}
+        return {"ok": False, "error": error, "report_id": report_id, "archived": True}
     store.mark_report_sent(report_id)
     return {"ok": True, "report_id": report_id}

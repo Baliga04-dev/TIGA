@@ -39,11 +39,13 @@ def test_audit_trail_records_the_users_decision(client):
     assert any(e["actor"] == "user" and e["action"] == "issue.transition" for e in log)
 
 
-def test_run_daily_now_reports_why_it_cannot_send(client, monkeypatch):
+def test_without_gmail_the_report_is_still_made_and_shown_in_the_app(client, monkeypatch):
     monkeypatch.setattr(config, "GMAIL_USER_EMAIL", "")
     monkeypatch.setattr(config, "ADMIN_REPORT_EMAIL", "")
     out = client.post("/api/reports/daily/run").json()
-    assert out["ok"] is False and "not configured" in out["error"]
+    assert out["ok"] is True and out["emailed"] is False and "not configured" in out["email_error"]
+    items = client.get("/api/reports").json()["items"]
+    assert len(items) == 1 and "OUTREACH" in items[0]["body"] and "not configured" in items[0]["delivery_error"]
 
 
 def test_skills_can_be_listed_read_and_edited_from_the_ui(client, tmp_path, monkeypatch):

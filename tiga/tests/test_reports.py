@@ -67,18 +67,20 @@ def test_daily_report_is_sent_once_per_day(store):
     sink = Sink()
     first = reports.send_daily(store, sink, "me@work.io", build())
     again = reports.send_daily(store, sink, "me@work.io", build())
-    assert first["ok"] and again == {"ok": True, "skipped": "already sent for 2026-10-21"}
+    assert first["ok"] and again["skipped"] == "already sent for 2026-10-21"
     assert len(sink.sent) == 1
 
 
-def test_failed_send_can_be_retried_and_is_not_archived_as_sent(store):
+def test_failed_email_still_archives_the_report_with_the_reason_then_retries(store):
     bad = Sink(ok=False)
     out = reports.send_daily(store, bad, "me@work.io", build())
-    assert out["ok"] is False and "invalid_grant" in out["error"]
+    assert out["ok"] is False and "invalid_grant" in out["error"] and out["archived"]
+    row = store.list_reports()[0]
+    assert row["sent_at"] == "" and "invalid_grant" in row["delivery_error"] and "OUTREACH" in row["body"]
     good = Sink()
     assert reports.send_daily(store, good, "me@work.io", build())["ok"]
     archive = store.list_reports()
-    assert len(archive) == 1 and archive[0]["sent_at"]
+    assert len(archive) == 1 and archive[0]["sent_at"] and archive[0]["delivery_error"] == ""
 
 
 def test_archive_keeps_the_text_for_the_ui(store):

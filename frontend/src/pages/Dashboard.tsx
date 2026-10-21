@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Bot, Loader2, Mail, RefreshCw, Sparkles } from 'lucide-react';
 import { useEmailSummary } from '../hooks/useApi';
 import { PageHeader, Card, Notice } from '../components/ui';
+import { DeskSummary } from '../components/DeskSummary';
 import { cn, formatRelativeTime, isGmailSetupError } from '../lib/utils';
 
 /** "Alex Doe <alex@acme.com>" -> "Alex Doe" */
@@ -33,6 +34,8 @@ export function Dashboard() {
           </button>
         }
       />
+
+      <DeskSummary />
 
       {error && (
         <div className="mb-8">
