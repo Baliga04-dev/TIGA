@@ -5,6 +5,11 @@ import httpx
 
 import config
 import gmail_service
+import drafter
+import leads
+import places
+import sitecheck
+from analyst import Analyst
 from mailer import Mailer
 from skills import Skills
 from store import Store
@@ -68,3 +73,14 @@ def llm_complete():
         return response.json()["choices"][0]["message"]["content"]
 
     return complete
+
+
+def write_draft(lead: dict) -> dict:
+    return drafter.write_draft(lead, sender_name=config.SENDER_NAME or "Tiga", offer=config.OFFER,
+                               complete=llm_complete())
+
+
+def get_analyst() -> Analyst:
+    return Analyst(get_store(), get_mailer(), fetch_businesses=places.fetch_businesses, inspect=sitecheck.inspect,
+                   find_leads=leads.find_leads, write_draft=write_draft,
+                   drafts_per_morning=config.ANALYST_DRAFTS_PER_MORNING, tz=config.TIMEZONE)

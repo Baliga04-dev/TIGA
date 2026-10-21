@@ -59,3 +59,8 @@ SKILLS_DIR = resolve_path(os.getenv("TIGA_SKILLS_DIR", "skills"))
 # Who the drafts are signed by and what they offer (the bot writes the drafts; you approve them).
 SENDER_NAME = os.getenv("TIGA_SENDER_NAME", "").strip()
 OFFER = os.getenv("TIGA_OFFER", "websites and custom software for small businesses").strip()
+
+# The overnight Analyst (16:00-02:00 collect, morning drafts). 0 minutes turns the schedule off.
+ANALYST_TICK_MINUTES = int(os.getenv("TIGA_ANALYST_TICK_MINUTES", "20"))
+ANALYST_DRAFTS_PER_MORNING = int(os.getenv("TIGA_ANALYST_DRAFTS_PER_MORNING", "15"))
+TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")

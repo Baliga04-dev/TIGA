@@ -18,6 +18,27 @@ _OPENERS = {
     "hiring": "I noticed {company} is hiring for a developer.",
 }
 _ORDER = ["redesign", "funding", "launch", "hiring"]
+
+# What the Analyst measured on the business's own site (or the lack of one). These lead when present.
+_FINDINGS = {
+    "no_website": ("A website for {company}",
+                   "I came across {company} on the map and couldn't find a website for it, so customers searching "
+                   "online may not find your hours, photos or contact details."),
+    "site_down": ("Your website isn't loading",
+                  "I tried to visit the {company} website this week and it didn't load, which means people searching "
+                  "for you may be leaving."),
+    "not_mobile": ("Your website on phones",
+                   "I opened the {company} website on my phone and it is hard to use on a small screen, which is "
+                   "where most customers look first."),
+    "no_https": ("Browsers mark your site 'Not secure'",
+                 "I noticed browsers show the {company} website as not secure, because it has no HTTPS. That warning "
+                 "can put visitors off."),
+    "outdated": ("A refresh for your website",
+                 "I had a look at the {company} website and it looks like it hasn't been updated in a few years."),
+    "slow": ("Your website's loading speed",
+             "I visited the {company} website and it was slow to load, and people often leave before a slow page opens."),
+}
+_FINDING_ORDER = ["no_website", "site_down", "not_mobile", "no_https", "outdated", "slow"]
 _SUBJECTS = {
     "redesign": "Your website redesign",
     "funding": "An idea after your funding news",
@@ -36,6 +57,16 @@ SYSTEM = (
 
 def _template(lead: dict, sender_name: str, offer: str) -> dict:
     company = lead.get("company") or "your team"
+    finding = next((p for p in _FINDING_ORDER if p in (lead.get("problems") or [])), None)
+    if finding:
+        subject, opener = _FINDINGS[finding]
+        body = (
+            f"Hi,\n\n{opener.format(company=company)} I'm {sender_name}, a freelance developer in Bengaluru, and I "
+            f"build {offer}.\n\nIf it helps, I can send a short, free plan for {company} with what I'd change and a "
+            "rough cost. No obligation.\n\nWould that be useful, or would a quick call suit you better?\n\n"
+            f"Best,\n{sender_name}"
+        )
+        return {"subject": subject.format(company=company)[:60], "body": body}
     signals = lead.get("signals") or []
     key = next((s for s in _ORDER if s in signals), "launch")
     opener = _OPENERS[key].format(company=company)
@@ -61,7 +92,9 @@ def write_draft(lead: dict, *, sender_name: str, offer: str,
     if complete:
         user = (
             f"Sender: {sender_name}\nOffer: {offer}\nCompany: {lead.get('company') or 'unknown'}\n"
-            f"Signals: {', '.join(lead.get('signals') or []) or 'none'}\n<headline>{lead.get('title', '')}</headline>"
+            f"Signals: {', '.join(lead.get('signals') or []) or 'none'}\n"
+            f"Site findings: {', '.join(lead.get('problems') or []) or 'none'}\n"
+            f"Business type: {lead.get('category') or 'unknown'}\n<headline>{lead.get('title', '')}</headline>"
         )
         try:
             data = json.loads(complete(SYSTEM, user))

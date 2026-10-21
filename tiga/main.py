@@ -16,6 +16,7 @@ import jobs
 import learn
 import outreach_api
 import prompt_api
+import analyst_api
 import services
 import tts as tts_mod
 import orchestration
@@ -47,6 +48,20 @@ async def _daily_maintenance() -> None:
             logger.exception("Daily maintenance run failed; will retry next interval")
 
 
+async def _analyst_loop() -> None:
+    """Every few minutes: the Analyst decides by the clock whether to collect, write, or rest."""
+    import datetime
+
+    while True:
+        await _sleep(config.ANALYST_TICK_MINUTES * 60)
+        try:
+            result = await services.get_analyst().tick(datetime.datetime.now(datetime.timezone.utc))
+            for error in result["errors"]:
+                logger.warning("Analyst: %s", error)
+        except Exception:
+            logger.exception("Analyst tick failed; will retry")
+
+
 OUTREACH_TICK_SECONDS = 300
 
 
@@ -68,6 +83,8 @@ async def lifespan(_app: FastAPI):
         tasks.append(asyncio.create_task(_daily_maintenance()))
         if Path(config.GMAIL_CREDENTIALS_FILE).exists():
             tasks.append(asyncio.create_task(_outreach_loop()))
+    if config.ANALYST_TICK_MINUTES > 0:
+        tasks.append(asyncio.create_task(_analyst_loop()))
     yield
     for task in tasks:
         task.cancel()
@@ -79,6 +96,7 @@ app.include_router(learn.router)
 app.include_router(outreach_api.router)
 app.include_router(desk_api.router)
 app.include_router(prompt_api.router)
+app.include_router(analyst_api.router)
 
 
 @app.get("/api/features")

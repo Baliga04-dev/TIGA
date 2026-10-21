@@ -10,6 +10,7 @@ _ISOLATED_ENV = {
     "BOOKING_WEBHOOK": "",
     "GITHUB_TOKEN": "",
     "GITHUB_SYNC_INTERVAL_MINUTES": "0",
+    "TIGA_ANALYST_TICK_MINUTES": "0",
     "GMAIL_CREDENTIALS_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-credentials.json"),
     "GMAIL_TOKEN_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-token.json"),
     "TIGA_TESTER_CHILD": "1",  # the tester agent must not recursively run this suite

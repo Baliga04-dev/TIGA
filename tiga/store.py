@@ -4,6 +4,7 @@ Interface: `Store(path)`. Job claims make scheduled work idempotent, issues move
 through one state machine (every step audited), suppressions are permanent.
 Callers never see SQL; statuses change only through `transition_issue`.
 """
+import json
 import sqlite3
 import threading
 from datetime import datetime, timezone
@@ -54,6 +55,16 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE TABLE IF NOT EXISTS interviews (
     id TEXT PRIMARY KEY, state TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS prospects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL UNIQUE, source TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '', category TEXT NOT NULL DEFAULT '', website TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '', email_source TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',
+    signals TEXT NOT NULL DEFAULT '[]', problems TEXT NOT NULL DEFAULT '[]', score INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '', outreach_id INTEGER,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
     action TEXT NOT NULL, entity TEXT NOT NULL, entity_id TEXT NOT NULL,
@@ -206,6 +217,88 @@ class Store:
         unknown = set(fields) - self._OUTREACH_FIELDS
         if unknown:
             raise ValueError(f"unknown outreach field(s): {', '.join(sorted(unknown))}")
+
+    # --- prospects (businesses the Analyst found) --------------------------
+    _PROSPECT_FIELDS = {"source", "name", "category", "website", "email", "email_source", "phone", "address",
+                        "link", "title", "signals", "problems", "score", "status", "note", "outreach_id"}
+    _PROSPECT_JSON = {"signals", "problems"}
+    # Details a fresh sighting may refresh; progress fields (status, email found, problems) are kept.
+    _PROSPECT_REFRESH = {"name", "category", "website", "phone", "address", "link", "title"}
+
+    def upsert_prospect(self, data: dict) -> tuple[dict, bool]:
+        """Insert by `key`, or refresh the listing details of an existing one. Returns (row, created)."""
+        fields = {k: v for k, v in data.items() if k != "key"}
+        self._check_prospect_fields(fields)
+        with self._lock, self._db:
+            row = self._db.execute("SELECT id FROM prospects WHERE key = ?", (data["key"],)).fetchone()
+            if row:
+                refresh = {k: v for k, v in fields.items() if k in self._PROSPECT_REFRESH and v}
+                if refresh:
+                    self._write_prospect(row["id"], refresh)
+                return self.get_prospect(row["id"]), False
+            stored = {k: json.dumps(v) if k in self._PROSPECT_JSON else v for k, v in fields.items()}
+            columns = ["key", "created_at", "updated_at", *stored]
+            cur = self._db.execute(
+                f"INSERT INTO prospects ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})",
+                [data["key"], _now(), _now(), *stored.values()],
+            )
+            return self.get_prospect(cur.lastrowid), True
+
+    def update_prospect(self, prospect_id: int, **fields) -> dict:
+        self._check_prospect_fields(fields)
+        with self._lock, self._db:
+            self._write_prospect(prospect_id, fields)
+        return self.get_prospect(prospect_id)
+
+    def get_prospect(self, prospect_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM prospects WHERE id = ?", (prospect_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no prospect {prospect_id}")
+        return self._decode_prospect(row)
+
+    def list_prospects(self, *statuses: str, limit: int = 500) -> list[dict]:
+        sql, args = "SELECT * FROM prospects", []
+        if statuses:
+            sql += f" WHERE status IN ({', '.join('?' * len(statuses))})"
+            args += statuses
+        with self._lock:
+            rows = self._db.execute(sql + " ORDER BY score DESC, id LIMIT ?", [*args, limit])
+            return [self._decode_prospect(r) for r in rows]
+
+    def prospect_counts(self) -> dict[str, int]:
+        with self._lock:
+            rows = self._db.execute("SELECT status, COUNT(*) AS n FROM prospects GROUP BY status")
+            return {r["status"]: r["n"] for r in rows}
+
+    def _write_prospect(self, prospect_id: int, fields: dict) -> None:
+        stored = {k: json.dumps(v) if k in self._PROSPECT_JSON else v for k, v in fields.items()}
+        assignments = ", ".join(f"{name} = ?" for name in [*stored, "updated_at"])
+        cur = self._db.execute(f"UPDATE prospects SET {assignments} WHERE id = ?", [*stored.values(), _now(), prospect_id])
+        if cur.rowcount == 0:
+            raise KeyError(f"no prospect {prospect_id}")
+
+    def _decode_prospect(self, row) -> dict:
+        out = dict(row)
+        for name in self._PROSPECT_JSON:
+            out[name] = json.loads(out[name] or "[]")
+        return out
+
+    def _check_prospect_fields(self, fields: dict) -> None:
+        unknown = set(fields) - self._PROSPECT_FIELDS
+        if unknown:
+            raise ValueError(f"unknown prospect field(s): {', '.join(sorted(unknown))}")
+
+    # --- small key-value settings (cursors) ----------------------------------
+    def get_value(self, key: str, default: str = "") -> str:
+        with self._lock:
+            row = self._db.execute("SELECT value FROM kv WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else default
+
+    def set_value(self, key: str, value: str) -> None:
+        with self._lock, self._db:
+            self._db.execute("INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                             (key, value))
 
     # --- interviews (opaque JSON state owned by interview.py) ---------------
     def save_interview(self, interview_id: str, state: str) -> None:
