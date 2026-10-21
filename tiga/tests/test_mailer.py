@@ -128,3 +128,97 @@ def test_one_open_draft_per_recipient(mailer):
     draft(mailer)
     with pytest.raises(MailerError, match="already"):
         draft(mailer)
+
+
+# --- replies, follow-ups, scorecard ---------------------------------------
+def sent_mail(mailer, email="owner@acme.io", now=T0):
+    d = draft(mailer, email=email)
+    mailer.approve(d["id"])
+    return mailer.send_next(now=now)
+
+
+def threads(**by_thread):
+    """A fake `fetch_thread`: thread id -> list of (sender, body)."""
+    return lambda thread_id: [{"from": f, "body": b} for f, b in by_thread.get(thread_id, [])]
+
+
+@pytest.mark.parametrize("reply, status", [
+    ("Yes, interested. Can we schedule a call?", "interested"),
+    ("No thanks, not interested.", "declined"),
+    ("STOP", "unsubscribed"),
+    ("Please remove me from your list", "unsubscribed"),
+    ("Who are you and where did you get my email?", "replied"),
+])
+def test_replies_are_classified(mailer, store, reply, status):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", reply)]}), now=T0 + timedelta(days=1))
+    assert mailer.get(row["id"])["status"] == status
+
+
+def test_negative_replies_suppress_the_address_permanently(mailer, store):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", "unsubscribe")]}), now=T0)
+    assert store.is_suppressed("owner@acme.io")
+
+
+def test_own_messages_and_auto_replies_do_not_count_as_replies(mailer):
+    row = sent_mail(mailer)
+    fetch = threads(**{row["thread_id"]: [
+        ("me@work.io", "my own message"),
+        ("owner@acme.io", "I am out of office until Monday"),
+    ]})
+    mailer.check_replies(fetch, now=T0, own_address="me@work.io")
+    assert mailer.get(row["id"])["status"] == "sent"
+
+
+def test_bounce_suppresses(mailer, store):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("MAILER-DAEMON@googlemail.com", "Delivery Status Notification (Failure)")]}), now=T0)
+    assert mailer.get(row["id"])["status"] == "bounced"
+    assert store.is_suppressed("owner@acme.io")
+
+
+def test_followup_drafted_after_five_quiet_days_and_needs_approval(mailer):
+    row = sent_mail(mailer)
+    assert mailer.due_followups(now=T0 + timedelta(days=4)) == []
+    created = mailer.due_followups(now=T0 + timedelta(days=5))
+    assert len(created) == 1 and created[0]["status"] == "drafted"
+    assert created[0]["followup_n"] == 1 and created[0]["parent_id"] == row["id"]
+    assert mailer.due_followups(now=T0 + timedelta(days=6)) == []  # not drafted twice
+
+
+def test_at_most_two_followups(mailer):
+    row = sent_mail(mailer)
+    for n, day in ((1, 5), (2, 12)):
+        follow = mailer.due_followups(now=T0 + timedelta(days=day))[0]
+        mailer.approve(follow["id"])
+        mailer.send_next(now=T0 + timedelta(days=day))
+    assert mailer.due_followups(now=T0 + timedelta(days=30)) == []
+
+
+def test_replied_prospects_get_no_followup(mailer):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", "Tell me more")]}), now=T0)
+    assert mailer.due_followups(now=T0 + timedelta(days=9)) == []
+
+
+def test_scorecard_counts_the_pipeline(mailer):
+    a = sent_mail(mailer, "a@a.io")
+    b = sent_mail(mailer, "b@b.io", now=T0 + timedelta(minutes=15))
+    draft(mailer, "c@c.io")
+    mailer.check_replies(threads(**{
+        a["thread_id"]: [("a@a.io", "Yes interested, call me")],
+        b["thread_id"]: [("b@b.io", "no thanks")],
+    }), now=T0 + timedelta(days=1))
+    card = mailer.scorecard(now=T0 + timedelta(days=1))
+    assert card["sent_today"] == 0 and card["sent_week"] == 2
+    assert card["replies"] == 2 and card["interested"] == 1 and card["declined"] == 1
+    assert card["awaiting_approval"] == 1
+    assert card["pipeline"]["drafted"] == 1
+
+
+def test_quoted_footer_in_a_reply_is_not_mistaken_for_an_unsubscribe(mailer):
+    row = sent_mail(mailer)
+    reply = "Sounds good, tell me more.\n\nOn Wed, Oct 21 Jo wrote:\n> reply STOP and I won't email you again."
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", reply)]}), now=T0)
+    assert mailer.get(row["id"])["status"] == "interested"

@@ -8,6 +8,7 @@ compliance footer, weekday business hours, a ramping daily cap and a gap.
 from __future__ import annotations
 
 import random
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
@@ -97,9 +98,114 @@ class Mailer:
             )
         return None
 
+    # --- replies and follow-ups ----------------------------------------------
+    def check_replies(self, fetch_thread: Callable[[str], list[dict]], *, now: datetime | None = None,
+                      own_address: str = "") -> int:
+        """Classify the first real reply on every sent thread; returns how many changed."""
+        now, changed = now or datetime.now(timezone.utc), 0
+        for row in self.store.list_outreach("sent"):
+            if self.get(row["id"])["status"] != "sent":
+                continue  # already settled through a sibling thread
+            status = None
+            for message in fetch_thread(row["thread_id"]):
+                if own_address and own_address.lower() in message["from"].lower():
+                    continue
+                status = _classify(message["from"], message["body"])
+                if status:
+                    break
+            if not status:
+                continue
+            for sibling in self.store.list_outreach("sent", email=row["email"]):
+                self.store.update_outreach(sibling["id"], actor="mailer", status=status,
+                                           replied_at=now.isoformat(timespec="seconds"))
+                changed += 1
+            if status in ("unsubscribed", "declined", "bounced"):
+                self.store.suppress(row["email"], reason=status)
+        return changed
+
+    def due_followups(self, *, now: datetime | None = None) -> list[dict]:
+        """Draft (never send) a follow-up for quiet prospects: after 5 days, at most 2 per prospect."""
+        now, created = now or datetime.now(timezone.utc), []
+        rows = self.store.list_outreach()
+        for row in self.store.list_outreach("sent"):
+            if row["followup_n"] >= MAX_FOLLOWUPS or now - _ts(row["sent_at"]) < FOLLOWUP_AFTER:
+                continue
+            if any(other["parent_id"] == row["id"] for other in rows):
+                continue
+            body = _FOLLOWUP_BODY[row["followup_n"]].format(for_company=f" for {row['company']}" if row["company"] else "")
+            subject = row["subject"] if row["subject"].lower().startswith("re:") else f"Re: {row['subject']}"
+            try:
+                created.append(self.draft(
+                    email=row["email"], subject=subject, body=body, company=row["company"],
+                    lead_url=row["lead_url"], source_note=row["source_note"], region=row["region"],
+                    parent_id=row["id"], followup_n=row["followup_n"] + 1,
+                ))
+            except MailerError:
+                continue  # suppressed since, or a draft is already open
+        return created
+
+    def scorecard(self, *, now: datetime | None = None) -> dict:
+        """The outreach numbers the daily report leads with."""
+        now = now or datetime.now(timezone.utc)
+        rows = self.store.list_outreach()
+        pipeline: dict[str, int] = {}
+        for row in rows:
+            pipeline[row["status"]] = pipeline.get(row["status"], 0) + 1
+        week_ago = now - timedelta(days=7)
+        sent = [r for r in rows if r["sent_at"]]
+        return {
+            "sent_today": self.sent_today(now),
+            "sent_week": sum(1 for r in sent if _ts(r["sent_at"]) > week_ago),
+            "replies": sum(1 for r in rows if r["replied_at"]),
+            "interested": pipeline.get("interested", 0),
+            "declined": pipeline.get("declined", 0),
+            "unsubscribed": pipeline.get("unsubscribed", 0),
+            "bounced": pipeline.get("bounced", 0),
+            "followups_sent": sum(1 for r in sent if r["followup_n"]),
+            "awaiting_approval": pipeline.get("drafted", 0),
+            "daily_cap": self.daily_cap(now),
+            "pipeline": pipeline,
+        }
+
     def _with_footer(self, body: str) -> str:
         return (f"{body.rstrip()}\n\n--\n{self.postal_address}\n"
                 "If you'd rather not hear from me, just reply STOP and I won't email you again.")
+
+
+_AUTO = re.compile(r"out of office|automatic reply|auto-?reply|away from (my )?(email|desk)", re.I)
+_STOP = re.compile(r"\bstop\b|unsubscribe|remove me|take me off|do not (contact|email)|don't (contact|email)", re.I)
+_NO = re.compile(r"not interested|no thanks|no thank you|not now|don't need|do not need", re.I)
+_YES = re.compile(r"interested|schedule|\bcall\b|sounds good|let's talk|tell me more|send (me )?(a |the )?(quote|proposal|details)|\byes\b", re.I)
+_QUOTE_START = re.compile(r"^(>|On .{0,80}wrote:?\s*$)", re.I)
+FOLLOWUP_AFTER = timedelta(days=5)
+MAX_FOLLOWUPS = 2
+_FOLLOWUP_BODY = (
+    "Hi, just following up on my note below in case it got buried. Happy to share a couple of ideas{for_company} if useful.",
+    "Last note from me. If now isn't the right time, no problem at all.",
+)
+
+
+def _fresh_text(body: str) -> str:
+    """The reply itself, without quoted history (which contains our own STOP footer)."""
+    lines = []
+    for line in body.splitlines():
+        if _QUOTE_START.match(line.strip()):
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _classify(sender: str, body: str) -> str | None:
+    """bounced / unsubscribed / declined / interested / replied, or None for auto-replies."""
+    if re.search(r"mailer-daemon|postmaster", sender, re.I):
+        return "bounced"
+    text = _fresh_text(body)
+    if _AUTO.search(text):
+        return None
+    for pattern, status in ((_STOP, "unsubscribed"), (_NO, "declined"), (_YES, "interested")):
+        if pattern.search(text):
+            return status
+    return "replied"
 
 
 def _ts(value: str) -> datetime:
