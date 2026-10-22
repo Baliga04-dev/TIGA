@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useChat, useStatus } from '../hooks/useApi';
 import { useSpeech } from '../hooks/useSpeech';
 import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
@@ -6,6 +7,7 @@ import { cn, formatRelativeTime } from '../lib/utils';
 import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings, Pause, Play, Mic, MicOff } from 'lucide-react';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 import { ActionCards } from '../components/ActionCards';
+import { onWakeChange, setWakeEnabled, wakeEnabled } from '../lib/wake';
 import { api } from '../services/api';
 
 const EXAMPLE_COMMANDS = [
@@ -55,16 +57,30 @@ export function Chat() {
 
   const [speakReplies, setSpeakReplies] = useState(false);
 
-  const send = async (raw: string) => {
+  const send = async (raw: string, speak = speakReplies) => {
     const text = raw.trim();
     if (!text || loading) return;
     setInput('');
     const response = await sendMessage(text);
     if (!response) setInput(text);
-    else if (speakReplies && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.reply));
+    else if (speak && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.reply));
   };
   const submit = () => send(input);
   const voice = useVoiceInput((text) => send(text));
+
+  // "Hey Tiga, ..." from any page arrives here; the reply is read aloud, since the owner is talking.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const said = (location.state as { say?: string } | null)?.say;
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  useEffect(() => {
+    if (!said) return;
+    navigate('.', { replace: true, state: null });
+    sendRef.current(said, true);
+  }, [said, navigate]);
+  const [wakeOn, setWakeOn] = useState(wakeEnabled());
+  useEffect(() => onWakeChange(() => setWakeOn(wakeEnabled())), []);
 
   const fillExample = (command: string) => {
     setInput(command);
@@ -230,6 +246,18 @@ export function Chat() {
                 </button>
               ))}
             </div>
+          </Card>
+
+          <Card title="Hey Tiga">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={wakeOn} disabled={!voice.supported} onChange={(e) => setWakeEnabled(e.target.checked)} />
+              Listen for "Hey Tiga" while Tiga is open
+            </label>
+            <p className="mt-2 text-xs text-ink-3">
+              {voice.supported
+                ? 'Say "Hey Tiga, who is waiting on me?" from any page. It uses your browser\'s online speech service (Edge sends the audio to Microsoft), only while a Tiga tab is open, and never confirms an action.'
+                : 'This browser has no speech recognition. Edge and Chrome do.'}
+            </p>
           </Card>
 
           <Card title="System status">

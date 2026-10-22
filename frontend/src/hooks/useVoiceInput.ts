@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { setVoiceBusy } from '../lib/wake';
 
 type Recognition = {
   lang: string;
@@ -46,11 +47,12 @@ export function useVoiceInput(onFinal: (text: string) => void) {
       if (results.length && results[results.length - 1].isFinal && text) latest.current(text);
     };
     r.onerror = (event) => setError(event.error === 'not-allowed' ? 'Microphone permission was refused' : `Voice input stopped: ${event.error}`);
-    r.onend = () => setListening(false);
+    r.onend = () => { setListening(false); setVoiceBusy(false); };
     recognition.current = r;
     setError(null);
     setHeard('');
     setListening(true);
+    setVoiceBusy(true);   // the "Hey Tiga" listener steps aside while push-to-talk has the mic
     r.start();
   }, []);
 

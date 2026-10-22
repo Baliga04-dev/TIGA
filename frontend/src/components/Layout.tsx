@@ -9,6 +9,7 @@ import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import { useTheme } from '../hooks/useTheme';
 import { ReminderWatcher } from './ReminderWatcher';
+import { WakeListener } from './WakeListener';
 
 type Item = { name: string; href: string; icon: LucideIcon };
 
@@ -154,6 +155,7 @@ export function Layout() {
           <Outlet />
         </div>
         <ReminderWatcher />
+        <WakeListener />
       </main>
     </div>
   );
