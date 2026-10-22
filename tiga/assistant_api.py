@@ -2,12 +2,16 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter
+import tempfile
+from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 
 import briefing
 import config
 import executor
+import meetings
 import routines
 import services
 from when import parse_when
@@ -80,6 +84,42 @@ def set_routine(routine_id: int, body: RoutineState) -> dict:
 @router.delete("/routines/{routine_id}")
 def delete_routine(routine_id: int) -> dict:
     return {"ok": routines.Routines(services.get_store()).delete(routine_id)}
+
+
+MAX_RECORDING_BYTES = 300 * 1024 * 1024   # about 20 hours of the browser's speech-quality Opus
+
+
+@router.post("/meetings")
+async def add_meeting(request: Request, background: BackgroundTasks, title: str = "Call") -> dict:
+    """The browser posts the recording as the raw body; notes are written in the background."""
+    audio = await request.body()
+    if not audio:
+        return {"ok": False, "error": "The recording was empty; nothing was saved."}
+    if len(audio) > MAX_RECORDING_BYTES:
+        return {"ok": False, "error": "That recording is too long to transcribe here."}
+    folder = Path(tempfile.mkdtemp(prefix="tiga-meeting-"))
+    path = folder / "audio.webm"
+    path.write_bytes(audio)
+    m = meetings.Meetings(services.get_store())
+    row = m.start(title, path)
+    background.add_task(m.process, row["id"])
+    return {"ok": True, "meeting": row}
+
+
+@router.get("/meetings")
+def list_meetings() -> dict:
+    return {"ok": True, "items": meetings.Meetings(services.get_store()).list()}
+
+
+@router.get("/meetings/{meeting_id}")
+def get_meeting(meeting_id: int) -> dict:
+    row = meetings.Meetings(services.get_store()).get(meeting_id)
+    return {"ok": True, "meeting": row} if row else {"ok": False, "error": "No such meeting"}
+
+
+@router.delete("/meetings/{meeting_id}")
+def delete_meeting(meeting_id: int) -> dict:
+    return {"ok": meetings.Meetings(services.get_store()).delete(meeting_id)}
 
 
 class NoteIn(BaseModel):

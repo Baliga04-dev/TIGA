@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
-  BarChart3, Bot, BookOpen, ClipboardList, Cpu, FileText, Gauge, Inbox, KanbanSquare, Menu, MessageSquare,
+  BarChart3, Bot, BookOpen, ClipboardList, Cpu, FileText, Gauge, Inbox, KanbanSquare, Menu, MessageSquare, AudioLines,
   Moon, Send, Settings as SettingsIcon, Sparkles, Sun, Users, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -23,6 +23,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     { name: 'Prospects', href: '/prospects', icon: Users },
     { name: 'Outreach', href: '/outreach', icon: Send },
     { name: 'Pipeline', href: '/pipeline', icon: KanbanSquare },
+    { name: 'Meetings', href: '/meetings', icon: AudioLines },
     { name: 'Email Bot', href: '/email', icon: Inbox },
   ] },
   { label: 'Studio', items: [

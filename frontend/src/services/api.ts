@@ -26,6 +26,7 @@ import type {
   DealDocument,
   Reminder,
   Routine,
+  Meeting,
   Note,
   Briefing,
   AiUsage,
@@ -205,6 +206,20 @@ export const api = {
   addReminder: (text: string, when: string) => post<{ ok: true; reminder: Reminder }>('/reminders', { text, when }),
 
   closeReminder: (id: number, outcome: 'done' | 'dismissed') => post<{ ok: boolean }>(`/reminders/${id}/${outcome}`),
+
+  listMeetings: () => request<{ ok: true; items: Meeting[] }>('/meetings'),
+
+  getMeeting: (id: number) => request<{ ok: true; meeting: Meeting }>(`/meetings/${id}`),
+
+  deleteMeeting: (id: number) => request<{ ok: boolean }>(`/meetings/${id}`, { method: 'DELETE' }),
+
+  /** The recording goes up as the raw body; the server answers at once and writes the notes in the background. */
+  uploadMeeting: (title: string, audio: Blob) =>
+    request<{ ok: true; meeting: Meeting }>(`/meetings?title=${encodeURIComponent(title)}`, {
+      method: 'POST',
+      body: audio,
+      headers: { 'Content-Type': audio.type || 'audio/webm' },
+    }),
 
   listRoutines: () => request<{ ok: true; items: Routine[] }>('/routines'),
 

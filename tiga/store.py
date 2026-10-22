@@ -102,6 +102,11 @@ CREATE TABLE IF NOT EXISTS routines (
     next_at TEXT NOT NULL, last_at TEXT NOT NULL DEFAULT '', last_result TEXT NOT NULL DEFAULT '',
     runs INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS meetings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'transcribing', duration_s REAL NOT NULL DEFAULT 0,
+    transcript TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL
 );
@@ -556,6 +561,33 @@ class Store:
     def delete_routine(self, routine_id: int) -> bool:
         with self._lock, self._db:
             return bool(self._db.execute("DELETE FROM routines WHERE id = ?", (routine_id,)).rowcount)
+
+    # --- meeting notes (the work is in meetings.py) ---------------------------------
+    def add_meeting(self, title: str) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO meetings (title, created_at) VALUES (?, ?)", (title, _now()))
+            return dict(self._db.execute("SELECT * FROM meetings WHERE id = ?", (cur.lastrowid,)).fetchone())
+
+    def update_meeting(self, meeting_id: int, **fields) -> None:
+        allowed = {"status", "duration_s", "transcript", "notes", "error"}
+        fields = {k: v for k, v in fields.items() if k in allowed}
+        with self._lock, self._db:
+            self._db.execute(f"UPDATE meetings SET {', '.join(k + ' = ?' for k in fields)} WHERE id = ?",
+                             (*fields.values(), meeting_id))
+
+    def list_meetings(self) -> list[dict]:
+        with self._lock:
+            return [dict(r) for r in self._db.execute(
+                "SELECT id, title, created_at, status, duration_s, notes, error FROM meetings ORDER BY id DESC")]
+
+    def get_meeting(self, meeting_id: int) -> dict | None:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM meetings WHERE id = ?", (meeting_id,)).fetchone()
+        return dict(row) if row else None
+
+    def delete_meeting(self, meeting_id: int) -> bool:
+        with self._lock, self._db:
+            return bool(self._db.execute("DELETE FROM meetings WHERE id = ?", (meeting_id,)).rowcount)
 
     # --- small key-value settings (cursors) ----------------------------------
     def get_value(self, key: str, default: str = "") -> str:

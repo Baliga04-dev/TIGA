@@ -4,6 +4,7 @@ import { PageHeader } from './components/ui';
 import { Dashboard } from './pages/Dashboard';
 import { EmailBot } from './pages/EmailBot';
 import { Chat } from './pages/Chat';
+import { Meetings } from './pages/Meetings';
 import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { Outreach } from './pages/Outreach';
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/learn" element={<Learn />} />
         <Route path="/usage" element={<Usage />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/meetings" element={<Meetings />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

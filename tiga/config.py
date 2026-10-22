@@ -69,6 +69,9 @@ TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")
 ROUTINE_TICK_SECONDS = int(os.getenv("TIGA_ROUTINE_TICK_SECONDS", "60"))
 ROUTINE_DAILY_RUNS = int(os.getenv("TIGA_ROUTINE_DAILY_RUNS", "24"))
 
+# Meeting notes: the local faster-whisper model (tiny, base, small, medium; bigger is slower and better).
+WHISPER_MODEL = os.getenv("TIGA_WHISPER_MODEL", "base").strip() or "base"
+
 # Which AI Tiga uses: auto (your Claude subscription via the claude CLI if installed, else an OpenAI-compatible
 # key, else the free built-in rules), claude, openai, or off.
 AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()

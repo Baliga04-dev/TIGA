@@ -11,3 +11,5 @@ lxml>=5.2
 defusedxml>=0.7
 yt-dlp>=2025.1
 qrcode>=7.4
+faster-whisper>=1.1
+av>=11,<16  # faster-whisper 1.2 passes an argument PyAV 16+ removed

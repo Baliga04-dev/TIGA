@@ -58,6 +58,17 @@ def no_real_claude(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_real_whisper(monkeypatch):
+    """No test may load the speech model (a large download and minutes of CPU)."""
+    import meetings
+
+    def refuse(path):
+        raise AssertionError("a test tried to run the real transcriber")
+
+    monkeypatch.setattr(meetings, "whisper_transcribe", refuse)
+
+
+@pytest.fixture(autouse=True)
 def ran(monkeypatch):
     """No test may run real PowerShell (volume, media keys, apps). Records the scripts instead."""
     import pc

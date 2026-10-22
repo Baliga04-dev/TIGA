@@ -353,6 +353,17 @@ export interface DealDocument {
   created_at: string;
 }
 
+export interface Meeting {
+  id: number;
+  title: string;
+  created_at: string;
+  status: 'transcribing' | 'writing' | 'done' | 'failed';
+  duration_s: number;
+  notes: string;
+  error: string;
+  transcript?: string;
+}
+
 export interface Routine {
   id: number;
   command: string;
