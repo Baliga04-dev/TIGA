@@ -194,3 +194,24 @@ describe('Chat safety', () => {
   })
 })
 
+describe('Chat voice', () => {
+  it('sends what you say with the mic button', async () => {
+    class FakeRecognition {
+      lang = ''; interimResults = false; continuous = false
+      onresult: ((e: unknown) => void) | null = null; onend: (() => void) | null = null; onerror = null
+      start() {
+        const results = [Object.assign([{ transcript: 'what time is it' }], { isFinal: true })]
+        setTimeout(() => { this.onresult?.({ results }); this.onend?.() }, 0)
+      }
+      stop() {}
+    }
+    ;(window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRecognition
+    const bodies = mock.record('/chat', { reply: 'It is noon.', actions: [], mode: 'builtin' })
+    const { user } = await openChat()
+    await user.click(screen.getByRole('button', { name: /speak to tiga/i }))
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect((bodies[0] as { text: string }).text).toBe('what time is it')
+    delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
+  })
+})
+

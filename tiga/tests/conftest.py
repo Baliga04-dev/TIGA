@@ -15,6 +15,7 @@ _ISOLATED_ENV = {
     "TIGA_POSTAL_ADDRESS": "",
     "TIGA_SENDER_NAME": "",
     "TIGA_UPI_ID": "",
+    "TIGA_BRIDGE_TOKEN": "",
     "TIGA_BUSINESS_NAME": "",
     "TIGA_PORTFOLIO_URL": "",
     "GMAIL_USER_EMAIL": "",

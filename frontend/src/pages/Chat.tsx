@@ -3,7 +3,8 @@ import { useChat, useStatus } from '../hooks/useApi';
 import { useSpeech } from '../hooks/useSpeech';
 import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
 import { cn, formatRelativeTime } from '../lib/utils';
-import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings, Pause, Play } from 'lucide-react';
+import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings, Pause, Play, Mic, MicOff } from 'lucide-react';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 import { ActionCards } from '../components/ActionCards';
 import { api } from '../services/api';
 
@@ -50,13 +51,18 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const submit = async () => {
-    const text = input.trim();
+  const [speakReplies, setSpeakReplies] = useState(false);
+
+  const send = async (raw: string) => {
+    const text = raw.trim();
     if (!text || loading) return;
     setInput('');
     const response = await sendMessage(text);
     if (!response) setInput(text);
+    else if (speakReplies && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance(response.reply));
   };
+  const submit = () => send(input);
+  const voice = useVoiceInput((text) => send(text));
 
   const fillExample = (command: string) => {
     setInput(command);
@@ -171,7 +177,16 @@ export function Chat() {
               className="p-4 border-t border-rule space-y-3"
             >
               {error && <Notice>{error}</Notice>}
+              {voice.error && <Notice>{voice.error}</Notice>}
+              {voice.listening && <p role="status" className="text-sm text-ink-2">Listening… {voice.heard}</p>}
               <div className="flex items-end gap-2">
+                {voice.supported && (
+                  <button type="button" onClick={voice.listening ? voice.stop : voice.start} disabled={loading}
+                    className={cn('btn p-3 self-end', voice.listening ? 'btn-danger' : 'btn-secondary')}
+                    aria-label={voice.listening ? 'Stop listening' : 'Speak to Tiga'} aria-pressed={voice.listening}>
+                    {voice.listening ? <MicOff className="size-5" aria-hidden="true" /> : <Mic className="size-5" aria-hidden="true" />}
+                  </button>
+                )}
                 <textarea
                   ref={textareaRef}
                   aria-label="Message"
@@ -192,6 +207,11 @@ export function Chat() {
                   <Send className="size-5" aria-hidden="true" />
                 </button>
               </div>
+              <label className="flex items-center gap-2 text-xs text-ink-3">
+                <input type="checkbox" checked={speakReplies} onChange={(e) => setSpeakReplies(e.target.checked)} />
+                Read Tiga's replies aloud
+                {voice.supported && <span>· voice input uses your browser's online speech service; a spoken "yes" never confirms an action</span>}
+              </label>
             </form>
           </section>
         </div>

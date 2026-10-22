@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Tiga Bridge",
+  "version": "1.0.0",
+  "description": "Lets your local Tiga assistant list, switch, read and (with your click in Tiga) close your tabs. Talks only to Tiga on 127.0.0.1.",
+  "permissions": ["tabs", "scripting", "storage", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html",
+  "action": { "default_title": "Tiga Bridge", "default_popup": "options.html" }
+}

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Tiga Bridge</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; min-width: 300px; color: #15211c; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #a9b3a6; border-radius: 4px; }
+  button { margin-top: 12px; padding: 8px 14px; background: #1f3f7a; color: #fff; border: 0; border-radius: 4px; }
+  #status { margin-top: 12px; }
+</style></head>
+<body>
+  <h1 style="font-size:18px;margin:0">Tiga Bridge</h1>
+  <p>Paste the token shown in Tiga under Settings, "Tiga Bridge".</p>
+  <label for="token">Token</label><input id="token" type="password" autocomplete="off">
+  <label for="server">Tiga address</label><input id="server" value="ws://127.0.0.1:8000/ws/bridge">
+  <button id="save">Save and connect</button>
+  <p id="status" role="status"></p>
+  <script src="options.js"></script>
+</body></html>

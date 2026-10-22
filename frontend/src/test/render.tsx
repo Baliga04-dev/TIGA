@@ -11,6 +11,8 @@ export function mockMountCalls() {
   mock.get('/pricing', { ok: true, rates: [{ id: 'business_site', name: 'Business website', price: 15000, unit: 'project', days: 10, description: 'Five pages' }, { id: 'photo_edit', name: 'Photo editing', price: 150, unit: 'image', days: 2, description: 'Per image' }] })
   mock.get('/deals/:id/documents', { ok: true, items: [] })
   mock.get('/reminders/due', { ok: true, items: [] })
+  mock.get('/bridge/status', { ok: true, connected: false, configured: true })
+  mock.get('/bridge/setup', { ok: true, token: 'tok', server: 'ws://127.0.0.1:8000/ws/bridge' })
   mock.get('/reminders', { ok: true, items: [] })
   mock.get('/notes', { ok: true, items: [] })
   mock.get('/briefing', { ok: true, cards: [{ title: 'To do today', lines: ['1 email draft to approve'] }], text: 'Good morning, Adithya.' })

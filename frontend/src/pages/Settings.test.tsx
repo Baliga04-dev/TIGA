@@ -104,5 +104,13 @@ describe('Settings', () => {
     expect((saved[0] as { rates: { price: number }[] }).rates[0].price).toBe(18000)
     expect(await screen.findByText(/prices saved/i)).toBeInTheDocument()
   })
+
+  it('explains how to connect the Edge extension without printing the token', async () => {
+    renderApp('/settings')
+    expect(await screen.findByText('Not connected')).toBeInTheDocument()
+    expect(screen.getByText(/load unpacked/i)).toBeInTheDocument()
+    expect(screen.queryByText('tok')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /copy token/i })).toBeInTheDocument()
+  })
 })
 

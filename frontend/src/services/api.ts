@@ -208,6 +208,10 @@ export const api = {
 
   deleteNote: (id: number) => request<{ ok: boolean }>(`/notes/${id}`, { method: 'DELETE' }),
 
+  getBridgeStatus: () => request<{ ok: true; connected: boolean; configured: boolean }>('/bridge/status'),
+
+  getBridgeSetup: () => request<{ ok: true; token: string; server: string }>('/bridge/setup'),
+
   confirmAction: (pendingId: string) =>
     post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),
 

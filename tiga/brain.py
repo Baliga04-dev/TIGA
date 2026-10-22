@@ -85,6 +85,10 @@ RE_LOCK = re.compile(r"\block\b.*\b(screen|pc|computer|laptop|system)\b", re.I)
 RE_REMIND = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?remind me\b\s*(.*)$", re.I | re.S)
 RE_NOTE = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:take a note|note(?:\s+down)?|make a note|remember that)\s*[:,-]?\s*(.+)$", re.I | re.S)
 RE_BRIEFING = re.compile(r"\bgood morning\b|\b(?:morning )?briefing\b|\bwhat(?:'s| is) (?:on|up) (?:for )?today\b|\bplan for today\b", re.I)
+RE_TABS = re.compile(r"\b(?:what|which) tabs\b|\b(?:list|show)(?: me)?(?: my| the)?(?: open)? tabs\b|\bopen tabs\b", re.I)
+RE_SWITCH_TAB = re.compile(r"^\s*(?:tiga[,\s]+)?(?:switch|go back|jump)\s+to\s+(?:the\s+|my\s+)?(.+?)(?:\s+tab)?\s*[.!?]*$", re.I)
+RE_CLOSE_TAB = re.compile(r"^\s*(?:tiga[,\s]+)?close\s+(?:the\s+|my\s+|all\s+)?(.+?)\s+tabs?\s*[.!?]*$", re.I)
+RE_SUMMARIZE = re.compile(r"\bsummari[sz]e\s+(?:this|the|my)\s+(?:page|tab|article)\b|\bwhat(?:'s| is) this page about\b", re.I)
 RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
 
 
@@ -380,6 +384,33 @@ async def _builtin_respond(text: str) -> dict:
     if RE_BRIEFING.search(lowered):
         action = await executor.execute("morning_briefing", {})
         reply = action["result"].get("text", "Here's your day.") if action["ok"] else "I couldn't put the briefing together."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    if RE_TABS.search(lowered):
+        action = await executor.execute("list_tabs", {})
+        if action["ok"]:
+            titles = [t["title"] for t in action["result"]["tabs"]][:8]
+            reply = f"{len(action['result']['tabs'])} tabs open: " + "; ".join(titles) + "." if titles else "No tabs are open."
+        else:
+            reply = f"I can't see your tabs: {_err(action['result'])}."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    if RE_SUMMARIZE.search(lowered):
+        action = await executor.execute("summarize_page", {})
+        reply = action["result"].get("summary") if action["ok"] else f"I couldn't read that page: {_err(action['result'])}."
+        return {"reply": reply or "That page has no readable text.", "actions": [action], "mode": "builtin"}
+
+    close_m = RE_CLOSE_TAB.match(text)
+    if close_m:
+        action = await executor.execute("close_tabs", {"query": close_m.group(1)})
+        reply = (f"Closed: {', '.join(action['result']['closed'])}." if action["ok"]
+                 else f"I couldn't close that: {_err(action['result'])}.")
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    switch_m = RE_SWITCH_TAB.match(text)
+    if switch_m:
+        action = await executor.execute("switch_tab", {"query": switch_m.group(1)})
+        reply = f"Switched to {action['result']['title']}." if action["ok"] else f"I couldn't switch: {_err(action['result'])}."
         return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     pc_action = _pc_intent(lowered)

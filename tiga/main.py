@@ -4,7 +4,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, Request
+import hmac
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -18,6 +20,7 @@ import outreach_api
 import prompt_api
 import analyst_api
 import assistant_api
+import bridge as bridge_mod
 import deals_api
 import services
 import tts as tts_mod
@@ -104,6 +107,37 @@ app.include_router(analyst_api.router)
 app.include_router(assistant_api.router)
 app.include_router(deals_api.router)
 app.include_router(deals_api.pricing_router)
+
+
+@app.websocket("/ws/bridge")
+async def bridge_socket(ws: WebSocket):
+    """The Tiga Bridge extension connects here; it must present the shared token from tiga/.env."""
+    token = ws.query_params.get("token", "")
+    if not config.BRIDGE_TOKEN or not hmac.compare_digest(token, config.BRIDGE_TOKEN):
+        await ws.close(code=4401)
+        return
+    await ws.accept()
+    bridge_mod.bridge.attach(ws)
+    try:
+        while True:
+            message = await ws.receive_json()
+            if isinstance(message, dict) and "id" in message:
+                bridge_mod.bridge.resolve(message)
+    except (WebSocketDisconnect, RuntimeError, ValueError):
+        pass
+    finally:
+        bridge_mod.bridge.detach(ws)
+
+
+@app.get("/api/bridge/status")
+def bridge_status() -> dict:
+    return {"ok": True, "connected": bridge_mod.bridge.connected(), "configured": bool(config.BRIDGE_TOKEN)}
+
+
+@app.get("/api/bridge/setup")
+def bridge_setup() -> dict:
+    """The token to paste into the extension. Readable only by Tiga's own pages (no CORS headers)."""
+    return {"ok": True, "token": config.BRIDGE_TOKEN, "server": f"ws://127.0.0.1:{config.PORT}/ws/bridge"}
 
 
 @app.get("/api/features")

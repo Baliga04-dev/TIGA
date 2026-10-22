@@ -6,6 +6,7 @@ import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/u
 import { api } from '../services/api';
 import { cn, downloadAsFile } from '../lib/utils';
 import { RateCard } from './settings/RateCard';
+import { BridgeCard } from './settings/BridgeCard';
 
 export function Settings() {
   const { status } = useStatus();
@@ -32,6 +33,7 @@ export function Settings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RateCard />
+        <BridgeCard />
         <Card title="Gmail">
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-wash rounded-lg">
