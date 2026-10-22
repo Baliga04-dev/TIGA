@@ -35,6 +35,30 @@ def complete_meta(system: str, user: str, *, model: str = "sonnet", timeout: int
     return _run_cli(system, user, model=model, timeout=timeout, run=run, tools=tools, workdir=workdir)
 
 
+def code(prompt: str, workdir: str, *, system: str, model: str = "sonnet", max_turns: int = 60, timeout: int = 1500,
+         run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
+    """An unattended Claude Code session for the Dev bot: file tools only (no shell, no web), edits accepted only
+    inside `workdir` (a throwaway worktree), the project's CLAUDE.md as its guide, a turn and time limit."""
+    import config
+
+    env = {k: v for k, v in os.environ.items() if k not in _BILLING_VARS}
+    args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", "Read,Edit,Write,Glob,Grep",
+            "--permission-mode", "acceptEdits", "--max-turns", str(config.DEV_MAX_TURNS if max_turns == 60 else max_turns),
+            "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--append-system-prompt", system]
+    try:
+        proc = run(args, input=prompt, capture_output=True, text=True, timeout=timeout, env=env, cwd=workdir)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Claude Code ran past {timeout // 60} minutes and was stopped") from exc
+    except OSError as exc:
+        raise RuntimeError(f"Could not run the claude CLI: {exc}") from exc
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"claude exited with {proc.returncode}: {(proc.stderr or '').strip()[-200:]}") from exc
+    return {"text": str(data.get("result", "")), "cost_usd": float(data.get("total_cost_usd") or 0),
+            "turns": int(data.get("num_turns") or 0), "error": bool(data.get("is_error"))}
+
+
 def _run_cli(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
              run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
              tools: str = "", workdir: str | None = None) -> dict:

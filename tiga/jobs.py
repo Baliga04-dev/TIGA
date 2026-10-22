@@ -83,6 +83,12 @@ async def run_configured_daily() -> dict:
         today=datetime.date.today(),
         own_address=config.GMAIL_USER_EMAIL,
     )
+    if config.DEV_AUTO:  # off unless the owner opted in: one approved issue a day becomes a draft pull request
+        import devbot
+
+        bot = devbot.DevBot(services.get_store())
+        if bot.precheck() is None:
+            outcome["dev"] = await bot.run()
     if gmail_ready:  # idempotent per ISO week: the first daily run of a week sends the R&D report
         try:
             outcome["rnd"] = await asyncio.to_thread(

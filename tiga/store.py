@@ -150,6 +150,10 @@ class Store:
             columns = {row["name"] for row in self._db.execute("PRAGMA table_info(reports)")}
             if "delivery_error" not in columns:  # databases created before in-app reports
                 self._db.execute("ALTER TABLE reports ADD COLUMN delivery_error TEXT NOT NULL DEFAULT ''")
+            columns = {row["name"] for row in self._db.execute("PRAGMA table_info(issues)")}
+            for name in ("pr_url", "dev_note"):   # databases created before the Dev bot
+                if name not in columns:
+                    self._db.execute(f"ALTER TABLE issues ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
 
     def close(self) -> None:
         with self._lock:
@@ -207,6 +211,14 @@ class Store:
             self._db.execute("UPDATE issues SET status = ?, updated_at = ? WHERE id = ?", (status, _now(), issue_id))
             self._write_audit(actor, "issue.transition", "issue", str(issue_id), f"{row['status']} -> {status}")
         return self.get_issue(issue_id)
+
+    def set_issue_dev(self, issue_id: int, *, pr_url: str | None = None, dev_note: str | None = None) -> None:
+        """What the Dev bot last did with an issue: its pull request, or why it handed the issue back."""
+        with self._lock, self._db:
+            if pr_url is not None:
+                self._db.execute("UPDATE issues SET pr_url = ? WHERE id = ?", (pr_url, issue_id))
+            if dev_note is not None:
+                self._db.execute("UPDATE issues SET dev_note = ? WHERE id = ?", (dev_note[:2000], issue_id))
 
     def get_issue(self, issue_id: int) -> dict:
         with self._lock:

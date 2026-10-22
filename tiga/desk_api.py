@@ -1,10 +1,11 @@
 """Routes behind the desk pages: report archive/preview/run-now, issue board, audit trail."""
 import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 
 import deals
+import devbot
 import jobs
 import rnd
 import reports
@@ -55,6 +56,26 @@ def transition_issue(issue_id: int, body: TransitionIn) -> dict:
         return {"ok": True, "issue": services.get_store().transition_issue(issue_id, body.status, actor="user")}
     except (TransitionError, KeyError) as exc:
         return {"ok": False, "error": str(exc).strip("'\"")}
+
+
+class DevRunIn(BaseModel):
+    issue_id: int | None = None
+
+
+@router.get("/dev")
+def dev_status() -> dict:
+    return {"ok": True, **devbot.DevBot(services.get_store()).status()}
+
+
+@router.post("/dev/run")
+async def dev_run(body: DevRunIn, background: BackgroundTasks) -> dict:
+    """Start the Dev bot on an approved issue; it works in the background and the issue shows how it went."""
+    bot = devbot.DevBot(services.get_store())
+    problem = bot.precheck(body.issue_id)
+    if problem:
+        return {"ok": False, "error": problem}
+    background.add_task(bot.run, body.issue_id)
+    return {"ok": True, "started": True}
 
 
 class SkillIn(BaseModel):

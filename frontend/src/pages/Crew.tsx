@@ -3,7 +3,7 @@ import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { useAction } from '../hooks/useAction';
 import { api } from '../services/api';
 import { cn } from '../lib/utils';
-import type { AuditEntry, Issue } from '../types';
+import type { AuditEntry, DevStatus, Issue } from '../types';
 
 /** What the user may do next from each state; everything else is done by the bots. */
 const YOUR_MOVES: Record<string, { label: string; to: string }[]> = {
@@ -23,6 +23,7 @@ export function Crew() {
   const [skill, setSkill] = useState('');
   const [skillText, setSkillText] = useState('');
   const [savedText, setSavedText] = useState('');
+  const [dev, setDev] = useState<DevStatus | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -30,11 +31,19 @@ export function Crew() {
       setIssues(i.items);
       setAudit(a.items.slice(-15).reverse());
       setError(null);
+      api.devStatus().then(setDev).catch(() => setDev(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load the issue board');
     }
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
+  // while the Dev bot works on something, check back until it hands the issue on
+  const devWorking = dev?.busy || issues.some((i) => i.status === 'in_progress');
+  useEffect(() => {
+    if (!devWorking) return;
+    const t = window.setInterval(refresh, 5000);
+    return () => window.clearInterval(t);
+  }, [devWorking, refresh]);
   useEffect(() => {
     api.listSkills().then((r) => setSkillNames(r.items)).catch(() => setSkillNames([]));
   }, []);
@@ -62,6 +71,16 @@ export function Crew() {
     setToast(out.skipped ? 'This week’s R&D report already went out.' : `R&D report sent with ${out.proposals ?? 0} proposals.`);
   });
 
+  const build = async (issue: Issue) => {
+    try {
+      await api.runDev(issue.id);
+      setToast(`The Dev bot started on #${issue.id}. It opens a draft pull request when the tests pass.`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The Dev bot could not start');
+    }
+  };
+
   const move = async (issue: Issue, status: string) => {
     try {
       await api.transitionIssue(issue.id, status);
@@ -86,6 +105,13 @@ export function Crew() {
         <button className="btn btn-secondary" onClick={() => rnd.run()} disabled={rnd.pending}>Run R&amp;D now</button>
         <span className="text-xs text-ink-3">Studies the outreach numbers and the board, files proposals, and mails the weekly report.</span>
       </div>
+      {dev && (
+        <p className="mb-8 max-w-prose text-sm text-ink-2">
+          {dev.ready
+            ? <>The Dev bot uses Claude Code on your subscription in a separate copy of the project, runs the tests, and opens a <b>draft</b> pull request. It never touches main and never merges. <span className="figure">{dev.runs_today}/{dev.daily_limit}</span> runs today.</>
+            : 'The Dev bot needs GITHUB_REPOSITORY and GITHUB_TOKEN in tiga/.env before it can open pull requests.'}
+        </p>
+      )}
       {rnd.error && <div className="mb-6"><Notice>{rnd.error}</Notice></div>}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -104,7 +130,17 @@ export function Crew() {
                   </p>
                   {issue.body && <p className="mt-1 text-ink-2">{issue.body}</p>}
                   <p className="text-xs text-ink-3">filed by {issue.source}</p>
+                  {issue.status === 'in_progress' && <p role="status" className="mt-1 text-ink-2">The Dev bot is working on this…</p>}
+                  {issue.pr_url && (
+                    <p className="mt-1"><a className="font-medium text-pen underline" href={issue.pr_url} target="_blank" rel="noreferrer">Review the pull request</a></p>
+                  )}
+                  {issue.dev_note && issue.status !== 'pr_open' && <p className="mt-1 text-ink-2">Dev bot: {issue.dev_note}</p>}
                   <div className="mt-2 flex flex-wrap gap-2">
+                    {issue.status === 'approved' && (
+                      <button className="btn btn-sm btn-primary" disabled={!dev?.ready || dev.busy || dev.runs_today >= dev.daily_limit} onClick={() => build(issue)}>
+                        Let the Dev bot build it <span className="sr-only">#{issue.id}</span>
+                      </button>
+                    )}
                     {(YOUR_MOVES[issue.status] ?? []).map((m) => (
                       <button key={m.to} className={cn('btn btn-sm', m.to === 'rejected' ? 'btn-ghost' : 'btn-secondary')} onClick={() => move(issue, m.to)}>
                         {m.label} <span className="sr-only">#{issue.id}</span>

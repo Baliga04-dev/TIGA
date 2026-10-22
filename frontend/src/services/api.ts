@@ -27,6 +27,7 @@ import type {
   Reminder,
   Routine,
   Meeting,
+  DevStatus,
   Note,
   Briefing,
   AiUsage,
@@ -206,6 +207,10 @@ export const api = {
   addReminder: (text: string, when: string) => post<{ ok: true; reminder: Reminder }>('/reminders', { text, when }),
 
   closeReminder: (id: number, outcome: 'done' | 'dismissed') => post<{ ok: boolean }>(`/reminders/${id}/${outcome}`),
+
+  devStatus: () => request<DevStatus>('/dev'),
+
+  runDev: (issueId: number) => post<{ ok: true; started: boolean }>('/dev/run', { issue_id: issueId }),
 
   listMeetings: () => request<{ ok: true; items: Meeting[] }>('/meetings'),
 

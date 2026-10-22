@@ -23,13 +23,13 @@ SECRET_PATTERNS = [
 ]
 
 
-async def _scan(base: str) -> str | None:
-    """Return a description of the first problem in commits after `base`, never the secret itself."""
-    names = (await _git("diff", "--name-only", "--diff-filter=AM", f"{base}..HEAD")).stdout.split()
+async def _scan(base: str, head: str = "HEAD") -> str | None:
+    """Return a description of the first problem in commits from `base` to `head`, never the secret itself."""
+    names = (await _git("diff", "--name-only", "--diff-filter=AM", f"{base}..{head}")).stdout.split()
     for name in names:
         if SECRET_FILES.search(name):
             return f"{name} is a secret file and must not be pushed"
-    patch = (await _git("diff", "--unified=0", f"{base}..HEAD")).stdout
+    patch = (await _git("diff", "--unified=0", f"{base}..{head}")).stdout
     current = ""
     for line in patch.splitlines():
         if line.startswith("+++ b/"):

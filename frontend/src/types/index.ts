@@ -263,6 +263,17 @@ export interface Issue {
   source: string;
   occurrences: number;
   updated_at: string;
+  pr_url?: string;
+  dev_note?: string;
+}
+
+export interface DevStatus {
+  ok: true;
+  busy: boolean;
+  runs_today: number;
+  daily_limit: number;
+  auto: boolean;
+  ready: boolean;
 }
 
 export interface AuditEntry {

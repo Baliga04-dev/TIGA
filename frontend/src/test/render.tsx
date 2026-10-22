@@ -16,6 +16,7 @@ export function mockMountCalls() {
   mock.get('/reminders', { ok: true, items: [] })
   mock.get('/notes', { ok: true, items: [] })
   mock.get('/routines', { ok: true, items: [] })
+  mock.get('/dev', { ok: true, busy: false, runs_today: 0, daily_limit: 2, auto: false, ready: true })
   mock.get('/briefing', { ok: true, cards: [{ title: 'To do today', lines: ['1 email draft to approve'] }], text: 'Good morning, Adithya.' })
   mock.get('/outreach/scorecard', { ok: true, scorecard: { sent_today: 0, sent_week: 0, replies: 0, interested: 0, declined: 0, unsubscribed: 0, bounced: 0, followups_sent: 0, awaiting_approval: 0, daily_cap: 5, pipeline: {} } })
   mock.get('/reports', { ok: true, items: [] })

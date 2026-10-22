@@ -55,6 +55,7 @@ def no_real_claude(monkeypatch):
         raise AssertionError("a test tried to call the real Claude CLI")
 
     monkeypatch.setattr(claude_cli, "complete_meta", refuse)
+    monkeypatch.setattr(claude_cli, "code", refuse)
 
 
 @pytest.fixture(autouse=True)

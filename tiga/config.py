@@ -72,6 +72,11 @@ ROUTINE_DAILY_RUNS = int(os.getenv("TIGA_ROUTINE_DAILY_RUNS", "24"))
 # Meeting notes: the local faster-whisper model (tiny, base, small, medium; bigger is slower and better).
 WHISPER_MODEL = os.getenv("TIGA_WHISPER_MODEL", "base").strip() or "base"
 
+# The Dev bot (approved issues -> draft pull requests through Claude Code on your subscription).
+DEV_DAILY_RUNS = int(os.getenv("TIGA_DEV_DAILY_RUNS", "2"))
+DEV_MAX_TURNS = int(os.getenv("TIGA_DEV_MAX_TURNS", "60"))
+DEV_AUTO = os.getenv("TIGA_DEV_AUTO", "").strip().lower() in ("1", "true", "yes", "on")
+
 # Which AI Tiga uses: auto (your Claude subscription via the claude CLI if installed, else an OpenAI-compatible
 # key, else the free built-in rules), claude, openai, or off.
 AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()
