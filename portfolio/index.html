@@ -3,126 +3,179 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adithya P Baliga: websites, apps and photo editing for Bengaluru shops</title>
-  <meta name="description" content="Freelance developer in Bengaluru. Websites, online stores, booking apps and photo editing for local shops, salons, clinics and cafés.">
-  <meta property="og:title" content="Websites, apps and photo editing for Bengaluru shops">
-  <meta property="og:description" content="Fast, phone-friendly websites for Bengaluru shops. 50% to start, the rest on launch.">
-  <meta name="theme-color" content="#0F5A43">
+  <title>Adithya Baliga: websites for Bengaluru shops</title>
+  <meta name="description" content="Adithya P Baliga builds websites, booking and ordering apps, and edits photos for Bengaluru shops: fast on any phone, with orders straight to your WhatsApp.">
+  <meta property="og:title" content="Websites for Bengaluru shops">
+  <meta property="og:description" content="Fast on any phone, found on Google, orders to your WhatsApp. 50% to start, the rest on launch.">
+  <meta name="theme-color" content="#0B1A14">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 fill=%22%230F5A43%22/%3E%3Ctext x=%2232%22 y=%2248%22 font-family=%22Arial Narrow,sans-serif%22 font-weight=%22900%22 font-size=%2244%22 text-anchor=%22middle%22 fill=%22%23F3C326%22%3EA%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="fonts/big-shoulders-display-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/atkinson-hyperlegible-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/brigade-road-signs-1600.webp" as="image" type="image/webp" media="(min-width: 700px)">
+  <link rel="preload" href="assets/brigade-road-signs-900.webp" as="image" type="image/webp" media="(max-width: 699px)">
   <link rel="stylesheet" href="styles.css">
   <script src="site.config.js" defer></script>
-  <script src="app.js" defer></script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#work">Skip to my work</a>
+  <a class="skip" href="#demos">Skip to the demos</a>
 
-  <header class="hero">
-    <div class="board" role="img" aria-label="Shop signboard reading: Adithya. Websites, apps and photo editing for Bengaluru shops.">
-      <div class="board-frame" aria-hidden="true">
-        <span class="board-name">Adithya</span>
-        <span class="board-trade">Websites, apps &amp; photo editing</span>
-        <span class="board-place">for Bengaluru shops</span>
-      </div>
+  <div class="street">
+    <div class="street-pics" aria-hidden="true">
+      <img class="street-pic is-on" src="assets/brigade-road-signs-1600.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="">
+      <img class="street-pic" src="assets/brigade-road-lights-1600.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" loading="lazy">
+      <canvas class="rain" hidden></canvas>
     </div>
-    <div class="intro">
-      <h1>Your shop already has a good signboard. Let&rsquo;s give it a good website too.</h1>
-      <p>I&rsquo;m Adithya P Baliga, a freelance developer in Bengaluru. I build websites that work well on any phone, show up when people search for you, and put a call or WhatsApp button one tap away.</p>
-      <div class="actions">
-        <a class="button primary" data-whatsapp hidden href="#">WhatsApp me</a>
-        <a class="button" href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">Email me</a>
-      </div>
+    <div class="street-detail" aria-hidden="true">
+      <img src="assets/brigade-road-signs-1600.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" loading="lazy">
     </div>
-  </header>
+
+    <div class="rail-spacer" aria-hidden="true"></div>
+    <header class="rail">
+      <h1 class="board"><span class="board-name">Adithya Baliga</span> <span class="board-trade">websites for Bengaluru shops</span></h1>
+      <p class="rail-line">Shop websites that work on any phone and send orders to your WhatsApp.</p>
+      <nav class="rail-links" aria-label="Page">
+        <a href="#demos">Try a demo</a>
+        <a href="#how">How it works</a>
+        <a class="action" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
+      </nav>
+    </header>
+    <p class="street-caption">Brigade Road at night, Bengaluru</p>
+  </div>
 
   <main>
-    <section id="work" aria-labelledby="work-title">
-      <h2 id="work-title">What it could look like</h2>
-      <p class="lead">These are concept designs I made for the kind of shops I work with. They aren&rsquo;t client projects yet.</p>
-      <div class="work">
-        <figure class="concept bakery">
-          <div class="screen" aria-hidden="true">
-            <div class="s-bar"></div>
-            <div class="s-head"><b>Malleswaram Bakehouse</b><i>Fresh from 7 am</i></div>
-            <ul class="s-menu"><li>Plum cake <span>₹480</span></li><li>Honey cake <span>₹60</span></li><li>Veg puff <span>₹25</span></li></ul>
-            <div class="s-cta">Order on WhatsApp</div>
+    <section id="demos" class="demos" aria-labelledby="demos-title">
+      <img class="demos-ground" src="assets/brigade-road-lights-1600.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" aria-hidden="true" loading="lazy">
+      <div class="demos-inner">
+        <div class="demos-text reveal">
+          <h2 id="demos-title">Try a shop’s website</h2>
+          <p>These are three demo shops I built for this page. Pick one and use it like a customer would: add a few things to an order, book a haircut, ask for an appointment.</p>
+          <div class="shop-tabs reveal" role="tablist" aria-label="Demo shops">
+            <button role="tab" id="tab-bakery" aria-controls="screen-bakery" aria-selected="true">Iyengar bakery</button>
+            <button role="tab" id="tab-salon" aria-controls="screen-salon" aria-selected="false" tabindex="-1">Salon</button>
+            <button role="tab" id="tab-clinic" aria-controls="screen-clinic" aria-selected="false" tabindex="-1">Dental clinic</button>
           </div>
-          <figcaption><strong>Bakery menu with WhatsApp orders</strong> Concept. Today&rsquo;s bakes and prices, and one tap to order.</figcaption>
-        </figure>
-        <figure class="concept salon">
-          <div class="screen" aria-hidden="true">
-            <div class="s-bar"></div>
-            <div class="s-head"><b>Glow Salon</b><i>Indiranagar</i></div>
-            <p class="s-label">Pick a time, Saturday</p>
-            <div class="s-slots"><span>10:00</span><span class="taken">11:00</span><span>12:30</span><span>3:00</span><span class="taken">4:30</span><span>6:00</span></div>
-            <div class="s-cta">Book haircut</div>
+          <p class="demos-note">On a real site, the order or booking goes straight to the shop’s WhatsApp.</p>
+        </div>
+
+        <div class="phone reveal" aria-label="Demo phone" data-ui>
+          <div class="phone-screen">
+            <section class="shop bakery" id="screen-bakery" role="tabpanel" aria-labelledby="tab-bakery">
+              <header class="shop-head"><b>Malleswaram Iyengar Bakery</b><span>8th Cross · out of the oven at 6 am</span></header>
+              <ul class="menu" aria-label="Today's bakes">
+                <li data-item="Honey cake" data-price="40"><span>Honey cake</span><span>₹40</span><span class="qty"><button aria-label="One less honey cake" data-step="-1">−</button><output>0</output><button aria-label="One more honey cake" data-step="1">+</button></span></li>
+                <li data-item="Dil pasand" data-price="35"><span>Dil pasand</span><span>₹35</span><span class="qty"><button aria-label="One less dil pasand" data-step="-1">−</button><output>0</output><button aria-label="One more dil pasand" data-step="1">+</button></span></li>
+                <li data-item="Veg puff" data-price="25"><span>Veg puff</span><span>₹25</span><span class="qty"><button aria-label="One less veg puff" data-step="-1">−</button><output>0</output><button aria-label="One more veg puff" data-step="1">+</button></span></li>
+                <li data-item="Khara bun" data-price="20"><span>Khara bun</span><span>₹20</span><span class="qty"><button aria-label="One less khara bun" data-step="-1">−</button><output>0</output><button aria-label="One more khara bun" data-step="1">+</button></span></li>
+                <li data-item="Rusk, 250 g" data-price="90"><span>Rusk, 250 g</span><span>₹90</span><span class="qty"><button aria-label="One less rusk" data-step="-1">−</button><output>0</output><button aria-label="One more rusk" data-step="1">+</button></span></li>
+              </ul>
+              <p class="shop-total">Total <b data-total>₹0</b></p>
+              <button class="shop-cta" data-order>Order on WhatsApp</button>
+              <p class="shop-done" role="status" hidden></p>
+              <p class="shop-foot">Open 6 am to 9:30 pm. Pick up at the counter, or delivery within 3 km.</p>
+            </section>
+
+            <section class="shop salon" id="screen-salon" role="tabpanel" aria-labelledby="tab-salon" hidden>
+              <header class="shop-head"><b>Glow Salon</b><span>100 Feet Road, Indiranagar</span></header>
+              <p class="shop-label" id="salon-service">Service</p>
+              <div class="chips" role="radiogroup" aria-labelledby="salon-service">
+                <button role="radio" aria-checked="true">Haircut</button><button role="radio" aria-checked="false">Beard trim</button><button role="radio" aria-checked="false">Facial</button>
+              </div>
+              <p class="shop-label" id="salon-time">Saturday</p>
+              <div class="slots" role="radiogroup" aria-labelledby="salon-time">
+                <button role="radio" aria-checked="false">10:00</button><button role="radio" aria-checked="false" disabled>11:00</button><button role="radio" aria-checked="true">12:30</button>
+                <button role="radio" aria-checked="false">3:00</button><button role="radio" aria-checked="false" disabled>4:30</button><button role="radio" aria-checked="false">6:00</button>
+              </div>
+              <button class="shop-cta" data-book>Book this slot</button>
+              <p class="shop-done" role="status" hidden></p>
+              <p class="shop-foot">Tuesday to Sunday, 10 am to 8 pm. Walk-ins welcome when a chair is free.</p>
+            </section>
+
+            <section class="shop clinic" id="screen-clinic" role="tabpanel" aria-labelledby="tab-clinic" hidden>
+              <header class="shop-head"><b>Sunrise Dental Clinic</b><span>Jayanagar 4th Block</span></header>
+              <dl class="hours"><div><dt>Mon to Sat</dt><dd>9 am to 8 pm</dd></div><div><dt>Sunday</dt><dd>Closed</dd></div></dl>
+              <p class="shop-label" id="clinic-reason">What is it for?</p>
+              <div class="chips" role="radiogroup" aria-labelledby="clinic-reason">
+                <button role="radio" aria-checked="true">Check-up</button><button role="radio" aria-checked="false">Cleaning</button><button role="radio" aria-checked="false">Tooth pain</button>
+              </div>
+              <p class="shop-label" id="clinic-day">Day</p>
+              <div class="chips" role="radiogroup" aria-labelledby="clinic-day">
+                <button role="radio" aria-checked="true">Tomorrow</button><button role="radio" aria-checked="false">Friday</button><button role="radio" aria-checked="false">Saturday</button>
+              </div>
+              <button class="shop-cta" data-request>Request an appointment</button>
+              <p class="shop-done" role="status" hidden></p>
+              <p class="shop-foot">For a dental emergency, call the clinic directly.</p>
+            </section>
           </div>
-          <figcaption><strong>Salon booking page</strong> Concept. Customers book a free slot themselves; no more phone tag.</figcaption>
-        </figure>
-        <figure class="concept clinic">
-          <div class="screen" aria-hidden="true">
-            <div class="s-bar"></div>
-            <div class="s-head"><b>Sunrise Dental Clinic</b><i>Jayanagar 4th Block</i></div>
-            <ul class="s-menu"><li>Mon to Sat <span>9 am to 8 pm</span></li><li>Sunday <span>Closed</span></li></ul>
-            <div class="s-cta">Request an appointment</div>
-          </div>
-          <figcaption><strong>Clinic site</strong> Concept. Timings, treatments and appointment requests in one place.</figcaption>
-        </figure>
-        <figure class="concept photo">
-          <div class="compare" style="--cut: 50%">
-            <svg class="shot" viewBox="0 0 320 200" role="img" aria-label="A cake on a counter, shown before and after editing">
-              <rect width="320" height="200" fill="#c9a77c"/><rect y="130" width="320" height="70" fill="#8b5e3c"/>
-              <ellipse cx="160" cy="150" rx="92" ry="16" fill="#efe7da"/>
-              <rect x="98" y="88" width="124" height="58" rx="8" fill="#6b3a24"/>
-              <rect x="98" y="88" width="124" height="16" rx="8" fill="#f7efe3"/>
-              <circle cx="128" cy="84" r="8" fill="#c8102e"/><circle cx="160" cy="80" r="8" fill="#c8102e"/><circle cx="192" cy="84" r="8" fill="#c8102e"/>
-              <rect x="235" y="40" width="50" height="70" rx="4" fill="#f4f1e8" opacity=".55"/>
-            </svg>
-            <svg class="shot before" viewBox="0 0 320 200" aria-hidden="true">
-              <rect width="320" height="200" fill="#c9a77c"/><rect y="130" width="320" height="70" fill="#8b5e3c"/>
-              <ellipse cx="160" cy="150" rx="92" ry="16" fill="#efe7da"/>
-              <rect x="98" y="88" width="124" height="58" rx="8" fill="#6b3a24"/>
-              <rect x="98" y="88" width="124" height="16" rx="8" fill="#f7efe3"/>
-              <circle cx="128" cy="84" r="8" fill="#c8102e"/><circle cx="160" cy="80" r="8" fill="#c8102e"/><circle cx="192" cy="84" r="8" fill="#c8102e"/>
-              <rect x="235" y="40" width="50" height="70" rx="4" fill="#f4f1e8" opacity=".55"/>
-            </svg>
-            <label class="sr-only" for="compare-range">Drag to compare the photo before and after editing</label>
-            <input id="compare-range" class="compare-range" type="range" min="0" max="100" value="50">
-          </div>
-          <figcaption><strong>Photo editing, before and after</strong> Concept. Drag the slider: the dull, dim shot on the left, the corrected one on the right.</figcaption>
-        </figure>
+        </div>
       </div>
     </section>
 
-    <section aria-labelledby="how-title">
-      <h2 id="how-title">How we&rsquo;d work together</h2>
-      <ol class="steps">
-        <li><strong>A short call</strong> Fifteen minutes, free. You tell me about your shop and what you want people to do on the site.</li>
-        <li><strong>A written proposal</strong> What you get, the price for your shop and the dates, on one page.</li>
-        <li><strong>50% to start</strong> I begin once the advance and your photos, logo and text arrive.</li>
-        <li><strong>A first look</strong> You see a working preview on your own phone, usually within a week.</li>
-        <li><strong>One round of changes</strong> Tell me what to adjust; I fix it.</li>
-        <li><strong>Launch</strong> The site goes live on your domain, you pay the balance, and every login is handed to you.</li>
-      </ol>
+    <section id="how" class="how" aria-labelledby="how-title">
+      <h2 id="how-title" class="how-title reveal">From first call to launch</h2>
+      <figure class="stage one reveal">
+        <img src="assets/night-market-900.webp" srcset="assets/night-market-900.webp 900w, assets/night-market-1600.webp 1600w" sizes="(min-width: 900px) 30vw, 100vw" width="900" height="614" alt="Market stalls lit up with paper star lanterns at night" loading="lazy">
+      </figure>
+      <p class="stage-text one reveal"><b>On the first day</b> we talk for fifteen minutes, free, about your shop and what you want customers to do on the site. You get a one-page written proposal with the price and the dates.</p>
+      <figure class="stage two reveal">
+        <img src="assets/brigade-road-lights-900.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="(min-width: 900px) 24vw, 62vw" width="900" height="678" alt="Strings of festival lights over Brigade Road at night" loading="lazy">
+      </figure>
+      <p class="stage-text two reveal"><b>Within a week</b> of the 50% advance and your photos, logo and text, you see a working preview on your own phone, and tell me what to change.</p>
+      <figure class="stage three reveal">
+        <img src="assets/brigade-road-signs-900.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="(min-width: 900px) 40vw, 78vw" width="900" height="678" alt="Shop signboards in Kannada and English on Brigade Road" loading="lazy">
+      </figure>
+      <p class="stage-text three reveal"><b>On launch day</b> the site goes live on your own domain, you pay the balance, and every login is handed to you. It’s your site, not mine.</p>
     </section>
 
-    <section aria-labelledby="words-title">
-      <h2 id="words-title">What clients say</h2>
-      <p class="empty">No reviews yet. I&rsquo;m just starting out, which means the first few shops get my full attention and a direct line to me while their site is built.</p>
+    <section class="about" aria-labelledby="about-title">
+      <div class="about-text reveal">
+        <h2 id="about-title">Who builds it</h2>
+        <p>I’m Adithya P Baliga, a developer in Bengaluru. I build websites, booking and ordering apps, and I clean up shop and product photos so your place looks as good online as it does in person.</p>
+        <p>I’m starting out, which means the first few shops get my full attention and a direct line to me while their site is built. You’ll talk to me, not a sales team.</p>
+        <ul class="makes reveal">
+          <li>Shop and restaurant websites</li>
+          <li>Booking and ordering apps</li>
+          <li>Redesigns of slow or old sites</li>
+          <li>Logos and photo editing</li>
+        </ul>
+      </div>
+      <figure class="about-pic reveal">
+        <img src="assets/gandhi-bazaar-900.webp" srcset="assets/gandhi-bazaar-900.webp 900w, assets/gandhi-bazaar-1600.webp 1600w" sizes="(min-width: 900px) 46vw, 100vw" width="900" height="675" alt="Shops around Gandhi Bazaar Circle, Basavanagudi" loading="lazy">
+        <figcaption>Gandhi Bazaar Circle, Basavanagudi</figcaption>
+      </figure>
     </section>
 
-    <section id="contact" aria-labelledby="contact-title" class="contact">
-      <h2 id="contact-title">Tell me about your shop</h2>
-      <p>Send a message with your shop&rsquo;s name and what you&rsquo;d like. I reply within a day.</p>
-      <div class="actions">
-        <a class="button primary" data-whatsapp hidden href="#">WhatsApp me</a>
-        <a class="button" href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">ymitigaa@gmail.com</a>
+    <section id="contact" class="contact" aria-labelledby="contact-title">
+      <img class="contact-pic" src="assets/rain-window-1600.webp" srcset="assets/rain-window-900.webp 900w, assets/rain-window-1600.webp 1600w" sizes="100vw" width="1600" height="1000" alt="Rain on a window with traffic lights blurred behind it" loading="lazy">
+      <div class="card reveal">
+        <h2 id="contact-title">Put your shop online</h2>
+        <label for="shop-name">Your shop’s name</label>
+        <input id="shop-name" name="shop" autocomplete="organization" placeholder="e.g. Sri Ganesh Stores…" maxlength="40">
+        <p class="mini-board" aria-live="polite"><span data-board>Your shop</span></p>
+        <p>Send a message with your shop’s name and what you’d like. I reply within a day.</p>
+        <a class="action wide" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
+        <a class="mail" href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">ymitigaa@gmail.com</a>
       </div>
     </section>
   </main>
 
-  <footer>
-    <p>Adithya P Baliga, Bengaluru. Fonts: Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License).</p>
+  <footer class="footer">
+    <div class="cols reveal">
+      <div><p class="col-head">Reach me</p><ul><li><a data-whatsapp href="mailto:ymitigaa@gmail.com">WhatsApp</a></li><li><a href="mailto:ymitigaa@gmail.com">ymitigaa@gmail.com</a></li></ul></div>
+      <div><p class="col-head">On this page</p><ul><li><a href="#demos">Demos</a></li><li><a href="#how">How it works</a></li><li><a href="#contact">Contact</a></li></ul></div>
+      <div><p class="col-head">Based in</p><ul><li>Bengaluru, Karnataka</li><li>Working across the city</li></ul></div>
+      <div class="credits"><p class="col-head">Pictures</p>
+        <p>Two photos of Brigade Road at night (<a href="https://commons.wikimedia.org/wiki/File:Brigade_Road,_Bangalore_at_night_(2024)_01.jpg">signs</a>, <a href="https://commons.wikimedia.org/wiki/File:Brigade_Road,_Bangalore_at_night_(2024)_02.jpg">lights</a>) by Gpkp, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>; <a href="https://commons.wikimedia.org/wiki/File:Gandhi_Bazaar_Circle.jpg">Gandhi Bazaar Circle</a> by LittleT889, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>; <a href="https://commons.wikimedia.org/wiki/File:The_Saturday_Night_Market_(17310074908).jpg">The Saturday Night Market</a> by Ashwin Kumar, <a href="https://creativecommons.org/licenses/by-sa/2.0">CC BY-SA 2.0</a>; all via Wikimedia Commons, resized. Rain on a window by Riley Briggs, Unsplash. Rain effect from <a href="https://github.com/MengTo/threeui">ThreeUI</a> (MIT).</p>
+      </div>
+    </div>
+    <div class="closing reveal">
+      <p class="closing-line">Your shop could be next on the street.</p>
+      <a class="action" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
+    </div>
+    <svg class="wordmark" viewBox="0 0 1000 158" role="img" aria-label="Adithya">
+      <text x="0" y="150" textLength="1000" lengthAdjust="spacingAndGlyphs">ADITHYA</text>
+    </svg>
+    <p class="legal">Adithya P Baliga, Bengaluru. Demo shops on this page are samples, not clients. Fonts: Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License).</p>
   </footer>
 </body>
 </html>
