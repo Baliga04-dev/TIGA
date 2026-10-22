@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { IndianRupee, Plus } from 'lucide-react';
+import { FileText, IndianRupee, Plus, Receipt } from 'lucide-react';
+import { ProposalDialog } from './pipeline/ProposalDialog';
 import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
 import { cn } from '../lib/utils';
-import type { Deal, DealStage, MoneySummary } from '../types';
+import type { Deal, DealDocument, DealStage, MoneySummary } from '../types';
 
 const COLUMNS: { stage: DealStage; title: string }[] = [
   { stage: 'interested', title: 'Interested' },
@@ -32,7 +33,12 @@ const rupees = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) => void; onError: (m: string) => void }) {
   const [amount, setAmount] = useState(String(deal.amount || ''));
   const [busy, setBusy] = useState(false);
+  const [proposing, setProposing] = useState(false);
+  const [docs, setDocs] = useState<DealDocument[]>([]);
   const name = deal.company || deal.contact || deal.email;
+  useEffect(() => {
+    api.listDealDocuments(deal.id).then((r) => setDocs(r.items)).catch(() => setDocs([]));
+  }, [deal.id]);
   const act = async (fn: () => Promise<unknown>, message: string) => {
     setBusy(true);
     try {
@@ -76,12 +82,40 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
             <IndianRupee className="size-3" aria-hidden="true" /> Balance received <span className="sr-only">from {name}</span>
           </button>
         )}
+        {['interested', 'call_booked', 'proposal_sent'].includes(deal.stage) && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setProposing(true)}>
+            <FileText className="size-3" aria-hidden="true" /> Proposal <span className="sr-only">for {name}</span>
+          </button>
+        )}
+        {(deal.stage === 'won' || deal.stage === 'in_progress') && deal.advance_paid === 0 && advanceDue > 0 && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(() => api.writeInvoice(deal.id, 'advance'), 'Advance invoice written. Approve the email on the Outreach page.')}>
+            <Receipt className="size-3" aria-hidden="true" /> Advance invoice <span className="sr-only">for {name}</span>
+          </button>
+        )}
+        {deal.stage === 'delivered' && balanceDue > 0 && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(() => api.writeInvoice(deal.id, 'balance'), 'Balance invoice written. Approve the email on the Outreach page.')}>
+            <Receipt className="size-3" aria-hidden="true" /> Balance invoice <span className="sr-only">for {name}</span>
+          </button>
+        )}
         {!['in_progress', 'delivered'].includes(deal.stage) && (
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => act(() => api.moveDeal(deal.id, 'lost'), `${name} marked lost`)}>
             Lost <span className="sr-only">{name}</span>
           </button>
         )}
       </div>
+      {docs.length > 0 && (
+        <p className="mt-2 flex flex-wrap gap-2 text-xs">
+          {docs.map((d) => (
+            <a key={d.id} href={`/api/documents/${d.id}`} target="_blank" rel="noopener noreferrer" className="text-pen underline">
+              {d.kind === 'invoice' ? d.number : 'Proposal'}
+            </a>
+          ))}
+        </p>
+      )}
+      {proposing && (
+        <ProposalDialog deal={deal} onClose={() => setProposing(false)}
+          onDone={(message) => { setProposing(false); onDone(message); }} />
+      )}
     </li>
   );
 }

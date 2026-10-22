@@ -10,3 +10,4 @@ beautifulsoup4>=4.12
 lxml>=5.2
 defusedxml>=0.7
 yt-dlp>=2025.1
+qrcode>=7.4

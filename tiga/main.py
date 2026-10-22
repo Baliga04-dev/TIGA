@@ -103,6 +103,7 @@ app.include_router(prompt_api.router)
 app.include_router(analyst_api.router)
 app.include_router(assistant_api.router)
 app.include_router(deals_api.router)
+app.include_router(deals_api.pricing_router)
 
 
 @app.get("/api/features")

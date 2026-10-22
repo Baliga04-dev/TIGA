@@ -22,6 +22,8 @@ import type {
   Interview,
   Deal,
   MoneySummary,
+  Rate,
+  DealDocument,
   Prospect,
   AnalystStatus,
 } from '../types';
@@ -174,6 +176,18 @@ export const api = {
 
   recordPayment: (id: number, kind: 'advance' | 'balance', amount: number) =>
     post<{ ok: true; deal: Deal }>(`/deals/${id}/payment`, { kind, amount }),
+
+  getRates: () => request<{ ok: true; rates: Rate[] }>('/pricing'),
+
+  saveRates: (rates: Rate[]) => request<{ ok: true; rates: Rate[] }>('/pricing', { method: 'PUT', body: JSON.stringify({ rates }) }),
+
+  writeProposal: (dealId: number, items: { rate_id: string; qty: number }[]) =>
+    post<{ ok: true; document: { id: number; total: number }; draft: OutreachItem | null }>(`/deals/${dealId}/proposal`, { items }),
+
+  writeInvoice: (dealId: number, kind: 'advance' | 'balance') =>
+    post<{ ok: true; document: { id: number; number: string; amount: number }; draft: OutreachItem | null }>(`/deals/${dealId}/invoice`, { kind }),
+
+  listDealDocuments: (dealId: number) => request<{ ok: true; items: DealDocument[] }>(`/deals/${dealId}/documents`),
 
   confirmAction: (pendingId: string) =>
     post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),

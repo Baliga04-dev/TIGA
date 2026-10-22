@@ -336,3 +336,19 @@ export interface MoneySummary {
   paid_this_month: number;
   open_deals: number;
 }
+
+export interface Rate {
+  id: string;
+  name: string;
+  price: number;
+  unit: 'project' | 'image' | 'month' | 'page' | 'hour';
+  days: number;
+  description: string;
+}
+
+export interface DealDocument {
+  id: number;
+  kind: 'proposal' | 'invoice';
+  number: string;
+  created_at: string;
+}

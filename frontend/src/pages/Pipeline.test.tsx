@@ -48,4 +48,33 @@ describe('Pipeline', () => {
     await user.click(screen.getByRole('button', { name: /add deal/i }))
     await waitFor(() => expect(created).toEqual([{ email: 'new@shop.in', company: '', service: '', amount: 15000 }]))
   })
+
+  it('writes a proposal from the price list and says where the email went', async () => {
+    mock.get('/deals', { ok: true, items: [deal()], money })
+    const sent = mock.record('/deals/1/proposal', { ok: true, document: { id: 5, total: 18000 }, draft: { id: 9 } })
+    const user = userEvent.setup()
+    renderApp('/pipeline')
+    await user.click(await screen.findByRole('button', { name: /proposal for sri bakery/i }))
+    const dialog = await screen.findByRole('dialog')
+    await user.clear(within(dialog).getByLabelText(/quantity of business website/i))
+    await user.type(within(dialog).getByLabelText(/quantity of business website/i), '1')
+    await user.clear(within(dialog).getByLabelText(/quantity of photo editing/i))
+    await user.type(within(dialog).getByLabelText(/quantity of photo editing/i), '20')
+    expect(dialog).toHaveTextContent('₹18,000')
+    await user.click(within(dialog).getByRole('button', { name: /write proposal/i }))
+    await waitFor(() => expect(sent).toEqual([{ items: [{ rate_id: 'business_site', qty: 1 }, { rate_id: 'photo_edit', qty: 20 }] }]))
+    expect(await screen.findByText(/approve the email on the outreach page/i)).toBeInTheDocument()
+  })
+
+  it('offers the advance invoice on a won deal and links issued documents', async () => {
+    mock.get('/deals', { ok: true, items: [deal({ stage: 'won' })], money })
+    mock.get('/deals/:id/documents', { ok: true, items: [{ id: 3, kind: 'invoice', number: 'INV-2026-0001', created_at: 'x' }] })
+    const inv = mock.record('/deals/1/invoice', { ok: true, document: { id: 4, number: 'INV-2026-0002', amount: 10000 }, draft: { id: 1 } })
+    const user = userEvent.setup()
+    renderApp('/pipeline')
+    expect(await screen.findByRole('link', { name: 'INV-2026-0001' })).toHaveAttribute('href', '/api/documents/3')
+    await user.click(screen.getByRole('button', { name: /advance invoice for sri bakery/i }))
+    await waitFor(() => expect(inv).toEqual([{ kind: 'advance' }]))
+  })
 })
+

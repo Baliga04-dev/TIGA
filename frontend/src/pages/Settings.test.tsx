@@ -89,4 +89,20 @@ describe('Settings', () => {
     expect(await screen.findByText('Baliga04-dev/TIGA')).toBeInTheDocument()
     expect(screen.getByText('0.2.0')).toBeInTheDocument()
   })
+
+  it('edits and saves the price list', async () => {
+    const saved: unknown[] = []
+    server.use(http.put('*/api/pricing', async ({ request }) => { const b = await request.json() as { rates: unknown[] }; saved.push(b); return HttpResponse.json({ ok: true, rates: b.rates }) }))
+    const user = userEvent.setup()
+    renderApp('/settings')
+    const price = await screen.findByLabelText(/price of business website in rupees/i)
+    expect(screen.getByRole('button', { name: /save prices/i })).toBeDisabled()
+    await user.clear(price)
+    await user.type(price, '18000')
+    await user.click(screen.getByRole('button', { name: /save prices/i }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect((saved[0] as { rates: { price: number }[] }).rates[0].price).toBe(18000)
+    expect(await screen.findByText(/prices saved/i)).toBeInTheDocument()
+  })
 })
+

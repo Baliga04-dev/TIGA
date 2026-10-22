@@ -89,6 +89,10 @@ CREATE TABLE IF NOT EXISTS deals (
     outreach_id INTEGER, prospect_id INTEGER, paid_at TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, deal_id INTEGER NOT NULL,
+    number TEXT NOT NULL DEFAULT '', data TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
@@ -377,6 +381,27 @@ class Store:
         unknown = set(fields) - self._DEAL_FIELDS
         if unknown:
             raise ValueError(f"unknown deal field(s): {', '.join(sorted(unknown))}")
+
+    # --- proposals and invoices (immutable once issued) -------------------------
+    def add_document(self, kind: str, deal_id: int, data: dict, number: str = "") -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO documents (kind, deal_id, number, data, created_at) VALUES (?, ?, ?, ?, ?)",
+                                   (kind, deal_id, number, json.dumps(data), _now()))
+            self._write_audit("user", f"{kind}.issue", "deal", str(deal_id), number)
+        return self.get_document(cur.lastrowid)
+
+    def get_document(self, document_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no document {document_id}")
+        return {**dict(row), "data": json.loads(row["data"])}
+
+    def list_documents(self, deal_id: int) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute("SELECT id, kind, number, created_at FROM documents WHERE deal_id = ? ORDER BY id",
+                                    (deal_id,))
+            return [dict(r) for r in rows]
 
     # --- assistant actions waiting for the owner's click ----------------------
     def add_pending(self, pending_id: str, tool: str, args: dict, summary: str, expires_at: str) -> None:

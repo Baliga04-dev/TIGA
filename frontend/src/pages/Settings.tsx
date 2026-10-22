@@ -5,6 +5,7 @@ import { useAction } from '../hooks/useAction';
 import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
 import { api } from '../services/api';
 import { cn, downloadAsFile } from '../lib/utils';
+import { RateCard } from './settings/RateCard';
 
 export function Settings() {
   const { status } = useStatus();
@@ -30,6 +31,7 @@ export function Settings() {
       <PageHeader title="Settings" description="Connect Gmail and see which integrations are active" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RateCard />
         <Card title="Gmail">
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-wash rounded-lg">

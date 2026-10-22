@@ -71,3 +71,8 @@ AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()
 CLAUDE_MODEL = os.getenv("TIGA_CLAUDE_MODEL", "sonnet").strip()
 # Hard daily ceiling on Claude calls (chat, drafts, briefings); over it Tiga uses its built-in rules.
 AI_DAILY_CALLS = int(os.getenv("TIGA_AI_DAILY_CALLS", "150"))
+
+# Billing: your UPI ID (e.g. name@okaxis) goes on invoices as a scan-to-pay QR; the business name defaults to your name.
+UPI_ID = os.getenv("TIGA_UPI_ID", "").strip()
+BUSINESS_NAME = os.getenv("TIGA_BUSINESS_NAME", "").strip()
+PORTFOLIO_URL = os.getenv("TIGA_PORTFOLIO_URL", "").strip()
