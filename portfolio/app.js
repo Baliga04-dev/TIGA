@@ -1,8 +1,4 @@
-// The street (crossfade + rain on capable devices), the live phone demos, the contact signboard, entrances.
-import { createCondensation } from './vendor/condensation.js';
-
-document.documentElement.classList.add('js');
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// The live phone demos and the contact links. The street itself is street.js.
 
 // --- WhatsApp links, with the shop's name in the message when the visitor typed one ----------------------
 const number = ((window.SITE && window.SITE.whatsapp) || '').replace(/\D/g, '');
@@ -18,43 +14,9 @@ const updateLinks = () => {
 };
 updateLinks();
 shopInput?.addEventListener('input', () => {
-  board.textContent = shopInput.value.trim() || 'Your shop';
+  if (board) board.textContent = shopInput.value.trim() || 'Your shop';
   updateLinks();
 });
-
-// --- The street: slow crossfade between two views, rain on the glass where the device can afford it --------
-const pics = [...document.querySelectorAll('.street-pic')];
-if (!reduced && pics.length > 1) {
-  let on = 0, timer = 0;
-  const next = () => { pics[on].classList.remove('is-on'); on = (on + 1) % pics.length; pics[on].classList.add('is-on'); };
-  const start = () => { if (!timer) timer = setInterval(next, 6500); };
-  const stop = () => { clearInterval(timer); timer = 0; };
-  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
-  start();
-}
-
-const capable = !reduced && !(navigator.connection && navigator.connection.saveData)
-  && (navigator.deviceMemory === undefined || navigator.deviceMemory >= 4)
-  && (navigator.hardwareConcurrency || 4) >= 4;
-const canvas = document.querySelector('.rain');
-if (capable && canvas) {
-  const host = canvas.parentElement;
-  const rain = createCondensation(canvas, { speed: 1, dropAmount: matchMedia('(max-width: 860px)').matches ? 0.6 : 1 });
-  if (rain) {
-    canvas.hidden = false;
-    let frame = 0, visible = true;
-    const size = () => { const b = host.getBoundingClientRect(); rain.resize(b.width, b.height); };
-    const tick = (now) => { rain.render(now); frame = visible && !document.hidden ? requestAnimationFrame(tick) : 0; };
-    new ResizeObserver(size).observe(host);
-    new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      if (visible && !frame) frame = requestAnimationFrame(tick);
-    }).observe(host);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && visible && !frame) frame = requestAnimationFrame(tick); });
-    size();
-    frame = requestAnimationFrame(tick);
-  }
-}
 
 // --- Demo shop tabs (arrow keys move between them, as a tablist should) --------------------------------------
 const tabs = [...document.querySelectorAll('[role="tab"]')];
@@ -117,25 +79,3 @@ const clinic = document.getElementById('screen-clinic');
 clinic.querySelector('[data-request]').addEventListener('click', () => {
   done(clinic, `Request sent: ${picked(clinic, 'clinic-reason')}, ${picked(clinic, 'clinic-day')}. The clinic calls you to confirm a time. (Demo)`);
 });
-
-// --- Entrances: each part of a section rises in turn, once --------------------------------------------------
-if (!reduced && 'IntersectionObserver' in window) {
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (!e.isIntersecting) return;
-      e.target.classList.add('is-in');
-      io.unobserve(e.target);
-    });
-  }, { rootMargin: '0px 0px -10% 0px' });
-  // Stagger the parts of each block (section or footer) in order; every .reveal on the page is observed.
-  const groups = new Map();
-  document.querySelectorAll('.reveal').forEach((el) => {
-    const group = el.closest('section, footer') || document.body;
-    const i = groups.get(group) || 0;
-    groups.set(group, i + 1);
-    el.style.setProperty('--d', `${i * 80}ms`);
-    io.observe(el);
-  });
-} else {
-  document.querySelectorAll('.reveal').forEach((el) => el.classList.add('is-in'));
-}

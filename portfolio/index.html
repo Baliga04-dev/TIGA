@@ -1,181 +1,326 @@
 <!doctype html>
 <html lang="en-IN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adithya Baliga: websites for Bengaluru shops</title>
-  <meta name="description" content="Adithya P Baliga builds websites, booking and ordering apps, and edits photos for Bengaluru shops: fast on any phone, with orders straight to your WhatsApp.">
-  <meta property="og:title" content="Websites for Bengaluru shops">
-  <meta property="og:description" content="Fast on any phone, found on Google, orders to your WhatsApp. 50% to start, the rest on launch.">
-  <meta name="theme-color" content="#0B1A14">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 fill=%22%230F5A43%22/%3E%3Ctext x=%2232%22 y=%2248%22 font-family=%22Arial Narrow,sans-serif%22 font-weight=%22900%22 font-size=%2244%22 text-anchor=%22middle%22 fill=%22%23F3C326%22%3EA%3C/text%3E%3C/svg%3E">
-  <link rel="preload" href="fonts/big-shoulders-display-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="fonts/atkinson-hyperlegible-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/brigade-road-signs-1600.webp" as="image" type="image/webp" media="(min-width: 700px)">
-  <link rel="preload" href="assets/brigade-road-signs-900.webp" as="image" type="image/webp" media="(max-width: 699px)">
-  <link rel="stylesheet" href="styles.css">
-  <script src="site.config.js" defer></script>
-  <script type="module" src="app.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adithya Baliga: websites for Bengaluru shops</title>
+<meta name="description" content="Adithya P Baliga builds websites, ordering and booking apps, and edits photos for Bengaluru shops: fast on any phone, found on Google, with orders straight to your WhatsApp.">
+<meta property="og:title" content="Websites for the shops of Bengaluru">
+<meta property="og:description" content="Fast on any phone, found on Google, orders and bookings straight to your WhatsApp.">
+<meta property="og:image" content="https://baliga04-dev.github.io/assets/street-poster.webp">
+<meta name="theme-color" content="#06080b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2306080b'/%3E%3Crect x='4' y='9' width='24' height='10' fill='%23f2c230'/%3E%3Crect x='4' y='19' width='24' height='4' fill='%23c4161c'/%3E%3Crect x='8' y='23' width='2' height='5' fill='%23efe7d8'/%3E%3Crect x='22' y='23' width='2' height='5' fill='%23efe7d8'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/onest-latin-variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/big-shoulders-display-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/noto-sans-kannada-variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="page.css">
+<script src="site.config.js" defer></script>
+<script type="module" src="app.js"></script>
 </head>
-<body>
-  <a class="skip" href="#demos">Skip to the demos</a>
+<body data-layout-hero="b" data-layout-story="b" data-layout-curriculum="b" data-layout-footer="b">
+<a class="skip" href="#demos">Skip to the demo shops</a>
 
-  <div class="street">
-    <div class="street-pics" aria-hidden="true">
-      <img class="street-pic is-on" src="assets/brigade-road-signs-1600.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="">
-      <img class="street-pic" src="assets/brigade-road-lights-1600.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" loading="lazy">
-      <canvas class="rain" hidden></canvas>
-    </div>
-    <div class="street-detail" aria-hidden="true">
-      <img src="assets/brigade-road-signs-1600.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" loading="lazy">
-    </div>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="vignette"></div>
+<div id="grain"></div>
+<div class="cur-dot" id="cursor"></div>
 
-    <div class="rail-spacer" aria-hidden="true"></div>
-    <header class="rail">
-      <h1 class="board"><span class="board-name">Adithya Baliga</span> <span class="board-trade">websites for Bengaluru shops</span></h1>
-      <p class="rail-line">Shop websites that work on any phone and send orders to your WhatsApp.</p>
-      <nav class="rail-links" aria-label="Page">
-        <a href="#demos">Try a demo</a>
-        <a href="#how">How it works</a>
-        <a class="action" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
-      </nav>
-    </header>
-    <p class="street-caption">Brigade Road at night, Bengaluru</p>
+<!-- ============================================================ preloader -->
+<div id="pre" aria-hidden="true">
+  <div class="pre-in">
+    <div class="pre-mark">
+      <svg viewBox="0 0 44 44" fill="none">
+        <rect x="6" y="12" width="32" height="13" fill="#f2c230"/>
+        <rect x="6" y="25" width="32" height="5" fill="#c4161c"/>
+        <path d="M11 30v8M33 30v8" stroke="#efe7d8" stroke-width="1.4"/>
+      </svg>
+    </div>
+    <div class="pre-kn kn">ಬೆಂಗಳೂರು</div>
+    <div class="pre-bar"><i id="pre-fill"></i></div>
+    <div class="pre-meta">
+      <span>Lighting up the street</span><b><span id="pre-pct">0</span>%</b>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ nav -->
+<header class="nav" id="nav">
+  <a class="brand" href="#top" data-cursor aria-label="Adithya Baliga, back to the top">
+    <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="34" height="14" fill="#f2c230"/>
+      <rect x="5" y="25" width="34" height="5" fill="#c4161c"/>
+      <path d="M10 30v9M34 30v9" stroke="#efe7d8" stroke-width="1.5"/>
+    </svg>
+    <span class="brand-tx"><b>ADITHYA</b><i>Websites for Bengaluru shops</i></span>
+  </a>
+  <nav class="nav-links" id="navlinks" aria-label="Page">
+    <a class="nav-link" href="#demos" data-cursor><span>Demo shops</span><span class="alt kn" aria-hidden="true">ಮಾದರಿ</span></a>
+    <a class="nav-link" href="#process" data-cursor><span>How it works</span><span class="alt kn" aria-hidden="true">ಹಂತಗಳು</span></a>
+    <a class="nav-link" href="#contact" data-cursor><span>Contact</span><span class="alt kn" aria-hidden="true">ಸಂಪರ್ಕ</span></a>
+  </nav>
+  <a class="nav-cta" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop" data-cursor>WhatsApp me</a>
+  <button class="nav-burger" aria-label="Menu" data-cursor><i></i><i></i></button>
+</header>
+
+<main class="page" id="top">
+
+<!-- ============================================================ hero -->
+<section class="hero" id="hero" data-cam="0" aria-labelledby="hero-title">
+  <div class="hero-top">
+    <p class="eyebrow" data-rv="fade"><span class="dot"></span>Adithya P Baliga, Bengaluru</p>
+    <h1 class="display h-hero" id="hero-title">
+      <span class="mask-line"><span>Websites for the shops</span></span>
+      <span class="mask-line"><span>of Bengaluru.</span></span>
+    </h1>
+    <p class="hero-sub body" data-rv="up">I build websites, ordering and booking apps, and edit photos for local shops.
+      Customers find you on Google and order on your WhatsApp.</p>
+    <a class="cta solid hero-cta" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop" data-rv="fade" data-cursor>
+      <i></i><span>WhatsApp me</span>
+      <svg viewBox="0 0 14 14" fill="none" width="13" height="13" aria-hidden="true"><path d="M3 11 11 3M5 3h6v6" stroke="currentColor" stroke-width="1.3"/></svg>
+    </a>
   </div>
 
-  <main>
-    <section id="demos" class="demos" aria-labelledby="demos-title">
-      <img class="demos-ground" src="assets/brigade-road-lights-1600.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="100vw" width="1600" height="1205" alt="" aria-hidden="true" loading="lazy">
-      <div class="demos-inner">
-        <div class="demos-text reveal">
-          <h2 id="demos-title">Try a shop’s website</h2>
-          <p>These are three demo shops I built for this page. Pick one and use it like a customer would: add a few things to an order, book a haircut, ask for an appointment.</p>
-          <div class="shop-tabs reveal" role="tablist" aria-label="Demo shops">
-            <button role="tab" id="tab-bakery" aria-controls="screen-bakery" aria-selected="true">Iyengar bakery</button>
-            <button role="tab" id="tab-salon" aria-controls="screen-salon" aria-selected="false" tabindex="-1">Salon</button>
-            <button role="tab" id="tab-clinic" aria-controls="screen-clinic" aria-selected="false" tabindex="-1">Dental clinic</button>
+  <div class="hero-spacer"></div>
+
+  <div class="hero-foot">
+    <div class="hero-cue" data-rv="fade" aria-hidden="true"><span>Scroll down the street</span><span class="track"><i></i></span></div>
+    <ul class="chapters" id="chips" aria-label="What I make">
+      <li class="chip" data-chip="0" data-rv="up" data-cursor><span class="num" aria-hidden="true">01</span>
+        <span class="tx"><b>Shop websites</b><span>Fast on any phone, and found on Google and Maps.</span></span></li>
+      <li class="chip" data-chip="1" data-rv="up" data-cursor><span class="num" aria-hidden="true">02</span>
+        <span class="tx"><b>Orders and bookings</b><span>They land on the WhatsApp you already use.</span></span></li>
+      <li class="chip" data-chip="2" data-rv="up" data-cursor><span class="num" aria-hidden="true">03</span>
+        <span class="tx"><b>Small apps</b><span>For regulars, staff, stock and appointments.</span></span></li>
+      <li class="chip" data-chip="3" data-rv="up" data-cursor><span class="num" aria-hidden="true">04</span>
+        <span class="tx"><b>Photo editing</b><span>Clean product and shop photos for the site.</span></span></li>
+    </ul>
+  </div>
+
+  <a class="peek" href="#contact" data-view="3" data-rv="fade" data-cursor aria-label="Put your shop's name on the board at the end of the street">
+    <span class="peek-fr" data-frame></span>
+    <span class="peek-cap"><b class="kn">ನಿಮ್ಮ ಅಂಗಡಿ</b><i>Your shop, at the end of the street</i></span>
+  </a>
+
+  <div class="word-fb" aria-hidden="true">ADITHYA</div>
+
+  <div class="hero-side" data-rv="up" aria-hidden="true">
+    <span class="v kn">ಬೆಂಗಳೂರು</span>
+  </div>
+</section>
+
+<!-- ============================================================ chapter I -->
+<section class="sec" id="street" data-cam="1" aria-labelledby="street-title">
+  <div class="sec-head" data-rv="fade" aria-hidden="true">
+    <span class="k"><b>01</b> — The street</span><span class="rule"></span><span class="k kn">ಬೀದಿ</span>
+  </div>
+  <div class="gate-grid">
+    <h2 class="display h-sec" id="street-title" data-rv="up">Every shop needs a door online.</h2>
+    <div class="gate-copy">
+      <p class="lead" data-rv="up">Your customers look you up before they walk in: the menu, the timings, whether you deliver.
+        If your shop isn’t there, the one two doors down is.</p>
+      <p class="body" data-rv="up">I make that door. A small, fast site with your real photos, prices and hours, in English and
+        Kannada if you want both. Orders and bookings come to the WhatsApp you already use. Your customers install nothing,
+        and there is nothing new for you to learn.</p>
+      <a class="arrowlink" href="#demos" data-rv="fade" data-cursor>
+        <span>Try a demo shop</span>
+        <span class="ar" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none"><path d="M3 11 11 3M5 3h6v6" stroke="currentColor" stroke-width="1.3"/></svg></span>
+      </a>
+    </div>
+  </div>
+  <dl class="gate-stats" data-rv="up">
+    <div><dt>Demo shops to try</dt><dd>3</dd></div>
+    <div><dt>Languages: English and <span class="kn" lang="kn">ಕನ್ನಡ</span></dt><dd>2</dd></div>
+    <div><dt>Advance, the rest on launch</dt><dd>50%</dd></div>
+    <div><dt>To a preview on your phone</dt><dd>1 wk</dd></div>
+  </dl>
+</section>
+
+<!-- ============================================================ chapter II -->
+<section class="sec" id="demos" data-cam="2" aria-labelledby="demos-title">
+  <div class="sec-head" data-rv="fade" aria-hidden="true">
+    <span class="k"><b>02</b> — Try a shop</span><span class="rule"></span><span class="k kn">ಮಾದರಿ</span>
+  </div>
+  <div class="demo-grid">
+    <div class="demo-text">
+      <h2 class="display h-sec" id="demos-title" data-rv="up">Use one like a customer would.</h2>
+      <p class="body-lg" data-rv="up">Three demo shops on this street, each with a site I built for this page. Pick one, then
+        add a few things to an order, book a haircut, or ask for an appointment.</p>
+      <div class="cards" role="tablist" aria-label="Demo shops">
+        <button class="card" role="tab" id="tab-bakery" aria-controls="screen-bakery" aria-selected="true" data-view="0" data-rv="up" data-cursor>
+          <span class="card-fr" data-frame><span class="card-lab"><b>Bakery</b><span class="kn" aria-hidden="true">ಬೇಕರಿ</span></span></span>
+          <span class="card-meta"><span>Order for pickup</span></span>
+        </button>
+        <button class="card" role="tab" id="tab-salon" aria-controls="screen-salon" aria-selected="false" tabindex="-1" data-view="1" data-rv="up" data-cursor>
+          <span class="card-fr" data-frame><span class="card-lab"><b>Salon</b><span class="kn" aria-hidden="true">ಸಲೂನ್</span></span></span>
+          <span class="card-meta"><span>Book a slot</span></span>
+        </button>
+        <button class="card" role="tab" id="tab-clinic" aria-controls="screen-clinic" aria-selected="false" tabindex="-1" data-view="2" data-rv="up" data-cursor>
+          <span class="card-fr" data-frame><span class="card-lab"><b>Dental clinic</b><span class="kn" aria-hidden="true">ಕ್ಲಿನಿಕ್</span></span></span>
+          <span class="card-meta"><span>Ask for a visit</span></span>
+        </button>
+      </div>
+      <p class="demos-note body" data-rv="up">On a real site, the order or booking goes straight to the shop’s WhatsApp.</p>
+    </div>
+
+    <div class="phone" data-rv="up" aria-label="Demo phone" data-ui>
+      <div class="phone-screen">
+        <section class="shop bakery" id="screen-bakery" role="tabpanel" aria-labelledby="tab-bakery">
+          <header class="shop-head"><b>Malleswaram Iyengar Bakery</b><span>8th Cross, out of the oven at 6 am</span></header>
+          <ul class="menu" aria-label="Today's bakes">
+            <li data-item="Honey cake" data-price="40"><span>Honey cake</span><span>₹40</span><span class="qty"><button aria-label="One less honey cake" data-step="-1">−</button><output>0</output><button aria-label="One more honey cake" data-step="1">+</button></span></li>
+            <li data-item="Dil pasand" data-price="35"><span>Dil pasand</span><span>₹35</span><span class="qty"><button aria-label="One less dil pasand" data-step="-1">−</button><output>0</output><button aria-label="One more dil pasand" data-step="1">+</button></span></li>
+            <li data-item="Veg puff" data-price="25"><span>Veg puff</span><span>₹25</span><span class="qty"><button aria-label="One less veg puff" data-step="-1">−</button><output>0</output><button aria-label="One more veg puff" data-step="1">+</button></span></li>
+            <li data-item="Khara bun" data-price="20"><span>Khara bun</span><span>₹20</span><span class="qty"><button aria-label="One less khara bun" data-step="-1">−</button><output>0</output><button aria-label="One more khara bun" data-step="1">+</button></span></li>
+            <li data-item="Rusk, 250 g" data-price="90"><span>Rusk, 250 g</span><span>₹90</span><span class="qty"><button aria-label="One less rusk" data-step="-1">−</button><output>0</output><button aria-label="One more rusk" data-step="1">+</button></span></li>
+          </ul>
+          <p class="shop-total">Total <b data-total>₹0</b></p>
+          <button class="shop-cta" data-order>Order on WhatsApp</button>
+          <p class="shop-done" role="status" hidden></p>
+          <p class="shop-foot">Open 6 am to 9:30 pm. Pick up at the counter, or delivery within 3 km.</p>
+        </section>
+
+        <section class="shop salon" id="screen-salon" role="tabpanel" aria-labelledby="tab-salon" hidden>
+          <header class="shop-head"><b>Glow Salon</b><span>100 Feet Road, Indiranagar</span></header>
+          <p class="shop-label" id="salon-service">Service</p>
+          <div class="chips" role="radiogroup" aria-labelledby="salon-service">
+            <button role="radio" aria-checked="true">Haircut</button><button role="radio" aria-checked="false">Beard trim</button><button role="radio" aria-checked="false">Facial</button>
           </div>
-          <p class="demos-note">On a real site, the order or booking goes straight to the shop’s WhatsApp.</p>
-        </div>
-
-        <div class="phone reveal" aria-label="Demo phone" data-ui>
-          <div class="phone-screen">
-            <section class="shop bakery" id="screen-bakery" role="tabpanel" aria-labelledby="tab-bakery">
-              <header class="shop-head"><b>Malleswaram Iyengar Bakery</b><span>8th Cross · out of the oven at 6 am</span></header>
-              <ul class="menu" aria-label="Today's bakes">
-                <li data-item="Honey cake" data-price="40"><span>Honey cake</span><span>₹40</span><span class="qty"><button aria-label="One less honey cake" data-step="-1">−</button><output>0</output><button aria-label="One more honey cake" data-step="1">+</button></span></li>
-                <li data-item="Dil pasand" data-price="35"><span>Dil pasand</span><span>₹35</span><span class="qty"><button aria-label="One less dil pasand" data-step="-1">−</button><output>0</output><button aria-label="One more dil pasand" data-step="1">+</button></span></li>
-                <li data-item="Veg puff" data-price="25"><span>Veg puff</span><span>₹25</span><span class="qty"><button aria-label="One less veg puff" data-step="-1">−</button><output>0</output><button aria-label="One more veg puff" data-step="1">+</button></span></li>
-                <li data-item="Khara bun" data-price="20"><span>Khara bun</span><span>₹20</span><span class="qty"><button aria-label="One less khara bun" data-step="-1">−</button><output>0</output><button aria-label="One more khara bun" data-step="1">+</button></span></li>
-                <li data-item="Rusk, 250 g" data-price="90"><span>Rusk, 250 g</span><span>₹90</span><span class="qty"><button aria-label="One less rusk" data-step="-1">−</button><output>0</output><button aria-label="One more rusk" data-step="1">+</button></span></li>
-              </ul>
-              <p class="shop-total">Total <b data-total>₹0</b></p>
-              <button class="shop-cta" data-order>Order on WhatsApp</button>
-              <p class="shop-done" role="status" hidden></p>
-              <p class="shop-foot">Open 6 am to 9:30 pm. Pick up at the counter, or delivery within 3 km.</p>
-            </section>
-
-            <section class="shop salon" id="screen-salon" role="tabpanel" aria-labelledby="tab-salon" hidden>
-              <header class="shop-head"><b>Glow Salon</b><span>100 Feet Road, Indiranagar</span></header>
-              <p class="shop-label" id="salon-service">Service</p>
-              <div class="chips" role="radiogroup" aria-labelledby="salon-service">
-                <button role="radio" aria-checked="true">Haircut</button><button role="radio" aria-checked="false">Beard trim</button><button role="radio" aria-checked="false">Facial</button>
-              </div>
-              <p class="shop-label" id="salon-time">Saturday</p>
-              <div class="slots" role="radiogroup" aria-labelledby="salon-time">
-                <button role="radio" aria-checked="false">10:00</button><button role="radio" aria-checked="false" disabled>11:00</button><button role="radio" aria-checked="true">12:30</button>
-                <button role="radio" aria-checked="false">3:00</button><button role="radio" aria-checked="false" disabled>4:30</button><button role="radio" aria-checked="false">6:00</button>
-              </div>
-              <button class="shop-cta" data-book>Book this slot</button>
-              <p class="shop-done" role="status" hidden></p>
-              <p class="shop-foot">Tuesday to Sunday, 10 am to 8 pm. Walk-ins welcome when a chair is free.</p>
-            </section>
-
-            <section class="shop clinic" id="screen-clinic" role="tabpanel" aria-labelledby="tab-clinic" hidden>
-              <header class="shop-head"><b>Sunrise Dental Clinic</b><span>Jayanagar 4th Block</span></header>
-              <dl class="hours"><div><dt>Mon to Sat</dt><dd>9 am to 8 pm</dd></div><div><dt>Sunday</dt><dd>Closed</dd></div></dl>
-              <p class="shop-label" id="clinic-reason">What is it for?</p>
-              <div class="chips" role="radiogroup" aria-labelledby="clinic-reason">
-                <button role="radio" aria-checked="true">Check-up</button><button role="radio" aria-checked="false">Cleaning</button><button role="radio" aria-checked="false">Tooth pain</button>
-              </div>
-              <p class="shop-label" id="clinic-day">Day</p>
-              <div class="chips" role="radiogroup" aria-labelledby="clinic-day">
-                <button role="radio" aria-checked="true">Tomorrow</button><button role="radio" aria-checked="false">Friday</button><button role="radio" aria-checked="false">Saturday</button>
-              </div>
-              <button class="shop-cta" data-request>Request an appointment</button>
-              <p class="shop-done" role="status" hidden></p>
-              <p class="shop-foot">For a dental emergency, call the clinic directly.</p>
-            </section>
+          <p class="shop-label" id="salon-time">Saturday</p>
+          <div class="slots" role="radiogroup" aria-labelledby="salon-time">
+            <button role="radio" aria-checked="false">10:00</button><button role="radio" aria-checked="false" disabled>11:00</button><button role="radio" aria-checked="true">12:30</button>
+            <button role="radio" aria-checked="false">3:00</button><button role="radio" aria-checked="false" disabled>4:30</button><button role="radio" aria-checked="false">6:00</button>
           </div>
-        </div>
-      </div>
-    </section>
+          <button class="shop-cta" data-book>Book this slot</button>
+          <p class="shop-done" role="status" hidden></p>
+          <p class="shop-foot">Tuesday to Sunday, 10 am to 8 pm. Walk-ins welcome when a chair is free.</p>
+        </section>
 
-    <section id="how" class="how" aria-labelledby="how-title">
-      <h2 id="how-title" class="how-title reveal">From first call to launch</h2>
-      <figure class="stage one reveal">
-        <img src="assets/night-market-900.webp" srcset="assets/night-market-900.webp 900w, assets/night-market-1600.webp 1600w" sizes="(min-width: 900px) 30vw, 100vw" width="900" height="614" alt="Market stalls lit up with paper star lanterns at night" loading="lazy">
-      </figure>
-      <p class="stage-text one reveal"><b>On the first day</b> we talk for fifteen minutes, free, about your shop and what you want customers to do on the site. You get a one-page written proposal with the price and the dates.</p>
-      <figure class="stage two reveal">
-        <img src="assets/brigade-road-lights-900.webp" srcset="assets/brigade-road-lights-900.webp 900w, assets/brigade-road-lights-1600.webp 1600w" sizes="(min-width: 900px) 24vw, 62vw" width="900" height="678" alt="Strings of festival lights over Brigade Road at night" loading="lazy">
-      </figure>
-      <p class="stage-text two reveal"><b>Within a week</b> of the 50% advance and your photos, logo and text, you see a working preview on your own phone, and tell me what to change.</p>
-      <figure class="stage three reveal">
-        <img src="assets/brigade-road-signs-900.webp" srcset="assets/brigade-road-signs-900.webp 900w, assets/brigade-road-signs-1600.webp 1600w" sizes="(min-width: 900px) 40vw, 78vw" width="900" height="678" alt="Shop signboards in Kannada and English on Brigade Road" loading="lazy">
-      </figure>
-      <p class="stage-text three reveal"><b>On launch day</b> the site goes live on your own domain, you pay the balance, and every login is handed to you. It’s your site, not mine.</p>
-    </section>
-
-    <section class="about" aria-labelledby="about-title">
-      <div class="about-text reveal">
-        <h2 id="about-title">Who builds it</h2>
-        <p>I’m Adithya P Baliga, a developer in Bengaluru. I build websites, booking and ordering apps, and I clean up shop and product photos so your place looks as good online as it does in person.</p>
-        <p>I’m starting out, which means the first few shops get my full attention and a direct line to me while their site is built. You’ll talk to me, not a sales team.</p>
-        <ul class="makes reveal">
-          <li>Shop and restaurant websites</li>
-          <li>Booking and ordering apps</li>
-          <li>Redesigns of slow or old sites</li>
-          <li>Logos and photo editing</li>
-        </ul>
-      </div>
-      <figure class="about-pic reveal">
-        <img src="assets/gandhi-bazaar-900.webp" srcset="assets/gandhi-bazaar-900.webp 900w, assets/gandhi-bazaar-1600.webp 1600w" sizes="(min-width: 900px) 46vw, 100vw" width="900" height="675" alt="Shops around Gandhi Bazaar Circle, Basavanagudi" loading="lazy">
-        <figcaption>Gandhi Bazaar Circle, Basavanagudi</figcaption>
-      </figure>
-    </section>
-
-    <section id="contact" class="contact" aria-labelledby="contact-title">
-      <img class="contact-pic" src="assets/rain-window-1600.webp" srcset="assets/rain-window-900.webp 900w, assets/rain-window-1600.webp 1600w" sizes="100vw" width="1600" height="1000" alt="Rain on a window with traffic lights blurred behind it" loading="lazy">
-      <div class="card reveal">
-        <h2 id="contact-title">Put your shop online</h2>
-        <label for="shop-name">Your shop’s name</label>
-        <input id="shop-name" name="shop" autocomplete="organization" placeholder="e.g. Sri Ganesh Stores…" maxlength="40">
-        <p class="mini-board" aria-live="polite"><span data-board>Your shop</span></p>
-        <p>Send a message with your shop’s name and what you’d like. I reply within a day.</p>
-        <a class="action wide" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
-        <a class="mail" href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">ymitigaa@gmail.com</a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="cols reveal">
-      <div><p class="col-head">Reach me</p><ul><li><a data-whatsapp href="mailto:ymitigaa@gmail.com">WhatsApp</a></li><li><a href="mailto:ymitigaa@gmail.com">ymitigaa@gmail.com</a></li></ul></div>
-      <div><p class="col-head">On this page</p><ul><li><a href="#demos">Demos</a></li><li><a href="#how">How it works</a></li><li><a href="#contact">Contact</a></li></ul></div>
-      <div><p class="col-head">Based in</p><ul><li>Bengaluru, Karnataka</li><li>Working across the city</li></ul></div>
-      <div class="credits"><p class="col-head">Pictures</p>
-        <p>Two photos of Brigade Road at night (<a href="https://commons.wikimedia.org/wiki/File:Brigade_Road,_Bangalore_at_night_(2024)_01.jpg">signs</a>, <a href="https://commons.wikimedia.org/wiki/File:Brigade_Road,_Bangalore_at_night_(2024)_02.jpg">lights</a>) by Gpkp, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>; <a href="https://commons.wikimedia.org/wiki/File:Gandhi_Bazaar_Circle.jpg">Gandhi Bazaar Circle</a> by LittleT889, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>; <a href="https://commons.wikimedia.org/wiki/File:The_Saturday_Night_Market_(17310074908).jpg">The Saturday Night Market</a> by Ashwin Kumar, <a href="https://creativecommons.org/licenses/by-sa/2.0">CC BY-SA 2.0</a>; all via Wikimedia Commons, resized. Rain on a window by Riley Briggs, Unsplash. Rain effect from <a href="https://github.com/MengTo/threeui">ThreeUI</a> (MIT).</p>
+        <section class="shop clinic" id="screen-clinic" role="tabpanel" aria-labelledby="tab-clinic" hidden>
+          <header class="shop-head"><b>Sunrise Dental Clinic</b><span>Jayanagar 4th Block</span></header>
+          <dl class="hours"><div><dt>Mon to Sat</dt><dd>9 am to 8 pm</dd></div><div><dt>Sunday</dt><dd>Closed</dd></div></dl>
+          <p class="shop-label" id="clinic-reason">What is it for?</p>
+          <div class="chips" role="radiogroup" aria-labelledby="clinic-reason">
+            <button role="radio" aria-checked="true">Check-up</button><button role="radio" aria-checked="false">Cleaning</button><button role="radio" aria-checked="false">Tooth pain</button>
+          </div>
+          <p class="shop-label" id="clinic-day">Day</p>
+          <div class="chips" role="radiogroup" aria-labelledby="clinic-day">
+            <button role="radio" aria-checked="true">Tomorrow</button><button role="radio" aria-checked="false">Friday</button><button role="radio" aria-checked="false">Saturday</button>
+          </div>
+          <button class="shop-cta" data-request>Request an appointment</button>
+          <p class="shop-done" role="status" hidden></p>
+          <p class="shop-foot">For a dental emergency, call the clinic directly.</p>
+        </section>
       </div>
     </div>
-    <div class="closing reveal">
-      <p class="closing-line">Your shop could be next on the street.</p>
-      <a class="action" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop">WhatsApp me</a>
+  </div>
+</section>
+
+<!-- ============================================================ chapter III -->
+<section class="sec" id="process" data-cam="3" aria-labelledby="process-title">
+  <div class="sec-head" data-rv="fade" aria-hidden="true">
+    <span class="k"><b>03</b> — How it works</span><span class="rule"></span><span class="k kn">ಹಂತಗಳು</span>
+  </div>
+  <div class="cur-head">
+    <h2 class="display h-sec" id="process-title" data-rv="up">From one call to your own site.</h2>
+    <p class="body-lg" data-rv="up">You talk to me the whole way through, not to a sales team, and every step ends with something
+      you can see on your own phone.</p>
+  </div>
+  <ol class="cur" id="cur">
+    <li class="les" data-les="0" data-cursor>
+      <span class="k" aria-hidden="true">01</span>
+      <h3>The call<em class="kn" aria-hidden="true">ಕರೆ</em></h3>
+      <p>Fifteen minutes, free, about your shop and what customers should be able to do on the site.</p>
+      <span class="t">Day 1</span><i class="bar"></i>
+    </li>
+    <li class="les" data-les="1" data-cursor>
+      <span class="k" aria-hidden="true">02</span>
+      <h3>The proposal<em class="kn" aria-hidden="true">ಪ್ರಸ್ತಾವನೆ</em></h3>
+      <p>One written page: what I’ll build, the price and the dates. Nothing added later.</p>
+      <span class="t">Day 2</span><i class="bar"></i>
+    </li>
+    <li class="les" data-les="2" data-cursor>
+      <span class="k" aria-hidden="true">03</span>
+      <h3>The advance<em class="kn" aria-hidden="true">ಮುಂಗಡ</em></h3>
+      <p>50% to start, with your logo, photos and text. I can clean up the photos you have.</p>
+      <span class="t">When you’re ready</span><i class="bar"></i>
+    </li>
+    <li class="les" data-les="3" data-cursor>
+      <span class="k" aria-hidden="true">04</span>
+      <h3>The preview<em class="kn" aria-hidden="true">ಮುನ್ನೋಟ</em></h3>
+      <p>A working site on your own phone. Tell me what to change, and I change it.</p>
+      <span class="t">Within a week</span><i class="bar"></i>
+    </li>
+    <li class="les" data-les="4" data-cursor>
+      <span class="k" aria-hidden="true">05</span>
+      <h3>Launch<em class="kn" aria-hidden="true">ಆರಂಭ</em></h3>
+      <p>Live on your own domain. You pay the balance and get every login. It’s your site, not mine.</p>
+      <span class="t">Launch day</span><i class="bar"></i>
+    </li>
+  </ol>
+</section>
+
+<!-- ============================================================ chapter IV -->
+<section class="sec fin" id="contact" data-cam="4" aria-labelledby="contact-title">
+  <div class="fin-copy">
+    <p class="eyebrow" data-rv="fade" aria-hidden="true"><b>04</b> — Your shop</p>
+    <h2 class="display" id="contact-title" data-rv="up">Next on the street.</h2>
+    <p class="body-lg" data-rv="up">I’m Adithya P Baliga, a developer in Bengaluru, and I’m starting out: the first few shops get my
+      full attention and a direct line to me. Type your shop’s name and see it lit at the end of the street.</p>
+    <form class="namecard" data-rv="up" action="#" onsubmit="return false">
+      <label for="shop-name">Your shop’s name</label>
+      <input id="shop-name" name="shop" autocomplete="organization" placeholder="e.g. Sri Ganesh Stores…" maxlength="40">
+      <p class="mini-board" aria-live="polite"><span data-board>Your shop</span></p>
+      <p class="namecard-note">Send a message with your shop’s name and what you’d like. I reply within a day.</p>
+      <div class="namecard-actions">
+        <a class="cta solid" data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop" data-cursor>
+          <i></i><span>WhatsApp me</span>
+          <svg viewBox="0 0 14 14" fill="none" width="13" height="13" aria-hidden="true"><path d="M3 11 11 3M5 3h6v6" stroke="currentColor" stroke-width="1.3"/></svg>
+        </a>
+        <a class="mail" href="mailto:ymitigaa@gmail.com?subject=Website%20for%20my%20shop" data-cursor>ymitigaa@gmail.com</a>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ============================================================ footer -->
+<footer class="foot" data-cam="5">
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <svg viewBox="0 0 44 44" fill="none" width="34" height="34" aria-hidden="true">
+        <rect x="5" y="11" width="34" height="14" fill="#f2c230"/>
+        <rect x="5" y="25" width="34" height="5" fill="#c4161c"/>
+        <path d="M10 30v9M34 30v9" stroke="#efe7d8" stroke-width="1.5"/>
+      </svg>
+      <p>Websites, ordering and booking apps, and photo edits for the shops of Bengaluru, built by one person you can call.</p>
     </div>
-    <svg class="wordmark" viewBox="0 0 1000 158" role="img" aria-label="Adithya">
-      <text x="0" y="150" textLength="1000" lengthAdjust="spacingAndGlyphs">ADITHYA</text>
-    </svg>
-    <p class="legal">Adithya P Baliga, Bengaluru. Demo shops on this page are samples, not clients. Fonts: Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License).</p>
-  </footer>
+    <div><h3>Reach me</h3><ul>
+      <li><a data-whatsapp href="mailto:ymitigaa@gmail.com" data-cursor>WhatsApp</a></li>
+      <li><a href="mailto:ymitigaa@gmail.com" data-cursor>ymitigaa@gmail.com</a></li>
+      <li>Bengaluru, Karnataka</li>
+    </ul></div>
+    <div><h3>On this page</h3><ul>
+      <li><a href="#demos" data-cursor>Demo shops</a></li>
+      <li><a href="#process" data-cursor>How it works</a></li>
+      <li><a href="#contact" data-cursor>Contact</a></li>
+    </ul></div>
+    <div class="credits"><h3>Credits</h3>
+      <p>The street is drawn live in WebGL, adapted from <a href="https://github.com/MengTo/threeui">Kage in ThreeUI</a>
+        by Meng To (MIT), with <a href="https://threejs.org">three.js</a> (MIT). Fonts: Onest, Big Shoulders Display and
+        Noto Sans Kannada (SIL Open Font License).</p>
+    </div>
+  </div>
+  <div class="foot-base">
+    <span>© 2026 Adithya P Baliga</span>
+    <span class="kn" lang="kn">ನಿಮ್ಮ ಅಂಗಡಿ, ನಿಮ್ಮ ವೆಬ್‌ಸೈಟ್</span>
+    <span>Demo shops are samples, not clients</span>
+  </div>
+</footer>
+
+</main>
+
+<div class="rail" id="rail" aria-hidden="true"></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="street.js"></script>
 </body>
 </html>
