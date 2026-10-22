@@ -10,6 +10,7 @@ import httpx
 import ai
 import config
 import executor
+import pc
 import tools
 
 logger = logging.getLogger("tiga")
@@ -17,24 +18,23 @@ logger = logging.getLogger("tiga")
 MAX_TOOL_ROUNDS = 5
 
 SYSTEM_PROMPT = (
-    "You are Tiga, the user's personal AI valet, in the style of Tony Stark's "
-    "assistant: impeccably polite, concise, faintly dry British wit. Address the "
-    "user as 'sir' occasionally. Your replies are spoken aloud via text-to-speech, "
-    "so keep them to one or two short sentences of plain prose. Never use markdown, "
-    "bullet points, or emoji. Prefer calling tools over guessing numbers; never "
-    "invent metric values. When a tool result has source=demo, you may note it "
-    "briefly ('per my demo records')."
+    "You are Tiga, the personal assistant of Adithya, a freelance developer in Bengaluru who builds "
+    "websites, apps and photo edits for local shops. Be warm, direct and brief: your replies may be "
+    "spoken aloud, so use one or two short sentences of plain prose, no markdown, bullet points or emoji. "
+    "Prefer calling tools over guessing; never invent numbers. When a tool result has source=demo, say "
+    "the figures are demo data. Anything that reaches other people waits for Adithya's click, so say so "
+    "rather than claiming it is done."
 )
 
 GREETINGS = [
-    "At your service, sir.",
-    "Online and attentive, sir. How may I assist?",
-    "Good to hear from you, sir. What shall we accomplish?",
+    "At your service.",
+    "Online and attentive. How may I assist?",
+    "Good to hear from you. What shall we accomplish?",
 ]
 
 UNKNOWN = [
-    "I'm afraid that's beyond my current remit, sir. I can report metrics, open a tab, or book a call.",
-    "My apologies, sir, that instruction isn't in my repertoire just yet. Try metrics, opening a site, or booking a call.",
+    "I'm afraid that's beyond my current remit. I can report metrics, open a tab, or book a call.",
+    "My apologies, that instruction isn't in my repertoire just yet. Try metrics, opening a site, or booking a call.",
 ]
 
 SITE_MAP = {
@@ -74,7 +74,38 @@ RE_BOOK = re.compile(
     r"|\b(call|meeting)\b[^.?!]*\b(book|schedule|arrange|set ?up)\b",
     re.IGNORECASE,
 )
+RE_VOLUME_SET = re.compile(r"\bvolume\b\s*(?:to|at)?\s*(\d{1,3})\s*%?", re.I)
+RE_VOLUME = re.compile(r"\b(?:volume|sound)\b.*\b(up|down|louder|quieter|lower|higher|increase|decrease|raise)\b"
+                       r"|\b(louder|quieter|turn it up|turn it down)\b", re.I)
+RE_MUTE = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:un)?mute\b", re.I)
+RE_MEDIA = re.compile(r"\b(pause|resume|stop)\b\s+(?:the\s+)?(music|song|video|track|playback)\b"
+                      r"|\b(next|previous|skip)\b(?:\s+(?:this|the))?\s+(song|track|video)\b"
+                      r"|\bplay\s+(?:the\s+)?(music|song)\s*$", re.I)
+RE_LOCK = re.compile(r"\block\b.*\b(screen|pc|computer|laptop|system)\b", re.I)
 RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
+
+
+def _pc_intent(lowered: str) -> tuple[str, dict, str] | None:
+    """Volume, media keys and screen lock in plain words -> (tool, args, reply when done)."""
+    if RE_LOCK.search(lowered):
+        return "lock_screen", {}, "Locking the screen."
+    m = RE_VOLUME_SET.search(lowered)
+    if m and int(m.group(1)) <= 100:
+        return "volume", {"action": "set", "level": int(m.group(1))}, f"Volume set to {m.group(1)}%."
+    if RE_MUTE.match(lowered):
+        return "volume", {"action": "mute"}, "Toggled mute."
+    m = RE_VOLUME.search(lowered)
+    if m:
+        word = (m.group(1) or m.group(2) or "").lower()
+        up = word in {"up", "louder", "higher", "increase", "raise", "turn it up"}
+        return "volume", {"action": "up" if up else "down"}, f"Volume {'up' if up else 'down'}."
+    m = RE_MEDIA.search(lowered)
+    if m:
+        if m.group(3):
+            action = "next" if m.group(3).lower() in {"next", "skip"} else "previous"
+            return "media", {"action": action}, f"{action.capitalize()} track."
+        return "media", {"action": "pause"}, "Done."
+    return None
 
 
 def _play_query(text: str) -> str:
@@ -166,7 +197,7 @@ async def _respond(user_text: str, history: list) -> dict:
             return {
                 "reply": (
                     "I carried out your request (" + ", ".join(done) + ") but lost the language "
-                    "model before I could summarise it, sir. Check the actions below."
+                    "model before I could summarise it. Check the actions below."
                 ),
                 "actions": actions,
                 "mode": mode,
@@ -260,7 +291,7 @@ async def _builtin_respond(text: str) -> dict:
         email_m = EMAIL_RE.search(text)
         if not email_m:
             return {
-                "reply": "Who should I send it to, sir? Give me an address and what to say.",
+                "reply": "Who should I send it to? Give me an address and what to say.",
                 "actions": [],
                 "mode": "builtin",
             }
@@ -270,7 +301,7 @@ async def _builtin_respond(text: str) -> dict:
         )
         if not content_m:
             return {
-                "reply": f"What should the email to {to} say, sir? Add 'saying ...' with the message.",
+                "reply": f"What should the email to {to} say? Add 'saying ...' with the message.",
                 "actions": [],
                 "mode": "builtin",
             }
@@ -310,13 +341,20 @@ async def _builtin_respond(text: str) -> dict:
         action = await executor.execute("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
 
+    pc_action = _pc_intent(lowered)
+    if pc_action:
+        name, args, done = pc_action
+        action = await executor.execute(name, args)
+        reply = done if action["ok"] else f"That didn't work: {_err(action['result'])}."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
     if RE_PLAY.search(lowered):
         query = _play_query(text)
         action = await executor.execute("play_youtube", {"query": query})
         if action["ok"]:
-            reply = f"Playing {action['result'].get('title') or query} on YouTube, sir."
+            reply = f"Playing {action['result'].get('title') or query} on YouTube."
         else:
-            reply = f"I couldn't start YouTube, sir: {_err(action['result'])}."
+            reply = f"I couldn't start YouTube: {_err(action['result'])}."
         return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     if RE_METRICS.search(lowered):
@@ -336,23 +374,28 @@ async def _builtin_respond(text: str) -> dict:
                 if re.search(rf"(?<!\w){re.escape(key)}(?!\w)", rest.lower()):
                     target = url
                     break
+        app = pc.app_command(re.sub(r"^(?:the|my)\s+", "", rest.lower()).strip(" .!?"))
+        if app and not url_m:
+            action = await executor.execute("open_app", {"name": rest.strip(" .!?")})
+            reply = f"Opening {rest.strip(' .!?')}." if action["ok"] else f"I couldn't open that: {_err(action['result'])}."
+            return {"reply": reply, "actions": [action], "mode": "builtin"}
         if target:
             action = await executor.execute("open_tab", {"url": target})
             shown = action["result"].get("url") or re.sub(r"^[a-zA-Z][a-zA-Z0-9+.-]*:?/*", "", target)
             host = shown.replace("https://", "").replace("http://", "").split("/")[0] or shown[:40]
             reply = (
-                f"Bringing up {host}, sir."
+                f"Bringing up {host}."
                 if action["ok"]
-                else f"I'm afraid I can't open that, sir — {host} was refused as unsafe."
+                else f"I'm afraid I can't open that, {host} was refused as unsafe."
             )
             return {"reply": reply, "actions": [action], "mode": "builtin"}
         if verb != "show me":
-            return {"reply": "Which site shall I summon, sir?", "actions": [], "mode": "builtin"}
+            return {"reply": "Which site shall I summon?", "actions": [], "mode": "builtin"}
 
     if RE_TIME.search(lowered):
         now = datetime.now()
         return {
-            "reply": f"It's {now.strftime('%H:%M')} on {now.strftime('%A, %d %B')}, sir.",
+            "reply": f"It's {now.strftime('%H:%M')} on {now.strftime('%A, %d %B')}.",
             "actions": [],
             "mode": "builtin",
         }
@@ -380,13 +423,13 @@ def _demo_suffix(source: str) -> str:
 def _metrics_reply(action: dict) -> str:
     result = action["result"]
     if not result.get("data"):
-        return "I'm afraid the metrics feed came back empty, sir."
+        return "I'm afraid the metrics feed came back empty."
     bits = []
     for key, value in list(result["data"].items())[:6]:
         bits.append(f"{key.replace('_', ' ')} {tools.flatten_value(value)}")
     body = "; ".join(bits)
     note = f" ({result['error']})" if result.get("error") else ""
-    return f"Current figures, sir{note} — {body}.{_demo_suffix(result.get('source'))}"
+    return f"Current figures{note} — {body}.{_demo_suffix(result.get('source'))}"
 
 
 def _booking_reply(action: dict) -> str:
@@ -395,9 +438,9 @@ def _booking_reply(action: dict) -> str:
     when = payload.get("preferred_time")
     topic = payload.get("topic")
     if not action["ok"]:
-        return f"My apologies, sir — the booking failed: {_err(result)}."
+        return f"My apologies, the booking failed: {_err(result)}."
     ref = result.get("booking_id", "confirmed")
-    parts = ["Done, sir."]
+    parts = ["Done."]
     if topic:
         parts.append(f"The call on {topic}")
     elif when:
@@ -421,7 +464,7 @@ def _status_reply() -> str:
         parts.append("voice synthesis via ElevenLabs")
     else:
         parts.append("voice falling back to your browser's synthesizer")
-    return "Diagnostics complete, sir: " + ", ".join(parts) + "."
+    return "Diagnostics complete: " + ", ".join(parts) + "."
 
 
 async def _llm_respond(user_text: str, history: list, actions: list) -> str:
@@ -484,20 +527,20 @@ async def _llm_respond(user_text: str, history: list, actions: list) -> str:
                         "content": tools.summarize_result(action["result"], limit=1500),
                     }
                 )
-    return "All done, sir."
+    return "All done."
 
 
 def _email_summary_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch the email summary, sir — {_err(result)}."
+        return f"I couldn't fetch the email summary, {_err(result)}."
     total = result.get("total_emails", 0)
     cold = result.get("cold_emails", 0)
     replies = result.get("replies_received", 0)
     positive = result.get("positive_responses", 0)
     topics = result.get("top_topics", {})
 
-    parts = [f"Email summary for the last {result.get('period_days', 1)} day(s), sir:"]
+    parts = [f"Email summary for the last {result.get('period_days', 1)} day(s):"]
     parts.append(f"{total} total, {cold} cold outreach, {replies} replies, {positive} positive.")
     if topics:
         top = ", ".join(f"{k} ({v})" for k, v in list(topics.items())[:3])
@@ -517,19 +560,19 @@ def _send_email_reply(action: dict) -> str:
 def _fetch_emails_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"I couldn't fetch emails, sir — {_err(result)}."
+        return f"I couldn't fetch emails, {_err(result)}."
     count = result.get("count", 0)
     emails = result.get("emails", [])
     cold = sum(1 for e in emails if e.get("is_cold_email"))
     replies = sum(1 for e in emails if e.get("is_reply"))
     positive = sum(1 for e in emails if e.get("sentiment") == "positive")
-    return f"Fetched {count} emails, sir — {cold} cold, {replies} replies, {positive} positive.{_demo_suffix(result.get('source'))}"
+    return f"Fetched {count} emails, {cold} cold, {replies} replies, {positive} positive.{_demo_suffix(result.get('source'))}"
 
 
 def _template_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"Couldn't generate template, sir — {_err(result)}."
+        return f"Couldn't generate template, {_err(result)}."
     template = result.get("template", {})
     subject = template.get("subject", "")
-    return f"Template ready, sir. Subject: {subject}. Check the UI for the full draft."
+    return f"Template ready. Subject: {subject}. Check the UI for the full draft."

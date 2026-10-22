@@ -1,4 +1,4 @@
-"""Jarvis with Claude (subscription CLI) as the brain; the CLI is faked at its one function."""
+"""Tiga with Claude (subscription CLI) as the brain; the CLI is faked at its one function."""
 import json
 
 import pytest
@@ -30,9 +30,9 @@ def chat(client, text):
 def test_claude_calls_a_tool_then_answers(client, claude, opened):
     replies, prompts = claude
     replies += [json.dumps({"tool": "open_tab", "args": {"url": "https://youtube.com"}}),
-                json.dumps({"reply": "YouTube is open, sir."})]
+                json.dumps({"reply": "YouTube is open."})]
     body = chat(client, "open youtube")
-    assert body["mode"] == "claude" and body["reply"] == "YouTube is open, sir."
+    assert body["mode"] == "claude" and body["reply"] == "YouTube is open."
     assert body["actions"][0]["tool"] == "open_tab" and opened == ["https://youtube.com"]
     system, second = prompts[1]
     assert "open_tab" in system and "<tool_result" in second and "earlier" in second
@@ -53,8 +53,8 @@ def test_mail_content_read_this_turn_cannot_trigger_a_send(client, claude, googl
 
 def test_plain_text_answer_is_accepted(client, claude):
     replies, _ = claude
-    replies.append("Good evening, sir.")
-    assert chat(client, "hello")["reply"] == "Good evening, sir."
+    replies.append("Good evening.")
+    assert chat(client, "hello")["reply"] == "Good evening."
 
 
 def test_claude_failure_falls_back_to_the_builtin_rules(client, claude):

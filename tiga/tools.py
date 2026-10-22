@@ -10,6 +10,7 @@ import httpx
 
 import config
 import desktop
+import pc
 import gmail_service
 
 HTTP_TIMEOUT = 8.0
@@ -124,6 +125,46 @@ async def play_youtube(query: str) -> dict:
         "ok": bool(opened), "source": "local", "url": url, "title": (found or {}).get("title", ""),
         "fallback": found is None, "error": None if opened else "could not open the browser", "ms": _ms(started),
     }
+
+
+async def _powershell(script: str, what: str, started: float) -> dict:
+    ok = await asyncio.to_thread(pc.run_powershell, script)
+    return {"ok": ok, "source": "local", "did": what, "error": None if ok else "Windows didn't accept the command", "ms": _ms(started)}
+
+
+async def volume(action: str, level: int = -1) -> dict:
+    """Turn the PC volume up, down, mute it, or set it to a level (0-100)."""
+    started = time.perf_counter()
+    try:
+        script = pc.volume_script(action.strip().lower(), level if level >= 0 else None)
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc), "ms": _ms(started)}
+    return await _powershell(script, f"volume {action}" + (f" {level}" if level >= 0 else ""), started)
+
+
+async def media(action: str) -> dict:
+    """Play/pause, next or previous track for whatever is playing."""
+    started = time.perf_counter()
+    key = {"play": "play_pause", "pause": "play_pause", "play_pause": "play_pause", "resume": "play_pause",
+           "next": "next", "skip": "next", "previous": "previous", "back": "previous"}.get(action.strip().lower())
+    if key is None:
+        return {"ok": False, "error": "media action must be play, pause, next or previous", "ms": _ms(started)}
+    return await _powershell(pc.key_script([key]), f"media {key}", started)
+
+
+async def open_app(name: str) -> dict:
+    """Open an app from the allowlist (VS Code, Spotify, File Explorer, Edge, Calculator, Notepad, ...)."""
+    started = time.perf_counter()
+    command = pc.app_command(name)
+    if command is None:
+        return {"ok": False, "error": f"'{name}' isn't on the list of apps I can open", "ms": _ms(started)}
+    return await _powershell(f"Start-Process '{command}'", f"open {name}", started)
+
+
+async def lock_screen() -> dict:
+    """Lock the Windows screen."""
+    started = time.perf_counter()
+    return await _powershell("rundll32.exe user32.dll,LockWorkStation", "lock screen", started)
 
 
 async def book_call(
@@ -263,6 +304,10 @@ TOOL_FUNCS = {
     "get_metrics": get_metrics,
     "open_tab": open_tab,
     "play_youtube": play_youtube,
+    "volume": volume,
+    "media": media,
+    "open_app": open_app,
+    "lock_screen": lock_screen,
     "book_call": book_call,
     "draft_email": draft_email,
     "fetch_recent_emails": fetch_recent_emails,
@@ -271,6 +316,17 @@ TOOL_FUNCS = {
 }
 
 TOOL_SPECS = [
+    {"type": "function", "function": {"name": "volume", "description": "Change the PC volume.", "parameters": {
+        "type": "object", "properties": {"action": {"type": "string", "enum": ["up", "down", "mute", "set"]},
+                                         "level": {"type": "integer", "description": "0-100, only with set"}},
+        "required": ["action"]}}},
+    {"type": "function", "function": {"name": "media", "description": "Play/pause, next or previous track.", "parameters": {
+        "type": "object", "properties": {"action": {"type": "string", "enum": ["play", "pause", "next", "previous"]}},
+        "required": ["action"]}}},
+    {"type": "function", "function": {"name": "open_app", "description": "Open a desktop app: VS Code, Spotify, File Explorer, Edge, Calculator, Notepad, Settings, WhatsApp, Terminal, Paint.", "parameters": {
+        "type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}}},
+    {"type": "function", "function": {"name": "lock_screen", "description": "Lock the Windows screen.", "parameters": {
+        "type": "object", "properties": {}}}},
     {
         "type": "function",
         "function": {

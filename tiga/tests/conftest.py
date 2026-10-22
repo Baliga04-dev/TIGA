@@ -45,6 +45,16 @@ def opened(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def ran(monkeypatch):
+    """No test may run real PowerShell (volume, media keys, apps). Records the scripts instead."""
+    import pc
+
+    scripts = []
+    monkeypatch.setattr(pc, "run_powershell", lambda script, **kw: scripts.append(script) or True)
+    return scripts
+
+
+@pytest.fixture(autouse=True)
 def fresh_services(tmp_path, monkeypatch):
     """Every test gets its own empty database and no leftover store/mailer."""
     import config
