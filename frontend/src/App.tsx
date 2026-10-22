@@ -13,6 +13,7 @@ import { Reports } from './pages/Reports';
 import { Crew } from './pages/Crew';
 import { Prompts } from './pages/Prompts';
 import { Learn } from './pages/Learn';
+import { Usage } from './pages/Usage';
 
 function NotFound() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/crew" element={<Crew />} />
         <Route path="/prompts" element={<Prompts />} />
         <Route path="/learn" element={<Learn />} />
+        <Route path="/usage" element={<Usage />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />

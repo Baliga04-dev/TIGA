@@ -259,6 +259,11 @@ def _claude_system() -> str:
     )
 
 
+def _ask_claude(system: str, transcript: str) -> str:
+    with ai.using("chat"):
+        return ai.claude_complete(system, transcript)
+
+
 def _parse_claude(text: str) -> dict:
     match = re.search(r"\{.*\}", text, re.S)
     if match:
@@ -282,7 +287,7 @@ async def _claude_respond(user_text: str, history: list, actions: list) -> str:
     transcript.append(f"User: {user_text}")
     turn = executor.Turn()
     for _ in range(MAX_TOOL_ROUNDS):
-        answer = _parse_claude(await asyncio.to_thread(ai.claude_complete, system, "\n".join(transcript)))
+        answer = _parse_claude(await asyncio.to_thread(_ask_claude, system, "\n".join(transcript)))
         if "tool" not in answer:
             return str(answer.get("reply", "")).strip()
         name, args = str(answer["tool"]), answer.get("args") if isinstance(answer.get("args"), dict) else {}

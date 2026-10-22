@@ -27,6 +27,9 @@ import type {
   Reminder,
   Note,
   Briefing,
+  AiUsage,
+  AiCall,
+  ChatLogEntry,
   Prospect,
   AnalystStatus,
 } from '../types';
@@ -211,6 +214,12 @@ export const api = {
   getBridgeStatus: () => request<{ ok: true; connected: boolean; configured: boolean }>('/bridge/status'),
 
   getBridgeSetup: () => request<{ ok: true; token: string; server: string }>('/bridge/setup'),
+
+  getAiUsage: (days = 7) => request<AiUsage>(`/ai/usage?days=${days}`),
+
+  listAiCalls: (feature = '') => request<{ ok: true; items: AiCall[] }>(`/ai/calls?limit=100${feature ? `&feature=${encodeURIComponent(feature)}` : ''}`),
+
+  getChatHistory: () => request<{ ok: true; items: ChatLogEntry[] }>('/chat/history?limit=100'),
 
   confirmAction: (pendingId: string) =>
     post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),

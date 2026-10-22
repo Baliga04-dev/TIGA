@@ -235,7 +235,30 @@ async def env_example():
 @app.post("/api/chat")
 async def chat(payload: ChatIn):
     result = await brain.respond(payload.text.strip(), payload.history)
+    actions = [{"tool": a["tool"], "ok": a["ok"], "status": a.get("status", "")} for a in result["actions"]]
+    services.get_store().add_chat(payload.text.strip(), result["reply"], result["mode"], actions)
     return result
+
+
+@app.get("/api/chat/history")
+def chat_history(limit: int = 100):
+    return {"ok": True, "items": services.get_store().list_chats(limit=max(1, min(limit, 500)))}
+
+
+@app.get("/api/ai/usage")
+def ai_usage(days: int = 7):
+    import datetime
+
+    since = (datetime.date.today() - datetime.timedelta(days=max(1, min(days, 90)) - 1)).isoformat()
+    report = services.get_store().ai_usage(since)
+    today = next((d for d in report["by_day"] if d["day"] == datetime.date.today().isoformat()), None)
+    return {"ok": True, "provider": ai.provider() or "builtin", "model": config.CLAUDE_MODEL,
+            "today": {"calls": (today or {}).get("calls", 0), "cap": config.AI_DAILY_CALLS}, **report}
+
+
+@app.get("/api/ai/calls")
+def ai_calls(limit: int = 50, feature: str = ""):
+    return {"ok": True, "items": services.get_store().list_ai_calls(limit=max(1, min(limit, 500)), feature=feature or None)}
 
 
 @app.post("/api/tts")

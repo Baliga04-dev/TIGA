@@ -24,6 +24,17 @@ def available() -> bool:
 
 def complete(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
              run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> str:
+    return _run_cli(system, user, model=model, timeout=timeout, run=run)["text"]
+
+
+def complete_meta(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
+                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
+    """Like `complete`, plus what the call used: tokens in/out, the CLI's cost estimate and duration."""
+    return _run_cli(system, user, model=model, timeout=timeout, run=run)
+
+
+def _run_cli(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
+                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
     env = {k: v for k, v in os.environ.items() if k not in _BILLING_VARS}
     args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", "",
             "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system]
@@ -41,4 +52,13 @@ def complete(system: str, user: str, *, model: str = "sonnet", timeout: int = 12
         raise RuntimeError("claude returned something that is not JSON") from exc
     if data.get("is_error"):
         raise RuntimeError(f"Claude refused or failed: {str(data.get('result', ''))[:200]}")
-    return str(data.get("result", ""))
+    usage = data.get("usage") or {}
+    return {
+        "text": str(data.get("result", "")),
+        "input_tokens": sum(int(usage.get(k) or 0) for k in
+                            ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")),
+        "output_tokens": int(usage.get("output_tokens") or 0),
+        "cost_usd": float(data.get("total_cost_usd") or 0),
+        "duration_ms": int(data.get("duration_ms") or 0),
+        "model": model,
+    }

@@ -100,6 +100,17 @@ CREATE TABLE IF NOT EXISTS reminders (
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ai_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, day TEXT NOT NULL, feature TEXT NOT NULL,
+    model TEXT NOT NULL DEFAULT '', system TEXT NOT NULL DEFAULT '', prompt TEXT NOT NULL DEFAULT '',
+    reply TEXT NOT NULL DEFAULT '', input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0, duration_ms INTEGER NOT NULL DEFAULT 0, ok INTEGER NOT NULL DEFAULT 1,
+    error TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS chat_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, user_text TEXT NOT NULL, reply TEXT NOT NULL,
+    mode TEXT NOT NULL, actions TEXT NOT NULL DEFAULT '[]'
+);
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
@@ -442,6 +453,44 @@ class Store:
     def delete_note(self, note_id: int) -> bool:
         with self._lock, self._db:
             return bool(self._db.execute("DELETE FROM notes WHERE id = ?", (note_id,)).rowcount)
+
+    # --- AI usage and chat history (for the owner to review how Claude is spent) -----
+    def add_ai_call(self, *, feature: str, day: str, model: str, system: str, prompt: str, reply: str,
+                    input_tokens: int = 0, output_tokens: int = 0, cost_usd: float = 0, duration_ms: int = 0,
+                    ok: bool = True, error: str = "") -> None:
+        with self._lock, self._db:
+            self._db.execute(
+                "INSERT INTO ai_calls (ts, day, feature, model, system, prompt, reply, input_tokens, output_tokens,"
+                " cost_usd, duration_ms, ok, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (_now(), day, feature, model, system[:20000], prompt[:20000], reply[:20000], input_tokens,
+                 output_tokens, cost_usd, duration_ms, int(ok), error[:500]))
+
+    def list_ai_calls(self, limit: int = 100, feature: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM ai_calls", []
+        if feature:
+            sql, args = sql + " WHERE feature = ?", [feature]
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY id DESC LIMIT ?", [*args, limit])]
+
+    def ai_usage(self, since_day: str) -> dict:
+        totals = "COUNT(*) AS calls, SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens," \
+                 " ROUND(SUM(cost_usd), 4) AS cost_usd, SUM(1 - ok) AS failed"
+        with self._lock:
+            by_day = [dict(r) for r in self._db.execute(
+                f"SELECT day, {totals} FROM ai_calls WHERE day >= ? GROUP BY day ORDER BY day DESC", (since_day,))]
+            by_feature = [dict(r) for r in self._db.execute(
+                f"SELECT feature, {totals} FROM ai_calls WHERE day >= ? GROUP BY feature ORDER BY calls DESC", (since_day,))]
+        return {"by_day": by_day, "by_feature": by_feature}
+
+    def add_chat(self, user_text: str, reply: str, mode: str, actions: list) -> None:
+        with self._lock, self._db:
+            self._db.execute("INSERT INTO chat_log (ts, user_text, reply, mode, actions) VALUES (?, ?, ?, ?, ?)",
+                             (_now(), user_text[:4000], reply[:4000], mode, json.dumps(actions, default=str)[:20000]))
+
+    def list_chats(self, limit: int = 100) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute("SELECT * FROM chat_log ORDER BY id DESC LIMIT ?", (limit,))
+            return [{**dict(r), "actions": json.loads(r["actions"])} for r in rows]
 
     # --- assistant actions waiting for the owner's click ----------------------
     def add_pending(self, pending_id: str, tool: str, args: dict, summary: str, expires_at: str) -> None:

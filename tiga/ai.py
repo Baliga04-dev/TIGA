@@ -1,8 +1,22 @@
 """Which AI answers for Tiga, as one `complete(system, user) -> str` callable (or None for rules only)."""
+import contextvars
+from contextlib import contextmanager
 from typing import Callable
 
 import claude_cli
 import config
+
+# Which agent is asking (chat, email writer, page summary...), so the usage report can split by it.
+_feature: contextvars.ContextVar[str] = contextvars.ContextVar("tiga_ai_feature", default="other")
+
+
+@contextmanager
+def using(feature: str):
+    token = _feature.set(feature)
+    try:
+        yield
+    finally:
+        _feature.reset(token)
 
 
 def provider() -> str | None:
@@ -37,7 +51,18 @@ def claude_complete(system: str, user: str) -> str:
     if used >= config.AI_DAILY_CALLS:
         raise RuntimeError(f"daily AI limit of {config.AI_DAILY_CALLS} calls reached; using built-in rules")
     store.set_value(key, str(used + 1))
-    return claude_cli.complete(system, user, model=config.CLAUDE_MODEL)
+    from datetime import date
+
+    record = {"feature": _feature.get(), "day": date.today().isoformat(), "model": config.CLAUDE_MODEL,
+              "system": system, "prompt": user}
+    try:
+        meta = claude_cli.complete_meta(system, user, model=config.CLAUDE_MODEL)
+    except Exception as exc:
+        store.add_ai_call(**record, reply="", ok=False, error=str(exc))
+        raise
+    store.add_ai_call(**record, reply=meta["text"], input_tokens=meta["input_tokens"],
+                      output_tokens=meta["output_tokens"], cost_usd=meta["cost_usd"], duration_ms=meta["duration_ms"])
+    return meta["text"]
 
 
 def completer() -> Callable[[str, str], str] | None:

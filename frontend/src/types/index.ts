@@ -371,3 +371,45 @@ export interface Briefing {
   cards: { title: string; lines: string[] }[];
   text: string;
 }
+
+export interface UsageRow {
+  calls: number;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cost_usd: number | null;
+  failed: number | null;
+}
+
+export interface AiUsage {
+  ok: true;
+  provider: string;
+  model: string;
+  today: { calls: number; cap: number };
+  by_day: (UsageRow & { day: string })[];
+  by_feature: (UsageRow & { feature: string })[];
+}
+
+export interface AiCall {
+  id: number;
+  ts: string;
+  feature: string;
+  model: string;
+  system: string;
+  prompt: string;
+  reply: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  duration_ms: number;
+  ok: number;
+  error: string;
+}
+
+export interface ChatLogEntry {
+  id: number;
+  ts: string;
+  user_text: string;
+  reply: string;
+  mode: string;
+  actions: { tool: string; ok: boolean; status: string }[];
+}

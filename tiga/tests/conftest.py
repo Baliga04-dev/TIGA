@@ -46,6 +46,17 @@ def opened(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_real_claude(monkeypatch):
+    """No test may spend the owner's Claude plan. Tests that need Claude replace complete_meta themselves."""
+    import claude_cli
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a test tried to call the real Claude CLI")
+
+    monkeypatch.setattr(claude_cli, "complete_meta", refuse)
+
+
+@pytest.fixture(autouse=True)
 def ran(monkeypatch):
     """No test may run real PowerShell (volume, media keys, apps). Records the scripts instead."""
     import pc

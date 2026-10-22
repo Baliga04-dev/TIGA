@@ -76,8 +76,11 @@ def openai_complete(system: str, user: str) -> str:
 
 
 def write_draft(lead: dict) -> dict:
-    return drafter.write_draft(lead, sender_name=config.SENDER_NAME or "Tiga", offer=config.OFFER,
-                               complete=llm_complete())
+    import ai
+
+    with ai.using("email writer"):
+        return drafter.write_draft(lead, sender_name=config.SENDER_NAME or "Tiga", offer=config.OFFER,
+                                   complete=llm_complete())
 
 
 def get_analyst() -> Analyst:

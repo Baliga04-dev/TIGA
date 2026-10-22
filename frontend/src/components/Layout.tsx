@@ -17,6 +17,7 @@ const navigation = [
   { name: 'Prompts', href: '/prompts' },
   { name: 'Tiga Chat', href: '/chat' },
   { name: 'Agents', href: '/agents' },
+  { name: 'AI usage', href: '/usage' },
   { name: 'Settings', href: '/settings' },
 ];
 
