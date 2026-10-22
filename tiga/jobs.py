@@ -11,7 +11,7 @@ from typing import Awaitable, Callable
 
 import codesync
 import config
-import orchestration
+import crew
 import reports
 import rnd
 import services
@@ -77,7 +77,7 @@ async def run_configured_daily() -> dict:
         fetch_thread=services.fetch_thread,
         send=services.send_email if gmail_ready else (lambda *_: {"ok": False, "error": "Gmail is not configured"}),
         to=to,
-        cycle_fn=lambda: orchestration.run_agent_cycle(),
+        cycle_fn=lambda: crew.run_agent_cycle(),
         sync_fn=(lambda: codesync.push_daily_branch(datetime.date.today())) if config.GITHUB_TOKEN else None,
         today=datetime.date.today(),
         own_address=config.GMAIL_USER_EMAIL,

@@ -35,8 +35,6 @@ def test_email_template_route_returns_subject_and_body(client):
         ("/api/email/fetch", {"days_back": -1}),
         ("/api/email/summary", {"days": 0}),
         ("/api/email/summary", {"days": 400}),
-        ("/api/prompt/generate", {"idea": "   ", "outcome": "something"}),
-        ("/api/research/leads", {"topic": "   "}),
     ],
 )
 def test_invalid_input_is_rejected_with_422(client, path, payload):
@@ -88,36 +86,6 @@ def test_unauthorised_gmail_fails_fast_without_starting_oauth(client, tmp_path, 
     assert "authorize" in body["error"].lower()
 
 
-def test_research_leads_merges_both_feeds_fairly_and_dedupes(client, http):
-    http.add("news.google.com", text=rss(*[(f"G{i}", f"https://g.example/{i}") for i in range(5)]))
-    http.add("hnrss.org", text=rss(("H0", "https://h.example/0"), ("G0", "https://g.example/0")))
-    body = client.post("/api/research/leads", json={"topic": "ai startups", "limit": 4}).json()
-    assert body["ok"] is True
-    urls = [l["url"] for l in body["leads"]]
-    assert len(urls) == len(set(urls))
-    assert {l["source"] for l in body["leads"]} == {"Google News", "Hacker News"}
-    assert len(body["leads"]) <= 4
-
-
-def test_research_reports_a_failing_feed_but_keeps_the_other(client, http):
-    import httpx
-
-    http.add("news.google.com", exc=httpx.ConnectError("boom"))
-    http.add("hnrss.org", text=rss(("H0", "https://h.example/0")))
-    body = client.post("/api/research/leads", json={"topic": "ai startups"}).json()
-    assert [l["title"] for l in body["leads"]] == ["H0"]
-    assert body["errors"]
-
-
-def test_prompt_generation_includes_research_urls(client, http):
-    http.add("news.google.com", text=rss(("G0", "https://g.example/0")))
-    http.add("hnrss.org", text=rss())
-    body = client.post("/api/prompt/generate", json={"idea": "invoice tool", "outcome": "get paid faster"}).json()
-    assert body["ok"] is True
-    assert "https://g.example/0" in body["prompt"]
-    assert len(body["questions"]) == 5
-
-
 def test_metrics_endpoint_returning_a_list_does_not_break_chat(client, http, monkeypatch):
     import config
 
@@ -134,19 +102,3 @@ def test_booking_webhook_returning_a_list_still_counts_as_booked(client, http, m
     http.add("hook.example", json=["ok"])
     r = client.post("/api/chat", json={"text": "book a call about pricing", "history": []}).json()
     assert r["actions"][0]["ok"] is True
-
-
-@pytest.mark.parametrize(
-    "title,signal",
-    [
-        ("Startup announces funding round", "growth or launch signal"),
-        ("Major outage hits payments provider", "possible pain point"),
-        ("New AI automation tool", "technology demand"),
-        ("The mayor said it was a happy day", "needs manual qualification"),
-    ],
-)
-def test_client_signal_labels_use_whole_words(client, http, title, signal):
-    http.add("news.google.com", text=rss((title, "https://g.example/1")))
-    http.add("hnrss.org", text=rss())
-    lead = client.post("/api/research/leads", json={"topic": "anything"}).json()["leads"][0]
-    assert lead["client_signal"] == signal

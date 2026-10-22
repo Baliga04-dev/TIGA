@@ -1,7 +1,7 @@
 """Daily code sync: push already-made commits to a dated `tiga/daily-YYYY-MM-DD` branch, never to main.
 
 Refuses when the tree is dirty or the new commits contain a secret or a secret-named file.
-Reuses the git helpers (token passed through git's environment) from orchestration.
+Uses git_ops (token passed through git's environment, never argv).
 """
 from __future__ import annotations
 
@@ -10,8 +10,7 @@ from datetime import date
 from typing import Any
 
 import config
-import orchestration
-from orchestration import _git
+from git_ops import git as _git
 
 SECRET_FILES = re.compile(r"(^|/)(\.env|token\.json|credentials\.json|.*\.pem|id_rsa)$")
 SECRET_PATTERNS = [

@@ -10,10 +10,7 @@ import type {
   ChatMessage,
   AgentStatusResponse,
   AgentRunResponse,
-  PromptGenerateRequest,
-  PromptGenerateResponse,
   GithubSyncResponse,
-  ResearchLeadsResponse,
   FindLeadsResponse,
   OutreachItem,
   NewDraft,
@@ -120,9 +117,6 @@ export const api = {
 
   syncGithub: () => post<GithubSyncResponse>('/github/sync'),
 
-  researchLeads: (topic: string, limit = 10) =>
-    post<ResearchLeadsResponse>('/research/leads', { topic, limit }),
-
   findLeads: (topics: string[], limit = 30) => post<FindLeadsResponse>('/leads/find', { topics, limit }),
 
   listOutreach: (status = '') => request<{ ok: true; items: OutreachItem[] }>(`/outreach${status ? `?status=${status}` : ''}`),
@@ -194,8 +188,6 @@ export const api = {
 
   runAnalyst: (phase: 'collect' | 'write') =>
     post<{ ok: true; result: { phase: string; drafted?: number; new?: number; checked?: number; errors: string[] } }>('/analyst/run', { phase }),
-
-  generatePrompt: (data: PromptGenerateRequest) => post<PromptGenerateResponse>('/prompt/generate', data),
 
   async getEnvExample(): Promise<string> {
     let response: Response;

@@ -48,7 +48,7 @@ export function Chat() {
     textareaRef.current?.focus();
   };
 
-  const brain = status ? (status.brain === 'openai' ? 'OpenAI-compatible model' : 'Built-in rules') : '…';
+  const brain = status ? (status.brain === 'claude' ? 'Claude (your subscription)' : status.brain === 'openai' ? 'OpenAI-compatible model' : 'Built-in rules') : '…';
 
   return (
     <>
@@ -62,7 +62,7 @@ export function Chat() {
               Clear
             </button>
             <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-wash text-xs text-ink-2">
-              {status?.brain === 'openai' ? (
+              {status && status.brain !== 'builtin' ? (
                 <Sparkles className="size-3.5 text-pen" aria-hidden="true" />
               ) : (
                 <Bot className="size-3.5 text-pen" aria-hidden="true" />
@@ -190,7 +190,7 @@ export function Chat() {
 
           <Card title="System Status">
             <div className="space-y-3">
-              <StatusRow label="Brain" value={brain} good={status?.brain === 'openai'} />
+              <StatusRow label="Brain" value={brain} good={!!status && status.brain !== 'builtin'} />
               <StatusRow label="Speech" value={status?.tts === 'elevenlabs' ? 'ElevenLabs' : 'Browser voice'} good={status?.tts === 'elevenlabs'} />
               <StatusRow label="Gmail" value={status?.gmail_configured ? 'Credentials found' : 'Not set up'} good={status?.gmail_configured} />
               <StatusRow label="Metrics" value={status?.metrics_endpoint ? 'Live' : 'Demo'} good={status?.metrics_endpoint} />

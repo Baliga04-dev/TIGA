@@ -11,6 +11,13 @@ _ISOLATED_ENV = {
     "GITHUB_TOKEN": "",
     "GITHUB_SYNC_INTERVAL_MINUTES": "0",
     "TIGA_ANALYST_TICK_MINUTES": "0",
+    "TIGA_LEARN_ENABLED": "",
+    "TIGA_POSTAL_ADDRESS": "",
+    "TIGA_SENDER_NAME": "",
+    "GMAIL_USER_EMAIL": "",
+    "ADMIN_REPORT_EMAIL": "",
+    "GITHUB_REPOSITORY": "",
+    "TIGA_DB_PATH": os.path.join(tempfile.gettempdir(), "tiga-tests.db"),
     "TIGA_AI_PROVIDER": "off",  # never spend the owner's Claude limits from tests
     "GMAIL_CREDENTIALS_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-credentials.json"),
     "GMAIL_TOKEN_FILE": os.path.join(tempfile.gettempdir(), "tiga-tests-no-token.json"),

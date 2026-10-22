@@ -101,7 +101,7 @@ export interface ChatMessage {
 export interface ChatResponse {
   reply: string;
   actions: ToolAction[];
-  mode: 'llm' | 'builtin';
+  mode: 'claude' | 'llm' | 'builtin';
 }
 
 export interface ToolAction {
@@ -169,42 +169,6 @@ export interface GithubSyncResponse {
   detail?: string;
   error?: string;
 }
-
-export interface PromptGenerateRequest {
-  idea: string;
-  outcome: string;
-  audience: string;
-  stack: string;
-  constraints: string;
-  research_topic: string;
-}
-
-export interface Lead {
-  source: string;
-  title: string;
-  url: string;
-  published: string;
-  client_signal: string;
-}
-
-export interface ResearchLeadsResponse {
-  ok: boolean;
-  topic: string;
-  searched_at: string;
-  sources: string[];
-  leads: Lead[];
-  errors: string[];
-  note: string;
-}
-
-export interface PromptGenerateResponse {
-  ok: boolean;
-  generated_at: string;
-  prompt: string;
-  questions: string[];
-  research: ResearchLeadsResponse;
-}
-
 
 export interface FoundLead {
   title: string;

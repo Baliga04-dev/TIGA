@@ -81,7 +81,7 @@ export function Settings() {
           <div className="space-y-2 text-sm">
             {status ? (
               <>
-                <StatusRow label="Brain" value={status.brain === 'openai' ? 'OpenAI-compatible model' : 'Built-in rules'} good={status.brain === 'openai'} />
+                <StatusRow label="Brain" value={status.brain === 'claude' ? 'Claude (your subscription)' : status.brain === 'openai' ? 'OpenAI-compatible model' : 'Built-in rules'} good={status.brain !== 'builtin'} />
                 <StatusRow label="Speech" value={status.tts === 'elevenlabs' ? 'ElevenLabs' : 'Browser voice'} good={status.tts === 'elevenlabs'} />
                 <StatusRow label="Metrics" value={status.metrics_endpoint ? 'Live endpoint' : 'Demo data'} good={status.metrics_endpoint} />
                 <StatusRow label="Booking" value={status.booking_webhook ? 'Live webhook' : 'Demo mode'} good={status.booking_webhook} />

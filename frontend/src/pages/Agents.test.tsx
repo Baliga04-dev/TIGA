@@ -22,15 +22,11 @@ const report = (ok: boolean) => ({
 
 const research = {
   ok: true,
-  topic: 'automation',
-  searched_at: '2026-10-20T10:00:00+00:00',
-  sources: ['Google News', 'Hacker News'],
   leads: [
-    { source: 'Google News', title: 'Acme raises seed round', url: 'https://g.example/1', published: '', client_signal: 'growth or launch signal' },
-    { source: 'Hacker News', title: 'Show HN: invoice bot', url: 'https://h.example/2', published: '', client_signal: 'technology demand' },
+    { source: 'Google News', title: 'Acme raises seed round', url: 'https://g.example/1', published: '', score: 7, signals: ['funding'] },
+    { source: 'Hacker News', title: 'Show HN: invoice bot launches', url: 'https://h.example/2', published: '', score: 4, signals: ['launch'] },
   ],
   errors: [],
-  note: 'Only public feeds are searched.',
 }
 
 beforeEach(() => mockMountCalls())
@@ -82,7 +78,7 @@ describe('Agents', () => {
   })
 
   it('lists research leads with their source and signal', async () => {
-    mock.post('/research/leads', research)
+    mock.post('/leads/find', research)
     const user = await open()
     await user.clear(screen.getByLabelText(/research topic/i))
     await user.type(screen.getByLabelText(/research topic/i), 'automation')
@@ -90,75 +86,36 @@ describe('Agents', () => {
     const link = await screen.findByRole('link', { name: /acme raises seed round/i })
     expect(link).toHaveAttribute('href', 'https://g.example/1')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
-    expect(screen.getByText('growth or launch signal')).toBeInTheDocument()
+    expect(screen.getByText('funding')).toBeInTheDocument()
   })
 
-  it('researches and generates with what was typed, not with the initial values', async () => {
-    const researchBodies = mock.record('/research/leads', research) as Record<string, unknown>[]
-    const promptBodies = mock.record('/prompt/generate', { ok: true, generated_at: 'now', prompt: 'p', questions: [], research }) as Record<string, unknown>[]
+  it('researches with what was typed, not with the initial value', async () => {
+    const bodies = mock.record('/leads/find', research) as Record<string, unknown>[]
     const user = await open()
     await user.clear(screen.getByLabelText(/research topic/i))
     await user.type(screen.getByLabelText(/research topic/i), 'dentists')
     await user.click(screen.getByRole('button', { name: /find signals/i }))
-    await waitFor(() => expect(researchBodies).toHaveLength(1))
-    expect(researchBodies[0]).toMatchObject({ topic: 'dentists' })
-    await user.type(screen.getByLabelText(/^idea/i), 'booking app')
-    await user.type(screen.getByLabelText(/desired outcome/i), 'fewer no-shows')
-    await user.click(screen.getByRole('button', { name: /research and generate/i }))
-    await waitFor(() => expect(promptBodies).toHaveLength(1))
-    expect(promptBodies[0]).toMatchObject({ idea: 'booking app', outcome: 'fewer no-shows', research_topic: 'dentists' })
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toMatchObject({ topics: ['dentists'] })
   })
 
   it('says which feeds failed when research is partial', async () => {
-    mock.post('/research/leads', { ...research, errors: ['Google News: ConnectError'] })
+    mock.post('/leads/find', { ...research, errors: ['Google News: ConnectError'] })
     const user = await open()
     await user.click(screen.getByRole('button', { name: /find signals/i }))
     expect(await screen.findByText(/Google News: ConnectError/)).toBeInTheDocument()
   })
 
   it('says so when research finds nothing', async () => {
-    mock.post('/research/leads', { ...research, leads: [] })
+    mock.post('/leads/find', { ...research, leads: [] })
     const user = await open()
     await user.click(screen.getByRole('button', { name: /find signals/i }))
     expect(await screen.findByText(/no public signals found/i)).toBeInTheDocument()
   })
 
-  it('needs both an idea and an outcome before generating', async () => {
-    const user = await open()
-    const button = screen.getByRole('button', { name: /research and generate/i })
-    expect(button).toBeDisabled()
-    await user.type(screen.getByLabelText(/^idea/i), 'invoice tool')
-    expect(button).toBeDisabled()
-    await user.type(screen.getByLabelText(/desired outcome/i), 'get paid faster')
-    expect(button).toBeEnabled()
-  })
-
-  it('shows the generated prompt and its clarifying questions, and can copy it', async () => {
-    mock.post('/prompt/generate', {
-      ok: true,
-      generated_at: 'now',
-      prompt: 'You are a planner. Goal: get paid faster',
-      questions: ['Who is the first user?'],
-      research,
-    })
-    const user = await open()
-    await user.type(screen.getByLabelText(/^idea/i), 'invoice tool')
-    await user.type(screen.getByLabelText(/desired outcome/i), 'get paid faster')
-    await user.click(screen.getByRole('button', { name: /research and generate/i }))
-    expect(await screen.findByText(/You are a planner/)).toBeInTheDocument()
-    expect(screen.getByText('Who is the first user?')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /copy prompt/i }))
-    expect(await navigator.clipboard.readText()).toBe('You are a planner. Goal: get paid faster')
-    expect(screen.getByRole('button', { name: /copied/i })).toBeInTheDocument()
-  })
-
-  it('shows validation messages from the server', async () => {
-    mock.post('/prompt/generate', { detail: [{ loc: ['body', 'idea'], msg: 'String should have at least 3 characters' }] }, 422)
-    const user = await open()
-    await user.type(screen.getByLabelText(/^idea/i), 'abc')
-    await user.type(screen.getByLabelText(/desired outcome/i), 'something')
-    await user.click(screen.getByRole('button', { name: /research and generate/i }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('idea: String should have at least 3 characters')
+  it('points to Prompt Studio for prompts', async () => {
+    await open()
+    expect(screen.getByRole('link', { name: /open prompt studio/i })).toHaveAttribute('href', '/prompts')
   })
 
   it('reports how many commits were pushed', async () => {

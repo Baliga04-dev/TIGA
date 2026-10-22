@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
@@ -21,6 +21,10 @@ const isolatedEnv = {
   GITHUB_SYNC_INTERVAL_MINUTES: '0',
   GMAIL_CREDENTIALS_FILE: '/nonexistent/credentials.json',
   GMAIL_TOKEN_FILE: '/nonexistent/token.json',
+  TIGA_AI_PROVIDER: 'off', // never spend the owner's Claude limits from browser tests
+  TIGA_ANALYST_TICK_MINUTES: '0',
+  TIGA_LEARN_ENABLED: '',
+  TIGA_DB_PATH: join(tmpdir(), `tiga-e2e-${process.pid}.db`),
 }
 
 export default defineConfig({

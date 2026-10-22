@@ -4,7 +4,7 @@ import subprocess
 import pytest
 
 import config
-import orchestration
+import git_ops
 
 
 def git(cwd, *args):
@@ -24,7 +24,7 @@ def repo(tmp_path, monkeypatch):
     git(work, "commit", "-q", "-m", "first")
     git(work, "remote", "add", "origin", str(remote))
     git(work, "push", "-q", "origin", "main")
-    monkeypatch.setattr(orchestration, "PROJECT_ROOT", work)
+    monkeypatch.setattr(git_ops, "PROJECT_ROOT", work)
     monkeypatch.setattr(config, "GITHUB_TOKEN", "test-token-123")
     monkeypatch.setattr(config, "GITHUB_REPOSITORY", "someone/tiga")
     monkeypatch.setattr(config, "GITHUB_BRANCH", "main")
@@ -39,13 +39,13 @@ def commit_change(work, text="print('v2')\n"):
 async def test_pushes_commits_that_are_ahead(repo):
     work, remote = repo
     commit_change(work)
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is True and result["pushed"] is True
     assert git(remote, "rev-parse", "main") == git(work, "rev-parse", "HEAD")
 
 
 async def test_nothing_to_push_is_a_clean_no_op(repo):
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is True and result["pushed"] is False
 
 
@@ -54,7 +54,7 @@ async def test_refuses_with_uncommitted_files_and_never_commits_them(repo):
     commit_change(work)
     (work / ".env").write_text("SECRET=1\n")
     head_before = git(work, "rev-parse", "HEAD")
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is False
     assert git(work, "rev-parse", "HEAD") == head_before
     assert git(remote, "rev-parse", "main") != head_before
@@ -72,7 +72,7 @@ async def test_refuses_when_behind_remote(repo, tmp_path):
     git(other, "commit", "-q", "-m", "remote work")
     git(other, "push", "-q", "origin", "main")
     commit_change(work)
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is False
     assert "behind" in result["error"].lower()
 
@@ -81,7 +81,7 @@ async def test_refuses_from_a_different_branch(repo):
     work, _ = repo
     git(work, "checkout", "-q", "-b", "feature")
     commit_change(work)
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is False
     assert "main" in result["error"]
 
@@ -90,7 +90,7 @@ async def test_requires_a_token_and_attempts_nothing_without_one(repo, monkeypat
     work, remote = repo
     commit_change(work)
     monkeypatch.setattr(config, "GITHUB_TOKEN", "")
-    result = await orchestration.github_sync_push()
+    result = await git_ops.push_current_branch()
     assert result["ok"] is False
     assert git(remote, "rev-parse", "main") != git(work, "rev-parse", "HEAD")
 
@@ -98,7 +98,7 @@ async def test_requires_a_token_and_attempts_nothing_without_one(repo, monkeypat
 async def test_leaves_the_origin_url_alone(repo):
     work, remote = repo
     commit_change(work)
-    await orchestration.github_sync_push()
+    await git_ops.push_current_branch()
     assert git(work, "remote", "get-url", "origin") == str(remote)
 
 
@@ -112,8 +112,8 @@ async def test_token_never_appears_on_a_command_line(repo, monkeypatch):
         seen.append(" ".join(map(str, cmd)))
         return real_run(cmd, *a, **k)
 
-    monkeypatch.setattr(orchestration.subprocess, "run", spy)
-    await orchestration.github_sync_push()
+    monkeypatch.setattr(git_ops.subprocess, "run", spy)
+    await git_ops.push_current_branch()
     assert seen and not any("test-token-123" in c for c in seen)
     import base64
 
@@ -123,6 +123,6 @@ async def test_token_never_appears_on_a_command_line(repo, monkeypatch):
 
 async def test_status_reports_clean_and_dirty(repo):
     work, _ = repo
-    assert (await orchestration.github_sync_status())["working_tree"] == "clean"
+    assert (await git_ops.status())["working_tree"] == "clean"
     (work / "new.txt").write_text("n")
-    assert "new.txt" in (await orchestration.github_sync_status())["working_tree"]
+    assert "new.txt" in (await git_ops.status())["working_tree"]

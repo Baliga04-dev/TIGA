@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 import brain
 import config
@@ -19,7 +19,9 @@ import prompt_api
 import analyst_api
 import services
 import tts as tts_mod
-import orchestration
+import ai
+import crew
+import git_ops
 import asyncio
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -157,24 +159,6 @@ class TemplateGenIn(BaseModel):
     portfolio_link: str = ""
 
 
-class LeadResearchIn(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    topic: str = Field(min_length=2, max_length=200)
-    limit: int = Field(default=10, ge=1, le=50)
-
-
-class PromptGenerateIn(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    idea: str = Field(min_length=3, max_length=4000)
-    outcome: str = Field(min_length=3, max_length=1000)
-    audience: str = Field(default="", max_length=1000)
-    stack: str = Field(default="", max_length=1000)
-    constraints: str = Field(default="", max_length=2000)
-    research_topic: str = Field(default="", max_length=200)
-
-
 @app.get("/")
 async def index():
     return FileResponse(STATIC_DIR / "index.html")
@@ -183,7 +167,7 @@ async def index():
 @app.get("/api/status")
 async def status():
     return {
-        "brain": "openai" if config.OPENAI_API_KEY else "builtin",
+        "brain": ai.provider() or "builtin",
         "tts": "elevenlabs" if config.ELEVENLABS_API_KEY else "browser",
         "metrics_endpoint": bool(config.METRICS_ENDPOINT),
         "booking_webhook": bool(config.BOOKING_WEBHOOK),
@@ -272,23 +256,6 @@ async def generate_template(payload: TemplateGenIn):
     return result
 
 
-@app.post("/api/research/leads")
-async def research_leads(payload: LeadResearchIn):
-    return await orchestration.research_leads(payload.topic, payload.limit)
-
-
-@app.post("/api/prompt/generate")
-async def generate_prompt(payload: PromptGenerateIn):
-    return await orchestration.generate_prompt(
-        payload.idea,
-        payload.outcome,
-        payload.audience,
-        payload.stack,
-        payload.constraints,
-        payload.research_topic,
-    )
-
-
 @app.get("/api/agents/status")
 async def agent_status():
     return {
@@ -298,25 +265,18 @@ async def agent_status():
             {"name": "dev", "role": "implementation and GitHub sync", "status": "ready"},
             {"name": "tester", "role": "feature and regression checks", "status": "ready"},
         ],
-        "github": await orchestration.github_sync_status(),
+        "github": await git_ops.status(),
     }
 
 
 @app.post("/api/agents/run")
 async def run_agents():
-    return await orchestration.run_agent_cycle()
+    return await crew.run_agent_cycle()
 
 
 @app.post("/api/github/sync")
 async def github_sync():
-    return await orchestration.github_sync_push()
-
-
-@app.post("/api/agents/daily-report")
-async def daily_report():
-    report = await orchestration.run_agent_cycle()
-    delivery = await orchestration.send_daily_report(report)
-    return {"report": report, "delivery": delivery}
+    return await git_ops.push_current_branch()
 
 
 if __name__ == "__main__":

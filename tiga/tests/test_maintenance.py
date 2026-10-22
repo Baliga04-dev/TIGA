@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 import config
 import main
-import orchestration
+import crew
 
 
 async def test_loop_survives_a_failing_cycle_and_keeps_running(monkeypatch):
@@ -22,7 +22,7 @@ async def test_loop_survives_a_failing_cycle_and_keeps_running(monkeypatch):
         if len(calls) >= 2:
             raise asyncio.CancelledError
 
-    monkeypatch.setattr(orchestration, "run_agent_cycle", cycle)
+    monkeypatch.setattr(crew, "run_agent_cycle", cycle)
     monkeypatch.setattr(main, "_sleep", fast_sleep)
     monkeypatch.setattr(config, "GITHUB_TOKEN", "")
     with pytest.raises(asyncio.CancelledError):

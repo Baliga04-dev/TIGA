@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, CheckCircle2, ExternalLink, Loader2, Play, Search, Send, XCircle } from 'lucide-react';
-import { PageHeader, Card, Notice, Field, CopyButton } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { Bot, CheckCircle2, ExternalLink, Loader2, Play, Search, Send, Sparkles, XCircle } from 'lucide-react';
+import { PageHeader, Card, Notice, Field } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
 import { cn } from '../lib/utils';
@@ -43,8 +44,6 @@ export function Agents() {
   const [status, setStatus] = useState<AgentStatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [topic, setTopic] = useState('software projects needing automation');
-  const [idea, setIdea] = useState('');
-  const [outcome, setOutcome] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -62,18 +61,15 @@ export function Agents() {
     await refresh();
     return report;
   });
-  const research = useAction(() => api.researchLeads(topic, 10));
-  const generate = useAction(() =>
-    api.generatePrompt({ idea, outcome, audience: '', stack: '', constraints: '', research_topic: topic }),
-  );
+  const research = useAction(() => api.findLeads([topic], 10));
   const sync = useAction(async () => {
     const result = await api.syncGithub();
     await refresh();
     return result;
   });
 
-  const leads = research.result?.leads ?? generate.result?.research.leads ?? [];
-  const feedErrors = research.result?.errors ?? generate.result?.research.errors ?? [];
+  const leads = research.result?.leads ?? [];
+  const feedErrors = research.result?.errors ?? [];
   const researched = research.result !== null;
   const dirty = status ? uncommittedCount(status.github.working_tree) : 0;
 
@@ -146,40 +142,11 @@ export function Agents() {
         </Card>
 
         <Card raised title="Prompt generator">
-          <div className="space-y-3">
-            <Field label="Idea">
-              {(id) => (
-                <textarea id={id} className="input min-h-24" value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="What do you want to build?" />
-              )}
-            </Field>
-            <Field label="Desired outcome">
-              {(id) => (
-                <textarea id={id} className="input min-h-20" value={outcome} onChange={(e) => setOutcome(e.target.value)} placeholder="How should it work and what outcome matters?" />
-              )}
-            </Field>
-            <button
-              className="btn btn-primary"
-              onClick={() => generate.run()}
-              disabled={generate.pending || idea.trim().length < 3 || outcome.trim().length < 3}
-            >
-              {generate.pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
-              Research and generate
-            </button>
-            {generate.error && <Notice>{generate.error}</Notice>}
-          </div>
+          <p className="text-sm text-ink-2 mb-3">Prompt Studio asks a few questions, then writes a build-ready prompt.</p>
+          <Link to="/prompts" className="btn btn-primary"><Sparkles className="size-4" aria-hidden="true" /> Open Prompt Studio</Link>
         </Card>
 
-        <Card raised title="Research results and generated prompt">
-          {generate.result && (
-            <div className="mb-4">
-              <CopyButton text={generate.result.prompt} label="Copy prompt" />
-              <pre tabIndex={0} aria-label="Generated prompt" className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded bg-wash p-3 text-xs">{generate.result.prompt}</pre>
-              <p className="mt-3 text-sm font-medium">Questions to answer first</p>
-              <ul className="list-disc pl-5 text-sm text-ink-2">
-                {generate.result.questions.map((q) => <li key={q}>{q}</li>)}
-              </ul>
-            </div>
-          )}
+        <Card raised title="Research results">
           {feedErrors.length > 0 && (
             <div className="mb-3"><Notice tone="info" title="Some feeds failed">{feedErrors.join('; ')}</Notice></div>
           )}
@@ -191,13 +158,13 @@ export function Agents() {
                     <ExternalLink className="size-3" aria-hidden="true" />
                     {lead.title}
                   </a>
-                  <p className="text-xs text-ink-3">{lead.source} · <span>{lead.client_signal}</span></p>
+                  <p className="text-xs text-ink-3">{lead.source} · <span>{lead.signals.join(', ')}</span> · score {lead.score}</p>
                 </li>
               ))}
             </ul>
           )}
           {researched && leads.length === 0 && <p className="text-sm text-ink-3">No public signals found for that topic.</p>}
-          {!generate.result && !researched && <p className="text-sm text-ink-3">Results will appear here.</p>}
+          {!researched && <p className="text-sm text-ink-3">Results will appear here.</p>}
         </Card>
       </div>
     </>

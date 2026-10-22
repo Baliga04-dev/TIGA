@@ -107,6 +107,12 @@ describe('Chat', () => {
     expect(screen.queryByText(/gpt-4o/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^connected$/i)).not.toBeInTheDocument()
   })
+
+  it('names Claude when Tiga runs on the subscription', async () => {
+    mock.get('/status', { ...statusOk, brain: 'claude' })
+    await openChat()
+    expect((await screen.findAllByText('Claude (your subscription)')).length).toBeGreaterThan(0)
+  })
 })
 
 describe('Chat speech', () => {

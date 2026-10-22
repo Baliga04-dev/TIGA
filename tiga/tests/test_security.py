@@ -2,9 +2,10 @@
 import pytest
 
 import config
-import orchestration
+import crew
+import git_ops
 
-POSTS = ["/api/agents/run", "/api/github/sync", "/api/agents/daily-report"]
+POSTS = ["/api/agents/run", "/api/github/sync"]
 
 
 @pytest.fixture(autouse=True)
@@ -15,8 +16,8 @@ def quiet_agents(monkeypatch):
     async def fake_push():
         return {"ok": False, "error": "disabled in tests"}
 
-    monkeypatch.setattr(orchestration, "run_agent_cycle", fake_cycle)
-    monkeypatch.setattr(orchestration, "github_sync_push", fake_push)
+    monkeypatch.setattr(crew, "run_agent_cycle", fake_cycle)
+    monkeypatch.setattr(git_ops, "push_current_branch", fake_push)
 
 
 @pytest.mark.parametrize("path", POSTS + ["/api/chat"])
