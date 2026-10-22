@@ -8,6 +8,7 @@ import { Settings } from './pages/Settings';
 import { Agents } from './pages/Agents';
 import { Outreach } from './pages/Outreach';
 import { Prospects } from './pages/Prospects';
+import { Pipeline } from './pages/Pipeline';
 import { Reports } from './pages/Reports';
 import { Crew } from './pages/Crew';
 import { Prompts } from './pages/Prompts';
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/email" element={<EmailBot />} />
         <Route path="/prospects" element={<Prospects />} />
+        <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/outreach" element={<Outreach />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/crew" element={<Crew />} />

@@ -12,6 +12,7 @@ from typing import Awaitable, Callable
 import codesync
 import config
 import crew
+import deals
 import reports
 import rnd
 import services
@@ -57,7 +58,7 @@ async def run_daily(*, store: Store, mailer: Mailer, fetch_thread: Callable[[str
 
     report = reports.build_daily_report(
         scorecard=mailer.scorecard(), followups_due=len(followups), issues=store.list_issues(),
-        cycle=cycle, sync=sync, today=today,
+        cycle=cycle, sync=sync, today=today, money=deals.money_summary(store.list_deals(), today=today),
     )
     if errors:
         report["body"] += "\n\nSTEP ERRORS\n" + "\n".join(errors)

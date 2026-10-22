@@ -309,3 +309,30 @@ export interface AnalystStatus {
   schedule: string;
   enabled: boolean;
 }
+
+export type DealStage = 'interested' | 'call_booked' | 'proposal_sent' | 'won' | 'lost' | 'in_progress' | 'delivered' | 'paid';
+
+export interface Deal {
+  id: number;
+  email: string;
+  contact: string;
+  company: string;
+  phone: string;
+  service: string;
+  stage: DealStage;
+  amount: number;
+  advance_paid: number;
+  balance_paid: number;
+  minutes_logged: number;
+  notes: string;
+  paid_at: string;
+  updated_at: string;
+}
+
+export interface MoneySummary {
+  pipeline_value: number;
+  advance_due: number;
+  balance_due: number;
+  paid_this_month: number;
+  open_deals: number;
+}

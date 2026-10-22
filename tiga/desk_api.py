@@ -4,6 +4,7 @@ import datetime
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+import deals
 import jobs
 import rnd
 import reports
@@ -29,6 +30,7 @@ def preview_report() -> dict:
     report = reports.build_daily_report(
         scorecard=mailer.scorecard(), followups_due=0, issues=store.list_issues(),
         cycle=None, sync=None, today=datetime.date.today(),
+        money=deals.money_summary(store.list_deals(), today=datetime.date.today()),
     )
     return {"ok": True, **report}
 

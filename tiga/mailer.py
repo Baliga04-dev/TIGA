@@ -121,6 +121,8 @@ class Mailer:
                 changed += 1
             if status in ("unsubscribed", "declined", "bounced"):
                 self.store.suppress(row["email"], reason=status)
+            if status == "interested":  # a warm reply becomes a deal on the Pipeline page
+                self.store.create_deal({"email": row["email"], "company": row["company"], "outreach_id": row["id"]})
         return changed
 
     def due_followups(self, *, now: datetime | None = None) -> list[dict]:

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
@@ -18,7 +18,7 @@ describe('Settings', () => {
   it('shows the .env template served by the backend', async () => {
     renderApp('/settings')
     const block = await screen.findByLabelText(/environment template/i)
-    expect(block).toHaveTextContent('OPENAI_API_KEY=')
+    await waitFor(() => expect(block).toHaveTextContent('OPENAI_API_KEY='))
     expect(block).toHaveTextContent('HOST=127.0.0.1')
   })
 

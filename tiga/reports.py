@@ -14,7 +14,7 @@ _TAG = {"red": "[RED]", "amber": "[ACTION]", "green": "[OK]"}
 
 
 def build_daily_report(*, scorecard: dict, followups_due: int, issues: list[dict], cycle: dict | None,
-                       sync: dict | None, today: date) -> dict:
+                       sync: dict | None, today: date, money: dict | None = None) -> dict:
     card = scorecard
     problems = []
     if cycle is not None and not cycle.get("ok", True):
@@ -37,8 +37,17 @@ def build_daily_report(*, scorecard: dict, followups_due: int, issues: list[dict
         f"Waiting for your approval: {card['awaiting_approval']}",
         "Pipeline: " + (", ".join(f"{name} {n}" for name, n in sorted(card["pipeline"].items())) or "empty"),
         "",
-        "SYSTEM",
     ]
+    if money is not None:
+        lines += [
+            "MONEY",
+            f"Open deals: {money['open_deals']} worth Rs {money['pipeline_value']:,}",
+            f"Advances to collect: Rs {money['advance_due']:,}",
+            f"Balances to collect: Rs {money['balance_due']:,}",
+            f"Paid this month: Rs {money['paid_this_month']:,}",
+            "",
+        ]
+    lines.append("SYSTEM")
     if cycle is not None:
         checks = cycle.get("tester", {}).get("checks", [])
         lines.append("Tester: " + ("passed" if cycle.get("ok") else "FAILED"))

@@ -5,6 +5,7 @@ const PAGES = [
   { path: '/email', heading: 'Email Bot' },
   { path: '/prospects', heading: 'Prospects' },
   { path: '/outreach', heading: 'Outreach' },
+  { path: '/pipeline', heading: 'Pipeline' },
   { path: '/reports', heading: 'Reports' },
   { path: '/crew', heading: 'Crew' },
   { path: '/prompts', heading: 'Prompt Studio' },

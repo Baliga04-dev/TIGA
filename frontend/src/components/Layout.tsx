@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Email Bot', href: '/email' },
   { name: 'Prospects', href: '/prospects' },
   { name: 'Outreach', href: '/outreach' },
+  { name: 'Pipeline', href: '/pipeline' },
   { name: 'Reports', href: '/reports' },
   { name: 'Crew', href: '/crew' },
   { name: 'Prompts', href: '/prompts' },

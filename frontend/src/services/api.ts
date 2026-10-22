@@ -20,6 +20,8 @@ import type {
   Issue,
   AuditEntry,
   Interview,
+  Deal,
+  MoneySummary,
   Prospect,
   AnalystStatus,
 } from '../types';
@@ -160,6 +162,18 @@ export const api = {
     post<{ ok: true; interview: Interview }>(`/interviews/${id}/answer`, { text }),
 
   generateInterviewPrompt: (id: string) => post<{ ok: true; prompt: string }>(`/interviews/${id}/generate`),
+
+  listDeals: () => request<{ ok: true; items: Deal[]; money: MoneySummary }>('/deals'),
+
+  createDeal: (data: Partial<Deal> & { email: string }) => post<{ ok: true; deal: Deal }>('/deals', data),
+
+  editDeal: (id: number, changes: Partial<Pick<Deal, 'contact' | 'company' | 'phone' | 'service' | 'amount' | 'notes'>>) =>
+    request<{ ok: true; deal: Deal }>(`/deals/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
+
+  moveDeal: (id: number, stage: string) => post<{ ok: true; deal: Deal }>(`/deals/${id}/move`, { stage }),
+
+  recordPayment: (id: number, kind: 'advance' | 'balance', amount: number) =>
+    post<{ ok: true; deal: Deal }>(`/deals/${id}/payment`, { kind, amount }),
 
   confirmAction: (pendingId: string) =>
     post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),

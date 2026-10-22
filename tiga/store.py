@@ -9,6 +9,18 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 
+DEAL_FLOW = {
+    "interested": {"call_booked", "proposal_sent", "lost"},
+    "call_booked": {"proposal_sent", "lost"},
+    "proposal_sent": {"won", "lost", "call_booked"},
+    "won": {"in_progress", "lost"},
+    "in_progress": {"delivered"},
+    "delivered": {"paid"},
+    "paid": set(),
+    "lost": {"interested"},
+}
+CLOSED_DEAL_STAGES = {"paid", "lost"}
+
 ISSUE_FLOW = {
     "open": {"triaged", "rejected"},
     "triaged": {"approved", "rejected"},
@@ -67,6 +79,15 @@ CREATE TABLE IF NOT EXISTS prospects (
 CREATE TABLE IF NOT EXISTS pending_actions (
     id TEXT PRIMARY KEY, tool TEXT NOT NULL, args TEXT NOT NULL, summary TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS deals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, contact TEXT NOT NULL DEFAULT '',
+    company TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', service TEXT NOT NULL DEFAULT '',
+    stage TEXT NOT NULL DEFAULT 'interested', amount INTEGER NOT NULL DEFAULT 0,
+    advance_paid INTEGER NOT NULL DEFAULT 0, balance_paid INTEGER NOT NULL DEFAULT 0,
+    minutes_logged INTEGER NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '',
+    outreach_id INTEGER, prospect_id INTEGER, paid_at TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -292,6 +313,70 @@ class Store:
         unknown = set(fields) - self._PROSPECT_FIELDS
         if unknown:
             raise ValueError(f"unknown prospect field(s): {', '.join(sorted(unknown))}")
+
+    # --- deals (a client job from first "interested" to paid) --------------------
+    _DEAL_FIELDS = {"contact", "company", "phone", "service", "amount", "advance_paid", "balance_paid",
+                    "minutes_logged", "notes", "outreach_id", "prospect_id"}
+
+    def create_deal(self, data: dict) -> dict:
+        """Open a deal, or return the client's deal that is still open (one live deal per address)."""
+        email = data["email"].strip().lower()
+        fields = {k: v for k, v in data.items() if k != "email"}
+        self._check_deal_fields(fields)
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT id FROM deals WHERE email = ? AND stage NOT IN ('paid', 'lost') ORDER BY id DESC LIMIT 1",
+                (email,)).fetchone()
+            if row:
+                return self.get_deal(row["id"])
+            columns = ["email", "created_at", "updated_at", *fields]
+            cur = self._db.execute(
+                f"INSERT INTO deals ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})",
+                [email, _now(), _now(), *fields.values()])
+            self._write_audit("system", "deal.open", "deal", str(cur.lastrowid), email)
+            return self.get_deal(cur.lastrowid)
+
+    def update_deal(self, deal_id: int, **fields) -> dict:
+        self._check_deal_fields(fields)
+        assignments = ", ".join(f"{name} = ?" for name in [*fields, "updated_at"])
+        with self._lock, self._db:
+            cur = self._db.execute(f"UPDATE deals SET {assignments} WHERE id = ?", [*fields.values(), _now(), deal_id])
+            if cur.rowcount == 0:
+                raise KeyError(f"no deal {deal_id}")
+        return self.get_deal(deal_id)
+
+    def move_deal(self, deal_id: int, stage: str, *, actor: str) -> dict:
+        with self._lock, self._db:
+            row = self._db.execute("SELECT stage FROM deals WHERE id = ?", (deal_id,)).fetchone()
+            if row is None:
+                raise KeyError(f"no deal {deal_id}")
+            if stage not in DEAL_FLOW.get(row["stage"], set()):
+                raise TransitionError(f"{row['stage']} -> {stage} is not allowed")
+            paid_at = _now() if stage == "paid" else ""
+            self._db.execute("UPDATE deals SET stage = ?, paid_at = ?, updated_at = ? WHERE id = ?",
+                             (stage, paid_at, _now(), deal_id))
+            self._write_audit(actor, "deal.move", "deal", str(deal_id), f"{row['stage']} -> {stage}")
+        return self.get_deal(deal_id)
+
+    def get_deal(self, deal_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM deals WHERE id = ?", (deal_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no deal {deal_id}")
+        return dict(row)
+
+    def list_deals(self, *stages: str) -> list[dict]:
+        sql, args = "SELECT * FROM deals", []
+        if stages:
+            sql += f" WHERE stage IN ({', '.join('?' * len(stages))})"
+            args += stages
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY updated_at DESC, id DESC", args)]
+
+    def _check_deal_fields(self, fields: dict) -> None:
+        unknown = set(fields) - self._DEAL_FIELDS
+        if unknown:
+            raise ValueError(f"unknown deal field(s): {', '.join(sorted(unknown))}")
 
     # --- assistant actions waiting for the owner's click ----------------------
     def add_pending(self, pending_id: str, tool: str, args: dict, summary: str, expires_at: str) -> None:

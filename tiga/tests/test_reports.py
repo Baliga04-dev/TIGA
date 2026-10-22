@@ -87,3 +87,10 @@ def test_archive_keeps_the_text_for_the_ui(store):
     reports.send_daily(store, Sink(), "me@work.io", build())
     row = store.list_reports()[0]
     assert row["report_date"] == "2026-10-21" and "OUTREACH" in row["body"] and row["kind"] == "daily"
+
+
+def test_money_section_sits_between_outreach_and_system():
+    money = {"open_deals": 3, "pipeline_value": 45000, "advance_due": 10000, "balance_due": 5000, "paid_this_month": 8000}
+    body = build(money=money)["body"]
+    assert body.index("OUTREACH") < body.index("MONEY") < body.index("SYSTEM")
+    assert "Open deals: 3 worth Rs 45,000" in body and "Balances to collect: Rs 5,000" in body

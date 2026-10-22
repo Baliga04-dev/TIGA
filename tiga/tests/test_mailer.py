@@ -222,3 +222,11 @@ def test_quoted_footer_in_a_reply_is_not_mistaken_for_an_unsubscribe(mailer):
     reply = "Sounds good, tell me more.\n\nOn Wed, Oct 21 Jo wrote:\n> reply STOP and I won't email you again."
     mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", reply)]}), now=T0)
     assert mailer.get(row["id"])["status"] == "interested"
+
+
+def test_an_interested_reply_opens_a_deal_once(mailer, store):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", "Yes, interested! Call me")]}), now=T0)
+    deals = store.list_deals()
+    assert len(deals) == 1 and deals[0]["email"] == "owner@acme.io" and deals[0]["company"] == "Acme"
+    assert deals[0]["outreach_id"] == row["id"]

@@ -18,6 +18,7 @@ import outreach_api
 import prompt_api
 import analyst_api
 import assistant_api
+import deals_api
 import services
 import tts as tts_mod
 import ai
@@ -101,6 +102,7 @@ app.include_router(desk_api.router)
 app.include_router(prompt_api.router)
 app.include_router(analyst_api.router)
 app.include_router(assistant_api.router)
+app.include_router(deals_api.router)
 
 
 @app.get("/api/features")
