@@ -73,4 +73,23 @@ describe('Dashboard', () => {
     expect(await screen.findByText(/4 drafts waiting for your approval/i)).toBeInTheDocument()
     expect(screen.getByText('[ACTION] Tiga daily report 2026-10-21')).toBeInTheDocument()
   })
+
+  it('opens with the day: briefing, reminders and notes', async () => {
+    mock.get('/reminders', { ok: true, items: [{ id: 1, text: 'call Ravi', due_at: '2026-10-22T17:00:00+05:30', status: 'pending' }] })
+    mock.get('/notes', { ok: true, items: [{ id: 2, text: 'Glow wants pink', created_at: 'x' }] })
+    renderApp('/')
+    expect(await screen.findByText('1 email draft to approve')).toBeInTheDocument()
+    expect(await screen.findByText(/call Ravi/)).toBeInTheDocument()
+    expect(screen.getByText('Glow wants pink')).toBeInTheDocument()
+  })
+
+  it('saves a note', async () => {
+    const saved = mock.record('/notes', { ok: true, note: { id: 3, text: 'x', created_at: 'x' } })
+    const user = userEvent.setup()
+    renderApp('/')
+    await user.type(await screen.findByLabelText('New note'), 'client prefers WhatsApp')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(saved).toEqual([{ text: 'client prefers WhatsApp' }]))
+  })
 })
+

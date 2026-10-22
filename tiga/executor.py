@@ -34,6 +34,10 @@ TIERS: dict[str, int] = {
     "media": LOCAL,
     "open_app": LOCAL,
     "lock_screen": OUTWARD,
+    "remind_me": LOCAL,
+    "take_note": LOCAL,
+    "list_reminders": READ,
+    "morning_briefing": READ,
     "book_call": OUTWARD,
 }
 # Tools whose results may contain text written by strangers (possible prompt injection).

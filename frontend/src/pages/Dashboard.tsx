@@ -3,6 +3,7 @@ import { Bot, Loader2, Mail, RefreshCw, Sparkles } from 'lucide-react';
 import { useEmailSummary } from '../hooks/useApi';
 import { PageHeader, Card, Notice } from '../components/ui';
 import { DeskSummary } from '../components/DeskSummary';
+import { TodayPanel } from '../components/TodayPanel';
 import { cn, formatRelativeTime, isGmailSetupError } from '../lib/utils';
 
 /** "Alex Doe <alex@acme.com>" -> "Alex Doe" */
@@ -35,6 +36,7 @@ export function Dashboard() {
         }
       />
 
+      <TodayPanel />
       <DeskSummary />
 
       {error && (

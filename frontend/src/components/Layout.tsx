@@ -4,6 +4,7 @@ import { Menu, Moon, Sun, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../services/api';
 import { useTheme } from '../hooks/useTheme';
+import { ReminderWatcher } from './ReminderWatcher';
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -98,6 +99,7 @@ export function Layout() {
       <Header />
       <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-5 pb-20 pt-8 outline-none sm:px-8">
         <Outlet />
+        <ReminderWatcher />
       </main>
     </div>
   );

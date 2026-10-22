@@ -352,3 +352,22 @@ export interface DealDocument {
   number: string;
   created_at: string;
 }
+
+export interface Reminder {
+  id: number;
+  text: string;
+  due_at: string;
+  status: string;
+}
+
+export interface Note {
+  id: number;
+  text: string;
+  created_at: string;
+}
+
+export interface Briefing {
+  ok: true;
+  cards: { title: string; lines: string[] }[];
+  text: string;
+}

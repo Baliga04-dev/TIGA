@@ -167,6 +167,50 @@ async def lock_screen() -> dict:
     return await _powershell("rundll32.exe user32.dll,LockWorkStation", "lock screen", started)
 
 
+async def remind_me(text: str, when: str) -> dict:
+    """Set a reminder: `when` is everyday words like 'at 5', 'in 20 minutes', 'tomorrow 10am'."""
+    import config
+    import services
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from when import parse_when
+
+    started = time.perf_counter()
+    due = parse_when(when, datetime.now(ZoneInfo(config.TIMEZONE)))
+    if due is None:
+        return {"ok": False, "error": f"I couldn't tell when '{when}' is; try 'at 5pm' or 'in 30 minutes'", "ms": _ms(started)}
+    row = services.get_store().add_reminder(text, due.isoformat())
+    return {"ok": True, "id": row["id"], "text": row["text"], "due": due.strftime("%a %I:%M %p"), "ms": _ms(started)}
+
+
+async def take_note(text: str) -> dict:
+    """Save a note (client details, ideas). Shown on the Dashboard; can be deleted there."""
+    import services
+
+    started = time.perf_counter()
+    row = services.get_store().add_note(text)
+    return {"ok": True, "id": row["id"], "text": row["text"], "ms": _ms(started)}
+
+
+async def list_reminders() -> dict:
+    import services
+
+    return {"ok": True, "reminders": services.get_store().list_reminders("pending"), "ms": 0}
+
+
+async def morning_briefing() -> dict:
+    """What needs doing today: drafts, interested clients, follow-ups, money, reminders, weather."""
+    import briefing
+    import config
+    import services
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    started = time.perf_counter()
+    out = await briefing.build(services.get_store(), services.get_mailer(), datetime.now(ZoneInfo(config.TIMEZONE)))
+    return {"ok": True, **out, "ms": _ms(started)}
+
+
 async def book_call(
     name: str = "",
     email: str = "",
@@ -305,6 +349,10 @@ TOOL_FUNCS = {
     "open_tab": open_tab,
     "play_youtube": play_youtube,
     "volume": volume,
+    "remind_me": remind_me,
+    "take_note": take_note,
+    "list_reminders": list_reminders,
+    "morning_briefing": morning_briefing,
     "media": media,
     "open_app": open_app,
     "lock_screen": lock_screen,
@@ -316,6 +364,16 @@ TOOL_FUNCS = {
 }
 
 TOOL_SPECS = [
+    {"type": "function", "function": {"name": "remind_me", "description": "Set a reminder.", "parameters": {
+        "type": "object", "properties": {"text": {"type": "string", "description": "what to remind about"},
+                                         "when": {"type": "string", "description": "e.g. 'at 5pm', 'in 20 minutes', 'tomorrow 10am'"}},
+        "required": ["text", "when"]}}},
+    {"type": "function", "function": {"name": "take_note", "description": "Save a note for later.", "parameters": {
+        "type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}},
+    {"type": "function", "function": {"name": "list_reminders", "description": "List pending reminders.", "parameters": {
+        "type": "object", "properties": {}}}},
+    {"type": "function", "function": {"name": "morning_briefing", "description": "Today's briefing: drafts to approve, interested clients, follow-ups, money to collect, reminders and weather.", "parameters": {
+        "type": "object", "properties": {}}}},
     {"type": "function", "function": {"name": "volume", "description": "Change the PC volume.", "parameters": {
         "type": "object", "properties": {"action": {"type": "string", "enum": ["up", "down", "mute", "set"]},
                                          "level": {"type": "integer", "description": "0-100, only with set"}},

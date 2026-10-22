@@ -82,7 +82,27 @@ RE_MEDIA = re.compile(r"\b(pause|resume|stop)\b\s+(?:the\s+)?(music|song|video|t
                       r"|\b(next|previous|skip)\b(?:\s+(?:this|the))?\s+(song|track|video)\b"
                       r"|\bplay\s+(?:the\s+)?(music|song)\s*$", re.I)
 RE_LOCK = re.compile(r"\block\b.*\b(screen|pc|computer|laptop|system)\b", re.I)
+RE_REMIND = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?remind me\b\s*(.*)$", re.I | re.S)
+RE_NOTE = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:take a note|note(?:\s+down)?|make a note|remember that)\s*[:,-]?\s*(.+)$", re.I | re.S)
+RE_BRIEFING = re.compile(r"\bgood morning\b|\b(?:morning )?briefing\b|\bwhat(?:'s| is) (?:on|up) (?:for )?today\b|\bplan for today\b", re.I)
 RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
+
+
+_WHEN_AT_START = re.compile(r"^((?:tomorrow\s+|tonight\s+)?(?:in\s+(?:an?|\d+)\s*\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|tomorrow|tonight)"
+                            r"(?:\s+(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\s+(?:to\s+)?(.+)$", re.I | re.S)
+_WHEN_AT_END = re.compile(r"^(?:to\s+)?(.+?)\s+((?:tomorrow\s+)?(?:in\s+(?:an?|\d+)\s*\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|tomorrow(?:\s+(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?|tonight(?:\s+at\s+\d{1,2})?))\s*[.!]?$", re.I | re.S)
+
+
+def _split_reminder(rest: str) -> tuple[str, str]:
+    """'at 5 to call Ravi' or 'to call Ravi at 5' -> ('call Ravi', 'at 5')."""
+    rest = rest.strip()
+    m = _WHEN_AT_START.match(rest)
+    if m:
+        return m.group(2).strip(" .!"), m.group(1).strip()
+    m = _WHEN_AT_END.match(rest)
+    if m:
+        return m.group(1).strip(" .!"), m.group(2).strip()
+    return "", ""
 
 
 def _pc_intent(lowered: str) -> tuple[str, dict, str] | None:
@@ -340,6 +360,27 @@ async def _builtin_respond(text: str) -> dict:
         }
         action = await executor.execute("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
+
+    remind_m = RE_REMIND.match(text)
+    if remind_m:
+        what, when = _split_reminder(remind_m.group(1))
+        if not what or not when:
+            return {"reply": "What should I remind you about, and when? For example: remind me at 5 to call Sri Bakery.",
+                    "actions": [], "mode": "builtin"}
+        action = await executor.execute("remind_me", {"text": what, "when": when})
+        reply = (f"Okay, I'll remind you {action['result']['due']}: {what}." if action["ok"]
+                 else f"I couldn't set that: {_err(action['result'])}.")
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    note_m = RE_NOTE.match(text)
+    if note_m:
+        action = await executor.execute("take_note", {"text": note_m.group(1).strip()})
+        return {"reply": "Noted." if action["ok"] else "I couldn't save that note.", "actions": [action], "mode": "builtin"}
+
+    if RE_BRIEFING.search(lowered):
+        action = await executor.execute("morning_briefing", {})
+        reply = action["result"].get("text", "Here's your day.") if action["ok"] else "I couldn't put the briefing together."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     pc_action = _pc_intent(lowered)
     if pc_action:

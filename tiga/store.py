@@ -93,6 +93,13 @@ CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, deal_id INTEGER NOT NULL,
     number TEXT NOT NULL DEFAULT '', data TEXT NOT NULL, created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, due_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
@@ -402,6 +409,39 @@ class Store:
             rows = self._db.execute("SELECT id, kind, number, created_at FROM documents WHERE deal_id = ? ORDER BY id",
                                     (deal_id,))
             return [dict(r) for r in rows]
+
+    # --- reminders and notes -------------------------------------------------------
+    def add_reminder(self, text: str, due_at: str) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO reminders (text, due_at, created_at) VALUES (?, ?, ?)",
+                                   (text.strip()[:500], due_at, _now()))
+            return dict(self._db.execute("SELECT * FROM reminders WHERE id = ?", (cur.lastrowid,)).fetchone())
+
+    def list_reminders(self, status: str = "pending", due_before: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM reminders WHERE status = ?", [status]
+        if due_before:
+            sql, args = sql + " AND due_at <= ?", [*args, due_before]
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY due_at", args)]
+
+    def close_reminder(self, reminder_id: int, status: str = "done") -> bool:
+        with self._lock, self._db:
+            cur = self._db.execute("UPDATE reminders SET status = ? WHERE id = ? AND status = 'pending'",
+                                   (status, reminder_id))
+            return bool(cur.rowcount)
+
+    def add_note(self, text: str) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO notes (text, created_at) VALUES (?, ?)", (text.strip()[:2000], _now()))
+            return dict(self._db.execute("SELECT * FROM notes WHERE id = ?", (cur.lastrowid,)).fetchone())
+
+    def list_notes(self, limit: int = 100) -> list[dict]:
+        with self._lock:
+            return [dict(r) for r in self._db.execute("SELECT * FROM notes ORDER BY id DESC LIMIT ?", (limit,))]
+
+    def delete_note(self, note_id: int) -> bool:
+        with self._lock, self._db:
+            return bool(self._db.execute("DELETE FROM notes WHERE id = ?", (note_id,)).rowcount)
 
     # --- assistant actions waiting for the owner's click ----------------------
     def add_pending(self, pending_id: str, tool: str, args: dict, summary: str, expires_at: str) -> None:

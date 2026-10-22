@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockMountCalls, renderApp } from './test/render'
 
@@ -52,3 +52,18 @@ describe('theme', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 })
+
+describe('reminders', () => {
+  it('shows a due reminder on any page and closes it', async () => {
+    const { mock } = await import('./test/mock')
+    mock.get('/reminders/due', { ok: true, items: [{ id: 9, text: 'call Sri Bakery', due_at: 'x', status: 'pending' }] })
+    const done = mock.record('/reminders/9/done', { ok: true })
+    const user = userEvent.setup()
+    renderApp('/chat')
+    const box = await screen.findByLabelText('Due reminders')
+    expect(within(box).getByRole('alert')).toHaveTextContent('call Sri Bakery')
+    await user.click(within(box).getByRole('button', { name: /done call sri bakery/i }))
+    await waitFor(() => expect(done).toHaveLength(1))
+  })
+})
+

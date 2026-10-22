@@ -24,6 +24,9 @@ import type {
   MoneySummary,
   Rate,
   DealDocument,
+  Reminder,
+  Note,
+  Briefing,
   Prospect,
   AnalystStatus,
 } from '../types';
@@ -188,6 +191,22 @@ export const api = {
     post<{ ok: true; document: { id: number; number: string; amount: number }; draft: OutreachItem | null }>(`/deals/${dealId}/invoice`, { kind }),
 
   listDealDocuments: (dealId: number) => request<{ ok: true; items: DealDocument[] }>(`/deals/${dealId}/documents`),
+
+  getBriefing: () => request<Briefing>('/briefing'),
+
+  dueReminders: () => request<{ ok: true; items: Reminder[] }>('/reminders/due'),
+
+  listReminders: () => request<{ ok: true; items: Reminder[] }>('/reminders'),
+
+  addReminder: (text: string, when: string) => post<{ ok: true; reminder: Reminder }>('/reminders', { text, when }),
+
+  closeReminder: (id: number, outcome: 'done' | 'dismissed') => post<{ ok: boolean }>(`/reminders/${id}/${outcome}`),
+
+  listNotes: () => request<{ ok: true; items: Note[] }>('/notes'),
+
+  addNote: (text: string) => post<{ ok: true; note: Note }>('/notes', { text }),
+
+  deleteNote: (id: number) => request<{ ok: boolean }>(`/notes/${id}`, { method: 'DELETE' }),
 
   confirmAction: (pendingId: string) =>
     post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),
