@@ -306,6 +306,90 @@ async def summarize_page(query: str = "") -> dict:
     return {"ok": True, "title": page["title"], "url": page["url"], "summary": summary.strip(), "ms": _ms(started)}
 
 
+async def who_is_waiting() -> dict:
+    """Who is waiting on Adithya: interested clients first, then quiet prospects, longest wait first."""
+    import services
+
+    started = time.perf_counter()
+    store, now = services.get_store(), datetime.now().astimezone()
+    waiting = []
+    for d in store.list_deals("interested", "call_booked", "proposal_sent"):
+        days = (now - datetime.fromisoformat(d["updated_at"])).days
+        waiting.append({"name": d["company"] or d["email"], "email": d["email"], "days": days,
+                        "why": f"{d['stage'].replace('_', ' ')}: reply or move them on", "priority": 0})
+    for r in store.list_outreach("sent"):
+        if r["sent_at"]:
+            days = (now - datetime.fromisoformat(r["sent_at"])).days
+            waiting.append({"name": r["company"] or r["email"], "email": r["email"], "days": days,
+                            "why": "no reply yet" + ("; a follow-up is due" if days >= 5 and r["followup_n"] < 2 else ""),
+                            "priority": 1})
+    waiting.sort(key=lambda w: (w["priority"], -w["days"]))
+    return {"ok": True, "waiting": waiting[:15], "ms": _ms(started)}
+
+
+async def focus(minutes: int = 50, client: str = "") -> dict:
+    """Start a focus session: pause the music, remind when it's over, log the minutes to the client's deal."""
+    import config
+    import services
+    from zoneinfo import ZoneInfo
+
+    started = time.perf_counter()
+    minutes = max(5, min(int(minutes), 240))
+    store = services.get_store()
+    deal = None
+    if client.strip():
+        words = client.lower().split()
+        deal = next((d for d in store.list_deals() if all(w in (d["company"] + " " + d["email"]).lower() for w in words)), None)
+    await asyncio.to_thread(pc.run_powershell, pc.key_script(["play_pause"]))
+    label = f" on {deal['company'] or deal['email']}" if deal else ""
+    end = datetime.now(ZoneInfo(config.TIMEZONE)) + timedelta(minutes=minutes)
+    store.add_reminder(f"Focus session over ({minutes} min{label}). Take a break.", end.isoformat())
+    if deal:
+        store.update_deal(deal["id"], minutes_logged=deal["minutes_logged"] + minutes)
+    return {"ok": True, "minutes": minutes, "client": label.removeprefix(" on "), "ends": end.strftime("%I:%M %p"),
+            "ms": _ms(started)}
+
+
+_PITCH = {
+    "no_website": ("one_page", "a simple website so customers can find them online"),
+    "site_down": ("redesign", "a reliable rebuild: their site isn't loading"),
+    "not_mobile": ("redesign", "a mobile-friendly redesign"),
+    "no_https": ("redesign", "a secure (HTTPS) redesign: browsers mark their site Not secure"),
+    "outdated": ("redesign", "a refresh: their site looks a few years old"),
+    "slow": ("redesign", "a faster site: theirs is slow to load"),
+}
+
+
+async def prospect_brief(name: str) -> dict:
+    """A one-page brief before a call: what's wrong with their site, what to pitch, a quote range."""
+    import billing
+    import services
+    import sitecheck
+
+    started = time.perf_counter()
+    store = services.get_store()
+    words = [w for w in name.lower().split() if w]
+    matches = lambda text: words and all(w in text.lower() for w in words)
+    prospect = next((p for p in store.list_prospects(limit=1000) if matches(p["name"])), None)
+    deal = next((d for d in store.list_deals() if matches(d["company"] + " " + d["email"])), None)
+    if not prospect and not deal:
+        return {"ok": False, "error": f"I don't know '{name}' yet", "ms": _ms(started)}
+    website = (prospect or {}).get("website", "")
+    problems = list((prospect or {}).get("problems", []))
+    if website:
+        report = await sitecheck.inspect(website, year=datetime.now().year)
+        problems = report.problems
+    elif not problems:
+        problems = ["no_website"]
+    rate_id, pitch = _PITCH.get(problems[0], ("business_site", "a business website")) if problems else ("business_site", "a business website")
+    rates = {r["id"]: r["price"] for r in billing.get_rates(store)}
+    low, high = rates.get(rate_id, 6000), rates.get("business_site", 15000)
+    quote = f"₹{min(low, high):,} to ₹{max(low, high):,}"
+    return {"ok": True, "name": (deal or prospect)["company" if deal else "name"], "website": website or "none",
+            "problems": problems, "pitch": f"Pitch {pitch}.", "quote": quote,
+            "stage": deal["stage"] if deal else "prospect", "ms": _ms(started)}
+
+
 async def book_call(
     name: str = "",
     email: str = "",
@@ -444,6 +528,9 @@ TOOL_FUNCS = {
     "open_tab": open_tab,
     "play_youtube": play_youtube,
     "volume": volume,
+    "who_is_waiting": who_is_waiting,
+    "focus": focus,
+    "prospect_brief": prospect_brief,
     "list_tabs": list_tabs,
     "switch_tab": switch_tab,
     "close_tabs": close_tabs,
@@ -464,6 +551,11 @@ TOOL_FUNCS = {
 }
 
 TOOL_SPECS = [
+    {"type": "function", "function": {"name": "who_is_waiting", "description": "Who is waiting on the owner: interested clients and prospects with no reply, longest wait first.", "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {"name": "focus", "description": "Start a focus session: pause music, remind at the end, log minutes to a client.", "parameters": {
+        "type": "object", "properties": {"minutes": {"type": "integer"}, "client": {"type": "string"}}}}},
+    {"type": "function", "function": {"name": "prospect_brief", "description": "A brief before a call with a prospect or client: site problems, what to pitch, a quote range.", "parameters": {
+        "type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}}},
     {"type": "function", "function": {"name": "list_tabs", "description": "List the tabs open in the owner's browser.", "parameters": {"type": "object", "properties": {}}}},
     {"type": "function", "function": {"name": "switch_tab", "description": "Switch to the open tab matching words in its title or address.", "parameters": {
         "type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},

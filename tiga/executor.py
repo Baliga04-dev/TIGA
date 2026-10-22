@@ -43,6 +43,9 @@ TIERS: dict[str, int] = {
     "summarize_page": READ,
     "switch_tab": LOCAL,
     "close_tabs": OUTWARD,
+    "who_is_waiting": READ,
+    "prospect_brief": READ,
+    "focus": LOCAL,
     "book_call": OUTWARD,
 }
 # Tools whose results may contain text written by strangers (possible prompt injection).
