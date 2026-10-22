@@ -6,6 +6,7 @@ const PAGES = [
   { path: '/prospects', heading: 'Prospects' },
   { path: '/outreach', heading: 'Outreach' },
   { path: '/pipeline', heading: 'Pipeline' },
+  { path: '/meetings', heading: 'Meetings' },
   { path: '/usage', heading: 'AI usage' },
   { path: '/reports', heading: 'Reports' },
   { path: '/crew', heading: 'Crew' },
