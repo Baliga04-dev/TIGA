@@ -16,28 +16,21 @@ export function DeskSummary() {
 
   if (!card) return null;
   return (
-    <div className="mb-10 grid grid-cols-1 gap-10 lg:grid-cols-2">
-      <Card title="Outreach today">
-        <p className="text-sm">
-          Sent <b>{card.sent_today}</b> of {card.daily_cap} today · <b>{card.replies}</b> replies · <b>{card.interested}</b> interested
+    <div className="space-y-8">
+      {card.awaiting_approval > 0 && (
+        <p className="rounded-lg border border-mark bg-mark/15 px-4 py-3 text-sm">
+          <Link to="/outreach" className="font-medium text-ink">{card.awaiting_approval} draft{card.awaiting_approval === 1 ? '' : 's'} waiting for your approval</Link>
         </p>
-        {card.awaiting_approval > 0 ? (
-          <p className="mt-2 text-sm">
-            <Link to="/outreach" className="font-medium text-pen underline">{card.awaiting_approval} draft{card.awaiting_approval === 1 ? '' : 's'} waiting for your approval</Link>
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-ink-3">No drafts waiting for you.</p>
-        )}
-      </Card>
+      )}
       <Card title="Latest report">
         {report ? (
           <>
             <p className="font-medium">{report.subject}</p>
-            <pre tabIndex={0} aria-label="Latest report text" className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-sm text-ink-2">{report.body}</pre>
-            <Link to="/reports" className="mt-2 inline-block text-sm text-pen underline">All reports</Link>
+            <pre tabIndex={0} aria-label="Latest report text" className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-sans text-sm text-ink-2">{report.body}</pre>
+            <Link to="/reports" className="mt-2 inline-block text-sm">All reports</Link>
           </>
         ) : (
-          <p className="text-sm text-ink-3">No report yet. <Link to="/reports" className="text-pen underline">Build today's report</Link>.</p>
+          <p className="text-sm text-ink-3">No report yet. <Link to="/reports">Build today's report</Link>.</p>
         )}
       </Card>
     </div>

@@ -34,7 +34,7 @@ export function MessageDialog({ parsed, onClose, onReply }: {
         {parsed.key_topics.map((t) => <span key={t} className="badge badge-gray">{topicLabel(t)}</span>)}
       </div>
 
-      <div className="whitespace-pre-wrap font-serif text-[1.0625rem] leading-relaxed">{email.body}</div>
+      <div className="whitespace-pre-wrap text-[0.975rem] leading-relaxed">{email.body}</div>
 
       {parsed.action_items.length > 0 && (
         <section className="mt-4 pt-4 border-t border-rule">

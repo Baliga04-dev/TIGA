@@ -3,7 +3,7 @@ import { Bot, Loader2, Mail, RefreshCw, Sparkles } from 'lucide-react';
 import { useEmailSummary } from '../hooks/useApi';
 import { PageHeader, Card, Notice } from '../components/ui';
 import { DeskSummary } from '../components/DeskSummary';
-import { TodayPanel } from '../components/TodayPanel';
+import { RemindersNotes, TodayPanel } from '../components/TodayPanel';
 import { cn, formatRelativeTime, isGmailSetupError } from '../lib/utils';
 
 /** "Alex Doe <alex@acme.com>" -> "Alex Doe" */
@@ -27,7 +27,7 @@ export function Dashboard() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Who replied this week, and what to do next"
+        description="What to do next, and how outreach is going."
         action={
           <button onClick={refetch} disabled={loading} className="btn btn-secondary btn-sm">
             <RefreshCw className={cn('size-4', loading && 'animate-spin')} aria-hidden="true" />
@@ -37,8 +37,13 @@ export function Dashboard() {
       />
 
       <TodayPanel />
-      <DeskSummary />
+      <div className="mb-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
+        <RemindersNotes />
+        <DeskSummary />
+      </div>
 
+      <h2 className="mb-1 text-lg font-semibold">Inbox, last 7 days</h2>
+      <p className="mb-4 text-sm text-ink-2">From your Gmail, once it's connected.</p>
       {error && (
         <div className="mb-8">
           <Notice
@@ -54,10 +59,12 @@ export function Dashboard() {
         </div>
       )}
 
+      {!(error && isGmailSetupError(error)) && (
+        <>
       <dl className="mb-10 flex flex-wrap gap-x-10 gap-y-3 border-y border-rule py-4">
         {figures.map((f) => (
           <div key={f.label} className="flex items-baseline gap-2">
-            <dd className="font-serif text-3xl font-semibold tabular-nums">{f.value}</dd>
+            <dd className="figure text-3xl">{f.value}</dd>
             <dt className="text-sm text-ink-2">{f.label}</dt>
           </div>
         ))}
@@ -65,7 +72,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-5">
         <div className="space-y-10 lg:col-span-3">
-          <Card title="Recent Positive Responses">
+          <Card title="Recent positive replies">
             {positive.length > 0 ? (
               <ul className="divide-y divide-rule">
                 {positive.map((item) => (
@@ -73,7 +80,7 @@ export function Dashboard() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{senderName(item.email.from)}</p>
                       <p className="truncate text-sm text-ink-2">{item.email.subject}</p>
-                      <p className="mt-1 font-serif text-[0.9375rem] text-ink-2">{item.summary}</p>
+                      <p className="mt-1 text-sm text-ink-2">{item.summary}</p>
                     </div>
                     <span className="shrink-0 text-sm text-ink-3">{formatRelativeTime(item.email.date)}</span>
                   </li>
@@ -84,7 +91,7 @@ export function Dashboard() {
             )}
           </Card>
 
-          <Card title="Top Topics This Week">
+          <Card title="Top topics this week">
             {loading ? (
               <Loader2 className="size-6 animate-spin text-pen" aria-label="Loading" />
             ) : topics.length > 0 ? (
@@ -106,7 +113,7 @@ export function Dashboard() {
         </div>
 
         <div className="space-y-10 lg:col-span-2">
-          <Card title="Action Items">
+          <Card title="Action items">
             {summary && summary.action_items.length > 0 ? (
               <ul className="space-y-3">
                 {summary.action_items.slice(0, 8).map((item, i) => (
@@ -120,7 +127,7 @@ export function Dashboard() {
             )}
           </Card>
 
-          <Card title="Quick Start">
+          <Card title="Quick start">
             <div className="flex flex-col gap-2">
               <Link to="/email?template=1" className="btn btn-primary justify-start gap-3">
                 <Sparkles className="size-4" aria-hidden="true" />
@@ -138,6 +145,8 @@ export function Dashboard() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }

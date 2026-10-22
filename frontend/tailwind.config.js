@@ -16,12 +16,14 @@ export default {
         ledger: token('ledger'),
         flag: token('flag'),
         mark: token('mark'),
+        board: token('board'),
+        'on-board': token('on-board'),
       },
       fontFamily: {
-        sans: ['"Hanken Grotesk Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        serif: ['"Source Serif 4 Variable"', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['"Geist Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Big Shoulders Display"', '"Arial Narrow"', 'sans-serif'],
       },
-      borderRadius: { sm: '4px', DEFAULT: '6px', md: '6px', lg: '8px', xl: '10px' },
+      borderRadius: { sm: '4px', DEFAULT: '6px', md: '6px', lg: '8px', xl: '12px', '2xl': '16px' },
       keyframes: {
         'dialog-in': {
           from: { opacity: '0', transform: 'translateY(6px) scale(0.985)' },

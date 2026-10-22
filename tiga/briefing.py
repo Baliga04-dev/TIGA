@@ -46,18 +46,21 @@ async def build(store: Store, mailer: Mailer, now: datetime,
              datetime.fromisoformat(r["sent_at"]) <= now - timedelta(days=5) and r["followup_n"] < 2]
 
     cards = []
-    todo = []
+    items: list[dict] = []  # each to-do with the page that resolves it
     if card["awaiting_approval"]:
-        todo.append(f"{card['awaiting_approval']} email draft{'s' if card['awaiting_approval'] != 1 else ''} to approve")
+        items.append({"text": f"{card['awaiting_approval']} email draft{'s' if card['awaiting_approval'] != 1 else ''} to approve",
+                      "link": "/outreach"})
     if interested:
-        todo.append(f"{len(interested)} interested client{'s' if len(interested) != 1 else ''} to call: "
-                    + ", ".join(d["company"] or d["email"] for d in interested[:3]))
+        items.append({"text": f"{len(interested)} interested client{'s' if len(interested) != 1 else ''} to call: "
+                      + ", ".join(d["company"] or d["email"] for d in interested[:3]), "link": "/pipeline"})
     if quiet:
-        todo.append(f"{len(quiet)} prospect{'s' if len(quiet) != 1 else ''} quiet for 5+ days: follow-ups due")
+        items.append({"text": f"{len(quiet)} prospect{'s' if len(quiet) != 1 else ''} quiet for 5+ days: follow-ups due",
+                      "link": "/outreach"})
     if money["advance_due"] or money["balance_due"]:
-        todo.append(f"Rs {money['advance_due'] + money['balance_due']:,} to collect")
+        items.append({"text": f"Rs {money['advance_due'] + money['balance_due']:,} to collect", "link": "/pipeline"})
     if needs_contact:
-        todo.append(f"{needs_contact} prospects need an email or a call")
+        items.append({"text": f"{needs_contact} prospects need an email or a call", "link": "/prospects"})
+    todo = [i["text"] for i in items]
     cards.append({"title": "To do today", "lines": todo or ["Nothing urgent. A good day to find new leads."]})
     if reminders:
         cards.append({"title": "Reminders", "lines": [f"{datetime.fromisoformat(r['due_at']).astimezone(now.tzinfo):%I:%M %p}: {r['text']}"
@@ -65,9 +68,10 @@ async def build(store: Store, mailer: Mailer, now: datetime,
     cards.append({"title": "Yesterday's outreach", "lines": [
         f"Sent this week: {card['sent_week']}", f"Replies: {card['replies']} ({card['interested']} interested)",
         f"Open deals: {money['open_deals']} worth Rs {money['pipeline_value']:,}"]})
+    forecast = None
     if weather is not None:
         try:
-            w = await weather()
+            w = forecast = await weather()
             cards.append({"title": "Bengaluru weather", "lines": [
                 f"{w['summary'].capitalize()}, {w['low']} to {w['high']} °C, {w['rain']}% chance of rain"]})
         except Exception:
@@ -75,4 +79,7 @@ async def build(store: Store, mailer: Mailer, now: datetime,
 
     hello = "Good morning" if now.hour < 12 else "Good afternoon" if now.hour < 17 else "Good evening"
     spoken = f"{hello}, Adithya. " + ". ".join(todo[:3] or ["Nothing urgent today"]) + "."
-    return {"cards": cards, "text": spoken}
+    return {"cards": cards, "text": spoken, "todo": items, "weather": forecast, "greeting": f"{hello}, Adithya",
+            "figures": {"sent_today": card["sent_today"], "daily_cap": card["daily_cap"], "replies": card["replies"],
+                        "interested": card["interested"], "pipeline_value": money["pipeline_value"],
+                        "to_collect": money["advance_due"] + money["balance_due"]}}

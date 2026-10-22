@@ -163,19 +163,24 @@ export function Pipeline() {
           ] as const).map(([label, value]) => (
             <div key={label} className="bg-sheet p-3">
               <dt className="text-xs text-ink-2">{label}</dt>
-              <dd className="font-serif text-2xl font-semibold">{value}</dd>
+              <dd className="figure text-2xl">{value}</dd>
             </div>
           ))}
         </dl>
       )}
 
+      {deals.every((d) => d.stage === 'paid' || d.stage === 'lost') && (
+        <p className="mb-4 rounded-lg border border-dashed border-rule px-4 py-3 text-sm text-ink-2">
+          No open deals yet. When a prospect replies "interested" it appears under Interested, or add one by hand below.
+        </p>
+      )}
       <div className="mb-8 overflow-x-auto pb-2">
         <div className="grid min-w-[60rem] grid-cols-6 gap-3">
           {COLUMNS.map((col) => {
             const items = deals.filter((d) => d.stage === col.stage);
             return (
               <section key={col.stage} aria-label={col.title}>
-                <h2 className="mb-2 font-serif text-base font-semibold">{col.title} <span className="text-ink-3">({items.length})</span></h2>
+                <h2 className="mb-2 text-sm font-semibold">{col.title} <span className="text-ink-3">({items.length})</span></h2>
                 <ul className="space-y-2">
                   {items.map((d) => <DealCard key={`${d.id}-${d.updated_at}`} deal={d} onDone={done} onError={setError} />)}
                 </ul>

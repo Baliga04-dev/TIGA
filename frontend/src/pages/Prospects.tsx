@@ -144,7 +144,7 @@ export function Prospects() {
         {COUNT_LABELS.map(([key, label]) => (
           <div key={key} className="bg-sheet p-3">
             <dt className="text-xs text-ink-2">{label}</dt>
-            <dd className="font-serif text-2xl font-semibold">{counts[key] ?? 0}</dd>
+            <dd className="figure text-2xl">{counts[key] ?? 0}</dd>
           </div>
         ))}
       </dl>

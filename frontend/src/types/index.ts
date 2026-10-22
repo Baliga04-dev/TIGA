@@ -370,6 +370,10 @@ export interface Briefing {
   ok: true;
   cards: { title: string; lines: string[] }[];
   text: string;
+  greeting?: string;
+  todo?: { text: string; link: string }[];
+  weather?: { summary: string; high: number; low: number; rain: number } | null;
+  figures?: { sent_today: number; daily_cap: number; replies: number; interested: number; pipeline_value: number; to_collect: number };
 }
 
 export interface UsageRow {

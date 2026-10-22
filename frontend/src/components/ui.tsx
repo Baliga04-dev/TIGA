@@ -9,10 +9,10 @@ export function PageHeader({ title, description, action }: {
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-8 flex flex-col gap-4 border-b border-rule pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold">{title}</h1>
-        {description && <p className="mt-1 text-ink-2">{description}</p>}
+        <h1 className="text-[1.75rem] font-semibold leading-tight">{title}</h1>
+        {description && <p className="mt-1.5 max-w-[65ch] text-ink-2">{description}</p>}
       </div>
       {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
@@ -31,10 +31,10 @@ export function Card({ title, children, action, className = '', raised = false }
   raised?: boolean;
 }) {
   return (
-    <section className={cn(raised && 'rounded-lg border border-rule bg-sheet shadow-sm', className)}>
+    <section className={cn(raised && 'rounded-xl border border-rule bg-sheet shadow-[0_1px_2px_rgb(var(--board)/0.06),0_12px_28px_-18px_rgb(var(--board)/0.25)]', className)}>
       {title && (
-        <div className={cn('flex items-center justify-between gap-3 border-b border-rule pb-2', raised ? 'px-5 pt-4' : 'mb-4')}>
-          <h2 className="text-xl font-semibold">{title}</h2>
+        <div className={cn('flex items-center justify-between gap-3', raised ? 'border-b border-rule px-5 pb-3 pt-4' : 'mb-3')}>
+          <h2 className="text-base font-semibold">{title}</h2>
           {action && <div>{action}</div>}
         </div>
       )}

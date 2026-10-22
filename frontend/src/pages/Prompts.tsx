@@ -83,7 +83,7 @@ export function Prompts() {
 
           {prompt && (
             <Card title="3. Your prompt" action={<CopyButton text={prompt} label="Copy prompt" />}>
-              <pre aria-label="Generated prompt" className="whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 text-sm">{prompt}</pre>
+              <pre aria-label="Generated prompt" className="whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 font-sans text-sm">{prompt}</pre>
             </Card>
           )}
         </div>

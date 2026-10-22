@@ -28,7 +28,7 @@ function ScorecardStrip({ card }: { card: Scorecard }) {
       {cells.map(([label, value]) => (
         <div key={label} className="bg-sheet p-3">
           <dt className="text-xs text-ink-2">{label}</dt>
-          <dd className="font-serif text-2xl font-semibold">{value}</dd>
+          <dd className="figure text-2xl">{value}</dd>
         </div>
       ))}
     </dl>

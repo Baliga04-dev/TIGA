@@ -116,7 +116,7 @@ export function EmailBot() {
           ['Positive', summary?.positive_responses],
         ].map(([label, value]) => (
           <div key={label} className="flex items-baseline gap-2">
-            <dd className="font-serif text-3xl font-semibold tabular-nums">{summary ? value : '–'}</dd>
+            <dd className="figure text-3xl">{summary ? value : '–'}</dd>
             <dt className="text-sm text-ink-2">{label}</dt>
           </div>
         ))}

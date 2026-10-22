@@ -62,7 +62,7 @@ export function Reports() {
                 <span className={cn('badge', TONE[preview.result.status])}>{preview.result.status}</span>
                 {preview.result.subject}
               </p>
-              <pre className="whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 text-sm">{preview.result.body}</pre>
+              <pre className="whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 font-sans text-sm">{preview.result.body}</pre>
             </article>
           )}
         </Card>
@@ -86,7 +86,7 @@ export function Reports() {
               ))}
             </ul>
           )}
-          {open && <pre aria-label="Report body" className="mt-3 whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 text-sm">{open.body}</pre>}
+          {open && <pre aria-label="Report body" className="mt-3 whitespace-pre-wrap rounded-lg border border-rule bg-wash p-3 font-sans text-sm">{open.body}</pre>}
         </Card>
       </div>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}

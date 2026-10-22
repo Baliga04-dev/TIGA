@@ -133,7 +133,7 @@ export function Chat() {
                       className={cn(
                         'inline-block px-4 py-2 rounded-2xl text-left',
                         msg.role === 'assistant'
-                          ? 'border border-rule bg-sheet font-serif text-[1.0625rem] text-ink'
+                          ? 'border border-rule bg-sheet text-[0.975rem] leading-relaxed text-ink'
                           : 'bg-pen text-on-accent',
                       )}
                     >
@@ -207,17 +207,19 @@ export function Chat() {
                   <Send className="size-5" aria-hidden="true" />
                 </button>
               </div>
-              <label className="flex items-center gap-2 text-xs text-ink-3">
+              <label className="flex items-center gap-2 text-xs text-ink-2">
                 <input type="checkbox" checked={speakReplies} onChange={(e) => setSpeakReplies(e.target.checked)} />
                 Read Tiga's replies aloud
-                {voice.supported && <span>· voice input uses your browser's online speech service; a spoken "yes" never confirms an action</span>}
               </label>
+              {voice.supported && (
+                <p className="text-xs text-ink-3">The mic uses your browser's online speech service. Saying "yes" never confirms an action; only the Confirm button does.</p>
+              )}
             </form>
           </section>
         </div>
 
         <div className="space-y-8">
-          <Card title="Quick Actions">
+          <Card title="Quick actions">
             <div className="space-y-2">
               {QUICK_ACTIONS.map(({ label, command, icon: Icon }) => (
                 <button key={label} onClick={() => fillExample(command)} className="btn btn-secondary w-full justify-start gap-2">
@@ -228,7 +230,7 @@ export function Chat() {
             </div>
           </Card>
 
-          <Card title="System Status">
+          <Card title="System status">
             <div className="space-y-3">
               <StatusRow label="Brain" value={brain} good={!!status && status.brain !== 'builtin'} />
               <StatusRow label="Speech" value={status?.tts === 'elevenlabs' ? 'ElevenLabs' : 'Browser voice'} good={status?.tts === 'elevenlabs'} />
