@@ -23,6 +23,7 @@ const isolatedEnv = {
   GMAIL_TOKEN_FILE: '/nonexistent/token.json',
   TIGA_AI_PROVIDER: 'off', // never spend the owner's Claude limits from browser tests
   TIGA_ANALYST_TICK_MINUTES: '0',
+  TIGA_ROUTINE_TICK_SECONDS: '0',
   TIGA_LEARN_ENABLED: '',
   TIGA_DB_PATH: join(tmpdir(), `tiga-e2e-${process.pid}.db`),
 }

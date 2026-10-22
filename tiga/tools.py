@@ -183,6 +183,32 @@ async def remind_me(text: str, when: str) -> dict:
     return {"ok": True, "id": row["id"], "text": row["text"], "due": due.strftime("%a %I:%M %p"), "ms": _ms(started)}
 
 
+async def add_routine(command: str, when: str) -> dict:
+    """Run a command on a schedule: `when` is like 'every Monday at 9am', 'every weekday 6pm', 'every 2 hours'."""
+    import config
+    import routines
+    import services
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    started = time.perf_counter()
+    out = routines.Routines(services.get_store()).add(command, when, datetime.now(ZoneInfo(config.TIMEZONE)))
+    if not out["ok"]:
+        return {"ok": False, "error": out["error"], "ms": _ms(started)}
+    r = out["routine"]
+    nxt = datetime.fromisoformat(r["next_at"]).strftime("%a %d %b, %I:%M %p")
+    return {"ok": True, "id": r["id"], "when": r["when"], "command": r["command"], "next": nxt, "ms": _ms(started)}
+
+
+async def list_routines() -> dict:
+    import routines
+    import services
+
+    items = routines.Routines(services.get_store()).list()
+    return {"ok": True, "routines": [{k: r[k] for k in ("id", "when", "command", "next_at", "active", "last_result")}
+                                     for r in items]}
+
+
 async def take_note(text: str) -> dict:
     """Save a note (client details, ideas). Shown on the Dashboard; can be deleted there."""
     import services
@@ -543,6 +569,8 @@ TOOL_FUNCS = {
     "remind_me": remind_me,
     "take_note": take_note,
     "list_reminders": list_reminders,
+    "add_routine": add_routine,
+    "list_routines": list_routines,
     "morning_briefing": morning_briefing,
     "media": media,
     "open_app": open_app,
@@ -576,6 +604,12 @@ TOOL_SPECS = [
     {"type": "function", "function": {"name": "take_note", "description": "Save a note for later.", "parameters": {
         "type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}},
     {"type": "function", "function": {"name": "list_reminders", "description": "List pending reminders.", "parameters": {
+        "type": "object", "properties": {}}}},
+    {"type": "function", "function": {"name": "add_routine", "description": "Repeat a command on a schedule (a recurring task).", "parameters": {
+        "type": "object", "properties": {"command": {"type": "string", "description": "what to do each time, as the owner would say it, e.g. 'who is waiting on me' or 'remind me to pay rent'"},
+                                         "when": {"type": "string", "description": "e.g. 'every Monday at 9am', 'every weekday 6pm', 'every 2 hours'"}},
+        "required": ["command", "when"]}}},
+    {"type": "function", "function": {"name": "list_routines", "description": "List recurring tasks.", "parameters": {
         "type": "object", "properties": {}}}},
     {"type": "function", "function": {"name": "morning_briefing", "description": "Today's briefing: drafts to approve, interested clients, follow-ups, money to collect, reminders and weather.", "parameters": {
         "type": "object", "properties": {}}}},

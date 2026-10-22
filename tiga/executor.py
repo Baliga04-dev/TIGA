@@ -37,6 +37,8 @@ TIERS: dict[str, int] = {
     "remind_me": LOCAL,
     "take_note": LOCAL,
     "list_reminders": READ,
+    "add_routine": LOCAL,
+    "list_routines": READ,
     "morning_briefing": READ,
     "list_tabs": READ,
     "read_page": READ,

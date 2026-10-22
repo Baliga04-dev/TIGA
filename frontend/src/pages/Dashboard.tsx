@@ -4,6 +4,7 @@ import { useEmailSummary } from '../hooks/useApi';
 import { PageHeader, Card, Notice } from '../components/ui';
 import { DeskSummary } from '../components/DeskSummary';
 import { RemindersNotes, TodayPanel } from '../components/TodayPanel';
+import { Routines } from '../components/Routines';
 import { cn, formatRelativeTime, isGmailSetupError } from '../lib/utils';
 
 /** "Alex Doe <alex@acme.com>" -> "Alex Doe" */
@@ -40,6 +41,7 @@ export function Dashboard() {
       <div className="mb-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
         <RemindersNotes />
         <DeskSummary />
+        <Routines />
       </div>
 
       <h2 className="mb-1 text-lg font-semibold">Inbox, last 7 days</h2>

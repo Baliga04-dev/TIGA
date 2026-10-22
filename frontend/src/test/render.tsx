@@ -15,6 +15,7 @@ export function mockMountCalls() {
   mock.get('/bridge/setup', { ok: true, token: 'tok', server: 'ws://127.0.0.1:8000/ws/bridge' })
   mock.get('/reminders', { ok: true, items: [] })
   mock.get('/notes', { ok: true, items: [] })
+  mock.get('/routines', { ok: true, items: [] })
   mock.get('/briefing', { ok: true, cards: [{ title: 'To do today', lines: ['1 email draft to approve'] }], text: 'Good morning, Adithya.' })
   mock.get('/outreach/scorecard', { ok: true, scorecard: { sent_today: 0, sent_week: 0, replies: 0, interested: 0, declined: 0, unsubscribed: 0, bounced: 0, followups_sent: 0, awaiting_approval: 0, daily_cap: 5, pipeline: {} } })
   mock.get('/reports', { ok: true, items: [] })

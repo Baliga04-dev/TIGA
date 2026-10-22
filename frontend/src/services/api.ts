@@ -25,6 +25,7 @@ import type {
   Rate,
   DealDocument,
   Reminder,
+  Routine,
   Note,
   Briefing,
   AiUsage,
@@ -204,6 +205,14 @@ export const api = {
   addReminder: (text: string, when: string) => post<{ ok: true; reminder: Reminder }>('/reminders', { text, when }),
 
   closeReminder: (id: number, outcome: 'done' | 'dismissed') => post<{ ok: boolean }>(`/reminders/${id}/${outcome}`),
+
+  listRoutines: () => request<{ ok: true; items: Routine[] }>('/routines'),
+
+  addRoutine: (command: string, when: string) => post<{ ok: true; routine: Routine }>('/routines', { command, when }),
+
+  setRoutineActive: (id: number, active: boolean) => post<{ ok: boolean }>(`/routines/${id}`, { active }),
+
+  deleteRoutine: (id: number) => request<{ ok: boolean }>(`/routines/${id}`, { method: 'DELETE' }),
 
   listNotes: () => request<{ ok: true; items: Note[] }>('/notes'),
 

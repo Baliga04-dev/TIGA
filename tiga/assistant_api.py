@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 import briefing
 import config
 import executor
+import routines
 import services
 from when import parse_when
 
@@ -46,6 +47,39 @@ def set_state(body: PauseIn) -> dict:
 class ReminderIn(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     when: str = Field(min_length=1, max_length=100)
+
+
+class RoutineIn(BaseModel):
+    command: str = Field(min_length=1, max_length=500)
+    when: str = Field(min_length=1, max_length=100)
+
+
+class RoutineState(BaseModel):
+    active: bool
+
+
+def _now():
+    return datetime.now(ZoneInfo(config.TIMEZONE))
+
+
+@router.get("/routines")
+def list_routines() -> dict:
+    return {"ok": True, "items": routines.Routines(services.get_store()).list()}
+
+
+@router.post("/routines")
+def add_routine(body: RoutineIn) -> dict:
+    return routines.Routines(services.get_store()).add(body.command, body.when, _now())
+
+
+@router.post("/routines/{routine_id}")
+def set_routine(routine_id: int, body: RoutineState) -> dict:
+    return {"ok": routines.Routines(services.get_store()).set_active(routine_id, body.active, _now())}
+
+
+@router.delete("/routines/{routine_id}")
+def delete_routine(routine_id: int) -> dict:
+    return {"ok": routines.Routines(services.get_store()).delete(routine_id)}
 
 
 class NoteIn(BaseModel):

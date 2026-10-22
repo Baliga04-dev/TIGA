@@ -11,6 +11,7 @@ import ai
 import config
 import executor
 import pc
+import routines
 import tools
 
 logger = logging.getLogger("tiga")
@@ -98,6 +99,20 @@ RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
 _WHEN_AT_START = re.compile(r"^((?:tomorrow\s+|tonight\s+)?(?:in\s+(?:an?|\d+)\s*\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|tomorrow|tonight)"
                             r"(?:\s+(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\s+(?:to\s+)?(.+)$", re.I | re.S)
 _WHEN_AT_END = re.compile(r"^(?:to\s+)?(.+?)\s+((?:tomorrow\s+)?(?:in\s+(?:an?|\d+)\s*\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|tomorrow(?:\s+(?:at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?|tonight(?:\s+at\s+\d{1,2})?))\s*[.!]?$", re.I | re.S)
+
+
+_REMIND_EVERY = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?remind me\s+(every\s+.+?)\s+(?:to|about)\s+(.+?)\s*[.!]?$", re.I | re.S)
+_REMIND_THEN_EVERY = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?remind me\s+(?:to\s+|about\s+)?(.+?)\s+(every\s+.+?)\s*[.!]?$", re.I | re.S)
+_POLITE = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?", re.I)
+
+
+def _routine_request(text: str) -> tuple[str, str] | None:
+    """'every Monday at 9am, check who is waiting' or 'remind me every Monday to pay rent' -> (schedule, command)."""
+    for pattern, rule_group, what_group in ((_REMIND_EVERY, 1, 2), (_REMIND_THEN_EVERY, 2, 1)):
+        m = pattern.match(text)
+        if m and routines.parse_rule(m.group(rule_group)):
+            return m.group(rule_group).strip(), "remind me to " + m.group(what_group).strip(" .!")
+    return routines.split(_POLITE.sub("", text, count=1))
 
 
 def _split_reminder(rest: str) -> tuple[str, str]:
@@ -260,7 +275,8 @@ def _claude_system() -> str:
 
 
 def _ask_claude(system: str, transcript: str) -> str:
-    with ai.using("chat"):
+    # a routine running a command keeps its own label in the usage report
+    with ai.using("chat" if ai.feature() == "other" else ai.feature()):
         return ai.claude_complete(system, transcript)
 
 
@@ -384,6 +400,14 @@ async def _builtin_respond(text: str) -> dict:
         }
         action = await executor.execute("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
+
+    routine = _routine_request(text)
+    if routine:
+        action = await executor.execute("add_routine", {"command": routine[1], "when": routine[0]})
+        res = action["result"]
+        reply = (f"Done. {res['when'][0].upper() + res['when'][1:]}, I'll {res['command']}. First run: {res['next']}."
+                 if action["ok"] else f"I couldn't set that up: {_err(res)}.")
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     remind_m = RE_REMIND.match(text)
     if remind_m:

@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, due_at TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS routines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, command TEXT NOT NULL, rule TEXT NOT NULL, when_text TEXT NOT NULL,
+    next_at TEXT NOT NULL, last_at TEXT NOT NULL DEFAULT '', last_result TEXT NOT NULL DEFAULT '',
+    runs INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL
 );
@@ -518,6 +523,39 @@ class Store:
             if cur.rowcount:
                 self._write_audit("user", "tool.cancel", "pending", pending_id)
             return bool(cur.rowcount)
+
+    # --- routines (recurring tasks; the schedule maths lives in routines.py) ------
+    def add_routine(self, command: str, rule: str, when_text: str, next_at: str) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "INSERT INTO routines (command, rule, when_text, next_at, created_at) VALUES (?, ?, ?, ?, ?)",
+                (command.strip()[:500], rule, when_text, next_at, _now()))
+            return dict(self._db.execute("SELECT * FROM routines WHERE id = ?", (cur.lastrowid,)).fetchone())
+
+    def list_routines(self, due_before: str | None = None) -> list[dict]:
+        sql, args = "SELECT * FROM routines", []
+        if due_before:
+            sql, args = sql + " WHERE active = 1 AND next_at <= ?", [due_before]
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY next_at", args)]
+
+    def record_routine_run(self, routine_id: int, next_at: str, result: str) -> None:
+        with self._lock, self._db:
+            self._db.execute("UPDATE routines SET next_at = ?, last_at = ?, last_result = ?, runs = runs + 1 WHERE id = ?",
+                             (next_at, _now(), result[:1000], routine_id))
+
+    def set_routine(self, routine_id: int, *, active: bool | None = None, next_at: str | None = None) -> bool:
+        sets = {k: v for k, v in (("active", None if active is None else int(active)), ("next_at", next_at)) if v is not None}
+        if not sets:
+            return False
+        with self._lock, self._db:
+            cur = self._db.execute(f"UPDATE routines SET {', '.join(k + ' = ?' for k in sets)} WHERE id = ?",
+                                   (*sets.values(), routine_id))
+            return bool(cur.rowcount)
+
+    def delete_routine(self, routine_id: int) -> bool:
+        with self._lock, self._db:
+            return bool(self._db.execute("DELETE FROM routines WHERE id = ?", (routine_id,)).rowcount)
 
     # --- small key-value settings (cursors) ----------------------------------
     def get_value(self, key: str, default: str = "") -> str:

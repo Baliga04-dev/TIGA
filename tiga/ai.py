@@ -19,6 +19,11 @@ def using(feature: str):
         _feature.reset(token)
 
 
+def feature() -> str:
+    """The feature the current AI call is for ("other" when nobody said)."""
+    return _feature.get()
+
+
 def provider() -> str | None:
     choice = config.AI_PROVIDER
     if choice == "off":

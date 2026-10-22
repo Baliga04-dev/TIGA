@@ -353,6 +353,17 @@ export interface DealDocument {
   created_at: string;
 }
 
+export interface Routine {
+  id: number;
+  command: string;
+  when: string;
+  next_at: string;
+  last_at: string;
+  last_result: string;
+  runs: number;
+  active: number;
+}
+
 export interface Reminder {
   id: number;
   text: string;

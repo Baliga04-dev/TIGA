@@ -65,6 +65,10 @@ ANALYST_TICK_MINUTES = int(os.getenv("TIGA_ANALYST_TICK_MINUTES", "20"))
 ANALYST_DRAFTS_PER_MORNING = int(os.getenv("TIGA_ANALYST_DRAFTS_PER_MORNING", "15"))
 TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")
 
+# Recurring tasks ("every Monday at 9am, check who is waiting"). 0 seconds turns the checker off.
+ROUTINE_TICK_SECONDS = int(os.getenv("TIGA_ROUTINE_TICK_SECONDS", "60"))
+ROUTINE_DAILY_RUNS = int(os.getenv("TIGA_ROUTINE_DAILY_RUNS", "24"))
+
 # Which AI Tiga uses: auto (your Claude subscription via the claude CLI if installed, else an OpenAI-compatible
 # key, else the free built-in rules), claude, openai, or off.
 AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()

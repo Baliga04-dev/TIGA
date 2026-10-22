@@ -69,6 +69,22 @@ async def _analyst_loop() -> None:
             logger.exception("Analyst tick failed; will retry")
 
 
+async def _routine_loop() -> None:
+    """Every minute: run any recurring task that is due, through the same assistant path as chat."""
+    import datetime
+    from zoneinfo import ZoneInfo
+
+    import routines
+
+    while True:
+        await _sleep(config.ROUTINE_TICK_SECONDS)
+        try:
+            now = datetime.datetime.now(ZoneInfo(config.TIMEZONE))
+            await routines.Routines(services.get_store()).run_due(now, lambda text: brain.respond(text, []))
+        except Exception:
+            logger.exception("Routine tick failed; will retry")
+
+
 OUTREACH_TICK_SECONDS = 300
 
 
@@ -92,6 +108,8 @@ async def lifespan(_app: FastAPI):
             tasks.append(asyncio.create_task(_outreach_loop()))
     if config.ANALYST_TICK_MINUTES > 0:
         tasks.append(asyncio.create_task(_analyst_loop()))
+    if config.ROUTINE_TICK_SECONDS > 0:
+        tasks.append(asyncio.create_task(_routine_loop()))
     yield
     for task in tasks:
         task.cancel()
