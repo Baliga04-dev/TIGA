@@ -69,3 +69,5 @@ TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")
 # key, else the free built-in rules), claude, openai, or off.
 AI_PROVIDER = os.getenv("TIGA_AI_PROVIDER", "auto").strip().lower()
 CLAUDE_MODEL = os.getenv("TIGA_CLAUDE_MODEL", "sonnet").strip()
+# Hard daily ceiling on Claude calls (chat, drafts, briefings); over it Tiga uses its built-in rules.
+AI_DAILY_CALLS = int(os.getenv("TIGA_AI_DAILY_CALLS", "150"))

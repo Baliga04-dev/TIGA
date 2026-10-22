@@ -181,20 +181,26 @@ async def book_call(
     }
 
 
-async def send_cold_email(
-    to: str,
-    subject: str,
-    body: str,
-    cc: str = "",
-    bcc: str = "",
-    is_html: bool = False,
-) -> dict:
-    """Send a cold email via Gmail."""
+async def draft_email(to: str, subject: str, body: str, company: str = "") -> dict:
+    """Put an email in the approval inbox. It is sent only after the owner approves it on the Outreach page."""
+    started = time.perf_counter()
+    import services
+    from mailer import MailerError
+
+    try:
+        draft = services.get_mailer().draft(email=to, subject=subject, body=body, company=company,
+                                            source_note="asked for in chat")
+    except (MailerError, ValueError) as exc:
+        return {"ok": False, "error": str(exc), "ms": _ms(started)}
+    return {"ok": True, "draft_id": draft["id"], "to": draft["email"], "status": "drafted",
+            "note": "Waiting for your approval on the Outreach page; nothing has been sent.", "ms": _ms(started)}
+
+
+async def send_email_now(to: str, subject: str, body: str, cc: str = "", bcc: str = "", is_html: bool = False) -> dict:
+    """The owner's own Send button on the Email Bot page. Deliberately NOT an assistant tool."""
     started = time.perf_counter()
     try:
-        result = await asyncio.to_thread(
-            gmail_service.gmail_service.send_email, to, subject, body, cc, bcc, is_html
-        )
+        result = await asyncio.to_thread(gmail_service.gmail_service.send_email, to, subject, body, cc, bcc, is_html)
         result["ms"] = _ms(started)
         return result
     except Exception as e:
@@ -258,7 +264,7 @@ TOOL_FUNCS = {
     "open_tab": open_tab,
     "play_youtube": play_youtube,
     "book_call": book_call,
-    "send_cold_email": send_cold_email,
+    "draft_email": draft_email,
     "fetch_recent_emails": fetch_recent_emails,
     "get_email_summary": get_email_summary,
     "generate_cold_email_template": generate_cold_email_template,
@@ -322,17 +328,15 @@ TOOL_SPECS = [
     {
         "type": "function",
         "function": {
-            "name": "send_cold_email",
-            "description": "Send a cold email via Gmail for freelancing outreach.",
+            "name": "draft_email",
+            "description": "Write an email into the owner's approval inbox. It is never sent until the owner approves it.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "to": {"type": "string", "description": "Recipient email address"},
                     "subject": {"type": "string", "description": "Email subject line"},
-                    "body": {"type": "string", "description": "Email body content"},
-                    "cc": {"type": "string", "description": "CC recipients"},
-                    "bcc": {"type": "string", "description": "BCC recipients"},
-                    "is_html": {"type": "boolean", "description": "Send as HTML email"},
+                    "body": {"type": "string", "description": "Plain-text email body"},
+                    "company": {"type": "string", "description": "Recipient's company, if known"},
                 },
                 "required": ["to", "subject", "body"],
             },

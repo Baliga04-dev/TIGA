@@ -86,9 +86,12 @@ def test_sending_without_content_asks_for_it(client, google):
     assert "bob@example.com" in body["reply"]
 
 
-def test_sending_with_explicit_content_sends_it(client, google):
-    chat(client, "send a cold email to bob@example.com saying I build fast websites")
-    assert len(google.sent) == 1
+def test_asking_to_send_only_drafts_it_for_approval(client, google):
+    import services
+    body = chat(client, "send a cold email to bob@example.com saying I build fast websites")
+    assert google.sent == []
+    drafts = services.get_store().list_outreach("drafted")
+    assert [d["email"] for d in drafts] == ["bob@example.com"] and "approval inbox" in body["reply"]
 
 
 def test_open_youtube_and_play_resolves_and_opens_the_video(client, opened, monkeypatch):

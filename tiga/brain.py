@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 import logging
 import json
 import random
@@ -10,6 +9,7 @@ import httpx
 
 import ai
 import config
+import executor
 import tools
 
 logger = logging.getLogger("tiga")
@@ -122,58 +122,31 @@ RE_GENERATE_TEMPLATE = re.compile(
 )
 
 
-def _coerce(value, annotation):
-    """Convert a tool argument to the type the tool function declares."""
-    if annotation is bool:
-        if isinstance(value, str):
-            return value.strip().lower() in {"1", "true", "yes", "y"}
-        return bool(value)
-    if annotation is int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return None
-    return str(value)[:200]
-
-
-async def run_tool(name: str, args: dict) -> dict:
-    func = tools.TOOL_FUNCS.get(name)
-    if func is None:
-        return {
-            "tool": name,
-            "args": args or {},
-            "result": {"ok": False, "error": f"unknown tool '{name}'"},
-            "ok": False,
-            "ms": 0,
-        }
-    params = {}
-    wanted = inspect.signature(func).parameters
-    for key, value in (args or {}).items():
-        if key in wanted and value not in (None, ""):
-            coerced = _coerce(value, wanted[key].annotation)
-            if coerced is not None:
-                params[key] = coerced
-    try:
-        result = await func(**params) if params else await func()
-    except Exception as exc:
-        result = {"ok": False, "source": "error", "error": f"{type(exc).__name__}: {exc}"}
-    return {
-        "tool": name,
-        "args": params,
-        "result": result,
-        "ok": bool(result.get("ok", True)),
-        "ms": int(result.get("ms", 0)),
-    }
-
-
-# Tools that read mailbox content (which may carry injected instructions) and
-# tools that act on the outside world. Once the first has run in a turn, the
-# second are refused for the rest of that turn.
-READS_UNTRUSTED = {"fetch_recent_emails", "get_email_summary"}
-ACTS_ON_WORLD = {"send_cold_email", "open_tab", "play_youtube"}
+RE_STOP = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:stop|halt)(?:\s+(?:everything|all|now))?\s*[.!]*\s*$", re.I)
+RE_RESUME = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:resume|unpause|carry on)\s*[.!]*\s*$", re.I)
 
 
 async def respond(user_text: str, history: list) -> dict:
+    """Answer one request. Stop/resume are handled here, before any model, so they always work."""
+    if RE_STOP.match(user_text):
+        executor.set_paused(True)
+        return {"reply": "Stopped. I won't do anything until you say resume.", "actions": [], "mode": "builtin"}
+    if RE_RESUME.match(user_text):
+        executor.set_paused(False)
+        return {"reply": "Back on. What do you need?", "actions": [], "mode": "builtin"}
+    return _note_pending(await _respond(user_text, history))
+
+
+def _note_pending(result: dict) -> dict:
+    """If any action is waiting for a click, say so plainly (the UI shows Confirm / Cancel)."""
+    waiting = [a for a in result["actions"] if a.get("status") == "needs_confirmation"]
+    if waiting:
+        asks = "; ".join(a["summary"] for a in waiting)
+        result["reply"] = f"I need your go-ahead first: {asks}. Tap Confirm to do it, or Cancel."
+    return result
+
+
+async def _respond(user_text: str, history: list) -> dict:
     chosen = ai.provider()
     if chosen:
         actions: list = []
@@ -188,7 +161,7 @@ async def respond(user_text: str, history: list) -> dict:
         mode = "claude" if chosen == "claude" else "llm"
         if reply:
             return {"reply": reply, "actions": actions, "mode": mode}
-        done = [a["tool"] for a in actions if a["tool"] in ACTS_ON_WORLD and a["ok"]]
+        done = [a["tool"] for a in actions if executor.is_outward(a["tool"]) and a["ok"]]
         if done:
             return {
                 "reply": (
@@ -199,22 +172,6 @@ async def respond(user_text: str, history: list) -> dict:
                 "mode": mode,
             }
     return await _builtin_respond(user_text)
-
-
-_REFUSED_AFTER_UNTRUSTED = (
-    "refused: mailbox content was read this turn, so it cannot trigger this action. "
-    "Ask the user to confirm it in a new message."
-)
-
-
-async def _guarded_tool(name: str, args: dict, state: dict) -> dict:
-    """Run a tool unless untrusted content read earlier in this turn could be steering an outward action."""
-    if state.get("read_untrusted") and name in ACTS_ON_WORLD:
-        return {"tool": name, "args": {}, "result": {"ok": False, "error": _REFUSED_AFTER_UNTRUSTED}, "ok": False, "ms": 0}
-    action = await run_tool(name, args)
-    if name in READS_UNTRUSTED:
-        state["read_untrusted"] = True
-    return action
 
 
 def _claude_system() -> str:
@@ -253,13 +210,13 @@ async def _claude_respond(user_text: str, history: list, actions: list) -> str:
             who = "User" if turn["role"] == "user" else "Tiga"
             transcript.append(f"{who}: {str(turn['content'])[:2000]}")
     transcript.append(f"User: {user_text}")
-    state: dict = {}
+    turn = executor.Turn()
     for _ in range(MAX_TOOL_ROUNDS):
         answer = _parse_claude(await asyncio.to_thread(ai.claude_complete, system, "\n".join(transcript)))
         if "tool" not in answer:
             return str(answer.get("reply", "")).strip()
         name, args = str(answer["tool"]), answer.get("args") if isinstance(answer.get("args"), dict) else {}
-        action = await _guarded_tool(name, args, state)
+        action = await executor.execute(name, args, turn)
         actions.append(action)
         transcript.append(f'Tiga used {name}.\n<tool_result name="{name}">{json.dumps(action["result"], default=str)[:4000]}</tool_result>')
     return ""
@@ -273,7 +230,7 @@ async def _builtin_respond(text: str) -> dict:
         days = int(days_m.group(1)) if days_m else 1
         if days_m and "week" in days_m.group(2):
             days *= 7
-        action = await run_tool("get_email_summary", {"days": days})
+        action = await executor.execute("get_email_summary", {"days": days})
         return {"reply": _email_summary_reply(action), "actions": [action], "mode": "builtin"}
 
     if RE_GENERATE_TEMPLATE.search(lowered):
@@ -289,7 +246,7 @@ async def _builtin_respond(text: str) -> dict:
         if not name_m:
             name_m = re.search(rf"\b(?:to|dear)\s+({_cap})\b", text)
 
-        action = await run_tool(
+        action = await executor.execute(
             "generate_cold_email_template",
             {
                 "service_type": service_type,
@@ -320,7 +277,7 @@ async def _builtin_respond(text: str) -> dict:
         subject_m = re.search(r"\bsubject\s*[:\-]\s*([^.!?]+)", text, re.IGNORECASE)
         subject = subject_m.group(1).strip() if subject_m else "Freelance proposal"
         body = content_m.group(1).strip()
-        action = await run_tool("send_cold_email", {"to": to, "subject": subject, "body": body})
+        action = await executor.execute("draft_email", {"to": to, "subject": subject, "body": body})
         return {"reply": _send_email_reply(action), "actions": [action], "mode": "builtin"}
 
     if RE_FETCH_EMAILS.search(lowered):
@@ -328,7 +285,7 @@ async def _builtin_respond(text: str) -> dict:
         days = int(days_m.group(1)) if days_m else 1
         if days_m and "week" in days_m.group(2):
             days *= 7
-        action = await run_tool("fetch_recent_emails", {"days_back": days, "max_results": 20})
+        action = await executor.execute("fetch_recent_emails", {"days_back": days, "max_results": 20})
         return {"reply": _fetch_emails_reply(action), "actions": [action], "mode": "builtin"}
 
     if RE_BOOK.search(lowered):
@@ -350,12 +307,12 @@ async def _builtin_respond(text: str) -> dict:
             "preferred_time": time_m.group(1) if time_m else "",
             "email": email_m.group(0) if email_m else "",
         }
-        action = await run_tool("book_call", args)
+        action = await executor.execute("book_call", args)
         return {"reply": _booking_reply(action), "actions": [action], "mode": "builtin"}
 
     if RE_PLAY.search(lowered):
         query = _play_query(text)
-        action = await run_tool("play_youtube", {"query": query})
+        action = await executor.execute("play_youtube", {"query": query})
         if action["ok"]:
             reply = f"Playing {action['result'].get('title') or query} on YouTube, sir."
         else:
@@ -363,7 +320,7 @@ async def _builtin_respond(text: str) -> dict:
         return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     if RE_METRICS.search(lowered):
-        action = await run_tool("get_metrics", {})
+        action = await executor.execute("get_metrics", {})
         return {"reply": _metrics_reply(action), "actions": [action], "mode": "builtin"}
 
     open_m = RE_OPEN.match(text)
@@ -380,7 +337,7 @@ async def _builtin_respond(text: str) -> dict:
                     target = url
                     break
         if target:
-            action = await run_tool("open_tab", {"url": target})
+            action = await executor.execute("open_tab", {"url": target})
             shown = action["result"].get("url") or re.sub(r"^[a-zA-Z][a-zA-Z0-9+.-]*:?/*", "", target)
             host = shown.replace("https://", "").replace("http://", "").split("/")[0] or shown[:40]
             reply = (
@@ -474,7 +431,7 @@ async def _llm_respond(user_text: str, history: list, actions: list) -> str:
             messages.append({"role": turn["role"], "content": str(turn["content"])[:2000]})
     messages.append({"role": "user", "content": user_text})
 
-    state: dict = {}
+    turn = executor.Turn()
     headers = {"Authorization": f"Bearer {config.OPENAI_API_KEY}"}
     url = f"{config.OPENAI_BASE_URL}/chat/completions"
 
@@ -518,7 +475,7 @@ async def _llm_respond(user_text: str, history: list, actions: list) -> str:
                     args = json.loads(call["function"].get("arguments") or "{}")
                 except json.JSONDecodeError:
                     args = {}
-                action = await _guarded_tool(name, args, state)
+                action = await executor.execute(name, args, turn)
                 actions.append(action)
                 messages.append(
                     {
@@ -553,8 +510,8 @@ def _email_summary_reply(action: dict) -> str:
 def _send_email_reply(action: dict) -> str:
     result = action["result"]
     if not action["ok"]:
-        return f"My apologies, sir — the email failed to send: {_err(result)}."
-    return f"Email sent, sir. Message ID: {result.get('message_id', 'unknown')}."
+        return f"I couldn't draft that email: {_err(result)}."
+    return f"Drafted to {result.get('to', 'them')}. It's waiting in your approval inbox on the Outreach page; nothing has been sent."
 
 
 def _fetch_emails_reply(action: dict) -> str:

@@ -96,6 +96,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  actions?: ToolAction[];
 }
 
 export interface ChatResponse {
@@ -110,6 +111,10 @@ export interface ToolAction {
   result: Record<string, unknown>;
   ok: boolean;
   ms: number;
+  /** Present when the action is waiting for the owner's click. */
+  status?: 'needs_confirmation';
+  pending_id?: string;
+  summary?: string;
 }
 
 export interface StatusResponse {

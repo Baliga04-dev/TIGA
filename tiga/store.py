@@ -64,6 +64,10 @@ CREATE TABLE IF NOT EXISTS prospects (
     status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '', outreach_id INTEGER,
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS pending_actions (
+    id TEXT PRIMARY KEY, tool TEXT NOT NULL, args TEXT NOT NULL, summary TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, expires_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, actor TEXT NOT NULL,
@@ -288,6 +292,33 @@ class Store:
         unknown = set(fields) - self._PROSPECT_FIELDS
         if unknown:
             raise ValueError(f"unknown prospect field(s): {', '.join(sorted(unknown))}")
+
+    # --- assistant actions waiting for the owner's click ----------------------
+    def add_pending(self, pending_id: str, tool: str, args: dict, summary: str, expires_at: str) -> None:
+        with self._lock, self._db:
+            self._db.execute(
+                "INSERT INTO pending_actions (id, tool, args, summary, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (pending_id, tool, json.dumps(args), summary, _now(), expires_at),
+            )
+            self._write_audit("assistant", "tool.pending", "tool", tool, summary)
+
+    def take_pending(self, pending_id: str) -> dict | None:
+        """Claim a pending action exactly once. None if it is unknown, used or cancelled."""
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM pending_actions WHERE id = ? AND status = 'pending'", (pending_id,)).fetchone()
+            if row is None:
+                return None
+            self._db.execute("UPDATE pending_actions SET status = 'used' WHERE id = ?", (pending_id,))
+            return {**dict(row), "args": json.loads(row["args"])}
+
+    def cancel_pending(self, pending_id: str) -> bool:
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "UPDATE pending_actions SET status = 'cancelled' WHERE id = ? AND status = 'pending'", (pending_id,))
+            if cur.rowcount:
+                self._write_audit("user", "tool.cancel", "pending", pending_id)
+            return bool(cur.rowcount)
 
     # --- small key-value settings (cursors) ----------------------------------
     def get_value(self, key: str, default: str = "") -> str:

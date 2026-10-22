@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
@@ -150,3 +150,47 @@ describe('Chat speech', () => {
     expect(synth.cancel).toHaveBeenCalled()
   })
 })
+
+describe('Chat safety', () => {
+  it('shows what Tiga did and asks before anything outbound, then confirms on click', async () => {
+    mock.post('/chat', {
+      reply: 'I need your go-ahead first: book call(topic=pricing). Tap Confirm to do it, or Cancel.',
+      mode: 'builtin',
+      actions: [
+        { tool: 'open_tab', args: {}, result: { ok: true }, ok: true, ms: 1 },
+        { tool: 'book_call', args: {}, result: { ok: false, error: 'waiting for your confirmation' }, ok: false, ms: 0,
+          status: 'needs_confirmation', pending_id: 'p1', summary: 'book call(topic=pricing)' },
+      ],
+    })
+    const confirmed = mock.record('/actions/p1/confirm', { ok: true, action: { ok: true, result: { ok: true } } })
+    const { user, box } = await openChat()
+    await user.type(box, 'book a call about pricing{Enter}')
+    expect(await screen.findByText('book call(topic=pricing)')).toBeInTheDocument()
+    expect(screen.getByText('open tab')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /confirm book call/i }))
+    await waitFor(() => expect(confirmed).toHaveLength(1))
+    expect(await screen.findByText('Done.')).toBeInTheDocument()
+  })
+
+  it('cancelling never confirms', async () => {
+    mock.post('/chat', { reply: 'go-ahead?', mode: 'builtin', actions: [
+      { tool: 'book_call', args: {}, result: {}, ok: false, ms: 0, status: 'needs_confirmation', pending_id: 'p2', summary: 'book call()' },
+    ] })
+    const cancelled = mock.record('/actions/p2/cancel', { ok: true })
+    const confirmed = mock.record('/actions/p2/confirm', { ok: true })
+    const { user, box } = await openChat()
+    await user.type(box, 'book{Enter}')
+    await user.click(await screen.findByRole('button', { name: /cancel book call/i }))
+    await waitFor(() => expect(cancelled).toHaveLength(1))
+    expect(confirmed).toHaveLength(0)
+  })
+
+  it('can pause and resume Tiga', async () => {
+    const calls = mock.record('/assistant', { ok: true, paused: true })
+    const { user } = await openChat()
+    await user.click(screen.getByRole('button', { name: /pause tiga/i }))
+    await waitFor(() => expect(calls).toEqual([{ paused: true }]))
+    expect(await screen.findByRole('button', { name: /resume tiga/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+

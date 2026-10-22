@@ -3,16 +3,18 @@ import { useChat, useStatus } from '../hooks/useApi';
 import { useSpeech } from '../hooks/useSpeech';
 import { PageHeader, Card, Notice, CopyButton, StatusRow } from '../components/ui';
 import { cn, formatRelativeTime } from '../lib/utils';
-import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings } from 'lucide-react';
+import { Send, Mail, Volume2, VolumeX, Bot, User, Sparkles, Trash2, ArrowUpRight, Settings, Pause, Play } from 'lucide-react';
+import { ActionCards } from '../components/ActionCards';
+import { api } from '../services/api';
 
 const EXAMPLE_COMMANDS = [
   'Check my email summary for today',
   'Fetch recent emails from last 3 days',
   'Generate a cold email template for web development',
-  'Send a cold email to client@example.com saying I build fast websites',
+  'Draft an email to client@example.com saying I build fast websites',
   'Show me business metrics',
   'Book a call about pricing for tomorrow 2pm',
-  'Open GitHub',
+  'Open YouTube and play lo-fi music',
   'What time is it?',
 ];
 
@@ -28,6 +30,19 @@ export function Chat() {
   const { status } = useStatus();
   const speech = useSpeech();
   const [input, setInput] = useState('');
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    api.getAssistant().then((a) => setPaused(a.paused)).catch(() => undefined);
+  }, []);
+
+  const togglePause = async () => {
+    try {
+      setPaused((await api.setAssistantPaused(!paused)).paused);
+    } catch {
+      // the status line keeps showing the last known state
+    }
+  };
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,6 +72,10 @@ export function Chat() {
         description="Your assistant for email outreach, metrics, scheduling and more"
         action={
           <div className="flex items-center gap-2">
+            <button onClick={togglePause} className={cn('btn btn-sm', paused ? 'btn-primary' : 'btn-secondary')} aria-pressed={paused}>
+              {paused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+              {paused ? 'Resume Tiga' : 'Pause Tiga'}
+            </button>
             <button onClick={clearMessages} className="btn btn-ghost btn-sm" disabled={messages.length === 0}>
               <Trash2 className="size-4" aria-hidden="true" />
               Clear
@@ -114,6 +133,7 @@ export function Chat() {
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     </div>
+                    {msg.actions && <ActionCards actions={msg.actions} />}
                     <div className={cn('flex items-center gap-1 mt-1', msg.role === 'user' && 'justify-end')}>
                       <span className="text-xs text-ink-3">{formatRelativeTime(msg.timestamp.toISOString())}</span>
                       {speech.supported && (

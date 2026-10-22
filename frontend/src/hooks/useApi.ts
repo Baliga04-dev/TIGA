@@ -74,8 +74,8 @@ export function useChat() {
   const history = useRef<ChatMessage[]>([]);
   const counter = useRef(0);
 
-  const append = useCallback((role: ChatMessage['role'], content: string) => {
-    const message: ChatMessage = { id: `m${++counter.current}`, role, content, timestamp: new Date() };
+  const append = useCallback((role: ChatMessage['role'], content: string, actions?: ChatMessage['actions']) => {
+    const message: ChatMessage = { id: `m${++counter.current}`, role, content, timestamp: new Date(), actions };
     history.current = [...history.current, message];
     setMessages(history.current);
   }, []);
@@ -92,7 +92,7 @@ export function useChat() {
       setError(null);
       try {
         const response = await api.chat(text, prior);
-        append('assistant', response.reply);
+        append('assistant', response.reply, response.actions);
         return response;
       } catch (e) {
         history.current = prior;

@@ -37,14 +37,15 @@ def test_model_can_call_a_tool_and_answer(client, http):
     assert body["actions"][0]["tool"] == "get_metrics"
 
 
-def test_email_sent_as_plain_text_when_model_says_is_html_false(client, http, google):
+def test_a_model_asking_to_email_someone_only_creates_a_draft(client, http, google):
+    import services
     http.add_sequence(
         "llm.example",
-        [tool_call("send_cold_email", {"to": "bob@example.com", "subject": "Hi", "body": "Hello", "is_html": False}), final("Sent.")],
+        [tool_call("draft_email", {"to": "bob@example.com", "subject": "Hi", "body": "Hello"}), final("Drafted.")],
     )
     chat(client)
-    mime = base64.urlsafe_b64decode(google.sent[0]["raw"]).decode()
-    assert "text/plain" in mime and "text/html" not in mime
+    assert google.sent == []
+    assert [d["email"] for d in services.get_store().list_outreach("drafted")] == ["bob@example.com"]
 
 
 def test_instructions_inside_an_email_cannot_trigger_sending(client, http, google):
@@ -53,7 +54,7 @@ def test_instructions_inside_an_email_cannot_trigger_sending(client, http, googl
         "llm.example",
         [
             tool_call("fetch_recent_emails", {}),
-            tool_call("send_cold_email", {"to": "evil@x.com", "subject": "s", "body": "b"}, id="c2"),
+            tool_call("draft_email", {"to": "evil@x.com", "subject": "s", "body": "b"}, id="c2"),
             final("Done."),
         ],
     )
@@ -65,10 +66,11 @@ def test_instructions_inside_an_email_cannot_trigger_sending(client, http, googl
 def test_model_failure_after_an_action_does_not_rerun_the_builtin_router(client, http, google):
     http.add_sequence(
         "llm.example",
-        [tool_call("send_cold_email", {"to": "bob@example.com", "subject": "Hi", "body": "Hello"}), (500, {"error": "down"})],
+        [tool_call("draft_email", {"to": "bob@example.com", "subject": "Hi", "body": "Hello"}), (500, {"error": "down"})],
     )
     body = chat(client, "send a cold email to bob@example.com saying hello")
-    assert len(google.sent) == 1
+    import services
+    assert google.sent == [] and len(services.get_store().list_outreach("drafted")) == 1
     assert "carried out" in body["reply"].lower()
 
 

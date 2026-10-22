@@ -161,6 +161,15 @@ export const api = {
 
   generateInterviewPrompt: (id: string) => post<{ ok: true; prompt: string }>(`/interviews/${id}/generate`),
 
+  confirmAction: (pendingId: string) =>
+    post<{ ok: boolean; action?: { ok: boolean; result: Record<string, unknown> }; error?: string }>(`/actions/${pendingId}/confirm`),
+
+  cancelAction: (pendingId: string) => post<{ ok: boolean }>(`/actions/${pendingId}/cancel`),
+
+  getAssistant: () => request<{ ok: true; paused: boolean }>('/assistant'),
+
+  setAssistantPaused: (paused: boolean) => post<{ ok: true; paused: boolean }>('/assistant', { paused }),
+
   listSkills: () => request<{ ok: true; items: string[] }>('/skills'),
 
   readSkill: (name: string) => request<{ ok: true; name: string; text: string }>(`/skills/${name}`),

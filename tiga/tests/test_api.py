@@ -101,4 +101,7 @@ def test_booking_webhook_returning_a_list_still_counts_as_booked(client, http, m
     monkeypatch.setattr(config, "BOOKING_WEBHOOK", "https://hook.example/book")
     http.add("hook.example", json=["ok"])
     r = client.post("/api/chat", json={"text": "book a call about pricing", "history": []}).json()
-    assert r["actions"][0]["ok"] is True
+    pending = r["actions"][0]
+    assert pending["status"] == "needs_confirmation" and "go-ahead" in r["reply"]
+    done = client.post(f"/api/actions/{pending['pending_id']}/confirm").json()
+    assert done["ok"] is True and done["action"]["ok"] is True
