@@ -94,6 +94,8 @@ RE_WAITING = re.compile(r"\bwho(?:'s| is)? (?:waiting|pending)\b|\bwho do i owe\
 RE_FOCUS = re.compile(r"\bfocus\b(?:\s+(?:mode|session|time))?(?:\s+for)?\s*(\d{1,3})?\s*(?:min(?:ute)?s?)?(?:\s+on\s+(.+?))?\s*[.!]?$", re.I)
 RE_BRIEF = re.compile(r"\b(?:brief me on|prep(?:are)? me for|tell me about|brief on)\s+(.+?)\s*[.!?]?$", re.I)
 RE_PLAY = re.compile(r"\bplay\b\s+\S", re.IGNORECASE)
+RE_SCREEN = re.compile(r"\b(?:look at|looking at|check|see|read|explain|critique|review)\s+(?:my|the|this)\s+screen\b"
+                       r"|\bwhat(?:'s| is) on (?:my|the) screen\b|\bwhat do you see\b|\b(?:take a )?screenshot\b", re.I)
 
 
 _WHEN_AT_START = re.compile(r"^((?:tomorrow\s+|tonight\s+)?(?:in\s+(?:an?|\d+)\s*\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|tomorrow|tonight)"
@@ -461,6 +463,11 @@ async def _builtin_respond(text: str) -> dict:
             reply = f"{len(action['result']['tabs'])} tabs open: " + "; ".join(titles) + "." if titles else "No tabs are open."
         else:
             reply = f"I can't see your tabs: {_err(action['result'])}."
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    if RE_SCREEN.search(lowered):
+        action = await executor.execute("look_at_screen", {"question": text.strip()})
+        reply = action["result"]["answer"] if action["ok"] else f"I couldn't look: {_err(action['result'])}."
         return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     if RE_SUMMARIZE.search(lowered):

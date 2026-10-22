@@ -39,6 +39,7 @@ TIERS: dict[str, int] = {
     "list_reminders": READ,
     "add_routine": LOCAL,
     "list_routines": READ,
+    "look_at_screen": READ,
     "morning_briefing": READ,
     "list_tabs": READ,
     "read_page": READ,
@@ -51,7 +52,7 @@ TIERS: dict[str, int] = {
     "book_call": OUTWARD,
 }
 # Tools whose results may contain text written by strangers (possible prompt injection).
-UNTRUSTED = {"fetch_recent_emails", "get_email_summary", "read_page", "summarize_page"}
+UNTRUSTED = {"fetch_recent_emails", "get_email_summary", "read_page", "summarize_page", "look_at_screen"}
 CONFIRM_WINDOW = timedelta(minutes=10)
 _PAUSE_KEY = "assistant.paused"
 

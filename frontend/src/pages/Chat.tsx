@@ -17,6 +17,8 @@ const EXAMPLE_COMMANDS = [
   'Book a call about pricing for tomorrow 2pm',
   'Open YouTube and play lo-fi music',
   'What time is it?',
+  'Look at my screen and tell me what needs attention',
+  'Every Monday at 9am, who is waiting on me',
 ];
 
 const QUICK_ACTIONS = [

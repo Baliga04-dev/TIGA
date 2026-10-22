@@ -47,7 +47,7 @@ def usage_today() -> dict:
     return {"used": int(services.get_store().get_value(_usage_key(), "0")), "cap": config.AI_DAILY_CALLS}
 
 
-def claude_complete(system: str, user: str) -> str:
+def claude_complete(system: str, user: str, **cli) -> str:
     """One Claude call, counted against a daily cap (so a loop or a busy night can't drain the plan)."""
     import services
 
@@ -61,7 +61,7 @@ def claude_complete(system: str, user: str) -> str:
     record = {"feature": _feature.get(), "day": date.today().isoformat(), "model": config.CLAUDE_MODEL,
               "system": system, "prompt": user}
     try:
-        meta = claude_cli.complete_meta(system, user, model=config.CLAUDE_MODEL)
+        meta = claude_cli.complete_meta(system, user, model=config.CLAUDE_MODEL, **cli)
     except Exception as exc:
         store.add_ai_call(**record, reply="", ok=False, error=str(exc))
         raise

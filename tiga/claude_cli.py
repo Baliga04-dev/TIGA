@@ -3,7 +3,8 @@
 Interface: `complete(system, user) -> str` (raises RuntimeError on any failure) and `available()`.
 Billing safety: the API-key variables are removed from the child's environment and `--bare` is never
 used, because either would switch the call to paid API billing. All of Claude's own tools are turned
-off (`--tools ""`): Tiga executes its own tools, so the model can only answer.
+off (`--tools ""`): Tiga executes its own tools, so the model can only answer. The one exception is
+`tools="Read"` with `workdir`: Claude may then read files in that one folder (a screenshot Tiga just took).
 """
 from __future__ import annotations
 
@@ -28,18 +29,23 @@ def complete(system: str, user: str, *, model: str = "sonnet", timeout: int = 12
 
 
 def complete_meta(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
-                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
+                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+                  tools: str = "", workdir: str | None = None) -> dict:
     """Like `complete`, plus what the call used: tokens in/out, the CLI's cost estimate and duration."""
-    return _run_cli(system, user, model=model, timeout=timeout, run=run)
+    return _run_cli(system, user, model=model, timeout=timeout, run=run, tools=tools, workdir=workdir)
 
 
 def _run_cli(system: str, user: str, *, model: str = "sonnet", timeout: int = 120,
-                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
+             run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+             tools: str = "", workdir: str | None = None) -> dict:
+    if tools not in ("", "Read") or (tools and not workdir):
+        raise ValueError("Claude may only be given Read, and only inside one folder")
     env = {k: v for k, v in os.environ.items() if k not in _BILLING_VARS}
-    args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", "",
+    args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", tools,
             "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system]
     try:
-        proc = run(args, input=user, capture_output=True, text=True, timeout=timeout, env=env, cwd=_WORKDIR)
+        proc = run(args, input=user, capture_output=True, text=True, timeout=timeout, env=env,
+                   cwd=workdir if tools else _WORKDIR)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(f"Claude timed out after {timeout}s") from exc
     except OSError as exc:
