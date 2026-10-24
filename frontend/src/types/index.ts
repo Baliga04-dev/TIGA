@@ -364,6 +364,34 @@ export interface DealDocument {
   created_at: string;
 }
 
+export interface LabService { name: string; container: string; state: string; health: string }
+export interface LabStatus {
+  ok: true;
+  docker: boolean;
+  running: boolean;
+  services: LabService[];
+  hint?: string;
+  job: string | null;
+  last_job: { name: string; ok: boolean; detail: string } | null;
+}
+export interface LabRates { rps: number; error_rate: number; p95_s: number; backlog?: number }
+export interface LabSnapshot {
+  ok: true;
+  up: boolean;
+  error?: string;
+  health?: Record<string, string>;
+  customers?: { requests: number; ok: number; failed: number; sold_out: number; rejected: number; error_rate: number; p50_s: number; p95_s: number; rps_target: number };
+  services?: Record<string, LabRates>;
+  stock?: { items: { sku: string; name: string; price_paise: number; stock: number }[]; oversold: { sku: string; name: string; stock: number }[]; indexes: string[] };
+  ledger?: { charges: number; charged_more_than_once: { order_ref: string; times: number }[] };
+  queue?: { backlog: number; dead: number; consumers: number };
+  orders?: { by_status: Record<string, number>; breaker: string };
+}
+export interface LabIncident { id: number; rule: string; title: string; detail: string; mission: string; opened_at: string; last_seen: string; resolved_at: string; seen: number }
+export interface LabMissionSummary { id: string; title: string; topic: string; actions: string[] }
+export interface LabMission extends LabMissionSummary { sections: { title: string; text: string }[] }
+export interface LabLogLine { ts: number; service: string; event: string; request_id: string; route?: string; status?: number; ms?: number; [key: string]: unknown }
+
 export interface Meeting {
   id: number;
   title: string;

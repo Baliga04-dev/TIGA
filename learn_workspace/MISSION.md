@@ -1,12 +1,6 @@
 # Mission
 
-Become interview-ready at the level of a principal architect and senior developer, by learning every layer of the stack this project uses, from the network up to the UI, and being able to explain and defend design decisions.
-
-## What "done" looks like
-- Explain what happens, end to end, when a user clicks a button in Tiga (network, server, database, third-party API) and where it can fail.
-- Design and critique a system on a whiteboard: data model, API, scaling, failure modes, security, cost.
-- Write and review code in Python, TypeScript and SQL with tests, and justify the trade-offs.
-- Answer behavioural and system-design interview questions with concrete examples from this project.
+Become interview-ready at the level of a senior engineer and architect by running, breaking and fixing a real system, and being able to explain why each design choice exists, what it buys and what it costs.
 
 ## How we work
-Each lesson is tied to real files in Tiga, ends with exercises, and gets a short learning record. Lessons are added one at a time as you finish the previous one.
+The Learn page runs ShopLab (`lab/`), a small online bakery built as microservices: gateway, menu, orders, payments, notifier, Postgres, Redis and pretend customers. Each mission starts from a real production failure (a missing index, a race, a missing timeout, a double charge, a slow dependency, an injection, a bad deploy), shows you the incident Tiga raises, lets you fix it with a switch and then in the code, and ends with the questions interviewers ask about it.

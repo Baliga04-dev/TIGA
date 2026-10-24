@@ -107,6 +107,11 @@ CREATE TABLE IF NOT EXISTS meetings (
     status TEXT NOT NULL DEFAULT 'transcribing', duration_s REAL NOT NULL DEFAULT 0,
     transcript TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', error TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS lab_incidents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, rule TEXT NOT NULL, title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+    mission TEXT NOT NULL DEFAULT '', opened_at TEXT NOT NULL, last_seen TEXT NOT NULL, resolved_at TEXT NOT NULL DEFAULT '',
+    seen INTEGER NOT NULL DEFAULT 1
+);
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, created_at TEXT NOT NULL
 );
@@ -600,6 +605,33 @@ class Store:
     def delete_meeting(self, meeting_id: int) -> bool:
         with self._lock, self._db:
             return bool(self._db.execute("DELETE FROM meetings WHERE id = ?", (meeting_id,)).rowcount)
+
+    # --- ShopLab incidents (rules live in lab.py) -------------------------------------
+    def upsert_lab_incident(self, rule: str, title: str, detail: str, mission: str) -> dict:
+        """Open an incident for this rule, or refresh the one already open."""
+        now = _now()
+        with self._lock, self._db:
+            row = self._db.execute("SELECT id FROM lab_incidents WHERE rule = ? AND resolved_at = ''", (rule,)).fetchone()
+            if row:
+                self._db.execute("UPDATE lab_incidents SET title = ?, detail = ?, last_seen = ?, seen = seen + 1 WHERE id = ?",
+                                 (title, detail, now, row["id"]))
+                iid = row["id"]
+            else:
+                iid = self._db.execute("INSERT INTO lab_incidents (rule, title, detail, mission, opened_at, last_seen)"
+                                       " VALUES (?, ?, ?, ?, ?, ?)", (rule, title, detail, mission, now, now)).lastrowid
+            return dict(self._db.execute("SELECT * FROM lab_incidents WHERE id = ?", (iid,)).fetchone())
+
+    def resolve_lab_incidents(self, keep: list[str]) -> int:
+        """Close every open incident whose rule no longer fires."""
+        with self._lock, self._db:
+            marks = ",".join("?" * len(keep)) or "''"
+            return self._db.execute(f"UPDATE lab_incidents SET resolved_at = ? WHERE resolved_at = '' AND rule NOT IN ({marks})",
+                                    (_now(), *keep)).rowcount
+
+    def list_lab_incidents(self, limit: int = 50) -> list[dict]:
+        with self._lock:
+            return [dict(r) for r in self._db.execute(
+                "SELECT * FROM lab_incidents ORDER BY (resolved_at = '') DESC, id DESC LIMIT ?", (limit,))]
 
     # --- small key-value settings (cursors) ----------------------------------
     def get_value(self, key: str, default: str = "") -> str:

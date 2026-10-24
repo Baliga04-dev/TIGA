@@ -27,6 +27,12 @@ import type {
   Reminder,
   Routine,
   Meeting,
+  LabStatus,
+  LabSnapshot,
+  LabIncident,
+  LabMissionSummary,
+  LabMission,
+  LabLogLine,
   DevStatus,
   Note,
   Briefing,
@@ -211,6 +217,32 @@ export const api = {
   devStatus: () => request<DevStatus>('/dev'),
 
   runDev: (issueId: number) => post<{ ok: true; started: boolean }>('/dev/run', { issue_id: issueId }),
+
+  labStatus: () => request<LabStatus>('/lab/status'),
+
+  labUp: () => post<{ ok: true; started: boolean }>('/lab/up'),
+
+  labDown: () => post<{ ok: boolean; detail: string }>('/lab/down'),
+
+  labService: (op: 'stop' | 'start' | 'restart' | 'rebuild' | 'scale', name: string, n?: number) =>
+    post<{ ok: boolean; detail?: string }>('/lab/service', { op, name, ...(n ? { n } : {}) }),
+
+  labKnobs: (service: string, values: Record<string, unknown>) => post<{ ok: true }>(`/lab/knobs/${service}`, values),
+
+  labSnapshot: () => request<LabSnapshot>('/lab/snapshot'),
+
+  labLogs: (service = '', requestId = '') =>
+    request<{ ok: true; items: LabLogLine[] }>(`/lab/logs?service=${encodeURIComponent(service)}&request_id=${encodeURIComponent(requestId)}&tail=200`),
+
+  labIncidents: () => request<{ ok: true; items: LabIncident[] }>('/lab/incidents'),
+
+  labMissions: () => request<{ ok: true; items: LabMissionSummary[] }>('/lab/missions'),
+
+  labMission: (id: string) => request<{ ok: true; mission: LabMission }>(`/lab/missions/${id}`),
+
+  labAct: (id: string, action: string) => post<{ ok: true; detail: string }>(`/lab/missions/${id}/${action}`),
+
+  labCheck: (id: string, answer = '') => post<{ ok: true; passed: boolean; detail: string }>(`/lab/missions/${id}/check`, { answer }),
 
   listMeetings: () => request<{ ok: true; items: Meeting[] }>('/meetings'),
 

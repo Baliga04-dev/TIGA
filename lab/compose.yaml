@@ -1,0 +1,61 @@
+# ShopLab: a small online bakery as microservices, for learning by breaking and fixing.
+# Tiga's Lab page drives it (docker compose up/down/stop/logs and the gateway's /admin endpoints).
+# Only the gateway is published, and only on this machine (127.0.0.1:8080).
+name: shoplab
+
+x-service: &service
+  build: ./services
+  image: shoplab:latest
+  restart: on-failure
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  environment: &env
+    DATABASE_URL: postgresql://shop:shop@postgres:5432/shop
+    REDIS_URL: redis://redis:6379/0
+    SHOP_API_KEY: lab-key
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: shop, POSTGRES_PASSWORD: shop, POSTGRES_DB: shop }
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U shop"], interval: 3s, timeout: 3s, retries: 20 }
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+
+  redis:
+    image: redis:7-alpine
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 3s, timeout: 3s, retries: 20 }
+
+  gateway:
+    <<: *service
+    command: uvicorn shoplab.gateway:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: gateway }
+    ports: [ "127.0.0.1:8080:8000" ]
+
+  menu:
+    <<: *service
+    command: uvicorn shoplab.menu:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: menu }
+
+  orders:
+    <<: *service
+    command: uvicorn shoplab.orders:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: orders }
+
+  payments:
+    <<: *service
+    command: uvicorn shoplab.payments:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: payments }
+
+  notifier:
+    <<: *service
+    command: uvicorn shoplab.notifier:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: notifier }
+
+  customers:
+    <<: *service
+    command: uvicorn shoplab.customers:app --host 0.0.0.0 --port 8000
+    environment: { <<: *env, SERVICE: customers }
+
+volumes:
+  pgdata:

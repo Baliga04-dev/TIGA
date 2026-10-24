@@ -15,6 +15,7 @@ import brain
 import config
 import desk_api
 import jobs
+import lab_api
 import learn
 import outreach_api
 import prompt_api
@@ -85,6 +86,20 @@ async def _routine_loop() -> None:
             logger.exception("Routine tick failed; will retry")
 
 
+async def _lab_watch_loop() -> None:
+    """While ShopLab runs, turn what breaks into incidents on the Lab page (and close them when it heals)."""
+    import lab
+
+    while True:
+        await _sleep(config.LAB_WATCH_SECONDS)
+        try:
+            watcher = lab.Lab(store=services.get_store())
+            if (await asyncio.to_thread(watcher.status)).get("running"):
+                await asyncio.to_thread(watcher.watch_once, services.get_store())
+        except Exception:
+            logger.exception("Lab watch failed; will retry")
+
+
 OUTREACH_TICK_SECONDS = 300
 
 
@@ -110,6 +125,8 @@ async def lifespan(_app: FastAPI):
         tasks.append(asyncio.create_task(_analyst_loop()))
     if config.ROUTINE_TICK_SECONDS > 0:
         tasks.append(asyncio.create_task(_routine_loop()))
+    if config.LEARN_ENABLED and config.LAB_WATCH_SECONDS > 0:
+        tasks.append(asyncio.create_task(_lab_watch_loop()))
     yield
     for task in tasks:
         task.cancel()
@@ -118,6 +135,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Tiga", version="0.2.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(learn.router)
+app.include_router(lab_api.router)
 app.include_router(outreach_api.router)
 app.include_router(desk_api.router)
 app.include_router(prompt_api.router)
