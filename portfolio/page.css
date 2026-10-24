@@ -1,24 +1,18 @@
-/* Adapted from "Kage" in ThreeUI by Meng To (MIT License, https://github.com/MengTo/threeui). */
-@font-face{ font-family:'Onest'; font-style:normal; font-weight:100 900; font-display:swap;
-  src:url(fonts/onest-latin-variable.woff2) format('woff2'); }
-@font-face{ font-family:'Kannada'; font-style:normal; font-weight:100 900; font-display:swap;
-  src:url(fonts/noto-sans-kannada-variable.woff2) format('woff2'); }
-@font-face{ font-family:'Wordmark'; font-style:normal; font-weight:900; font-display:block;
-  src:url(fonts/big-shoulders-display-latin-900-normal.woff2) format('woff2'); }
-
+/* "Kage" from ThreeUI by Meng To (MIT License, https://github.com/MengTo/threeui); this page's additions are at the end. */
+@font-face{ font-family:'Onest'; font-style:normal; font-weight:100 900; font-display:swap; src:url(fonts/onest-latin-variable.woff2) format('woff2'); }
+@font-face{ font-family:'Wordmark'; font-style:normal; font-weight:600; font-display:block; src:url(fonts/lexend-600.woff2) format('woff2'); }
+@font-face{ font-family:'NotoJP'; font-style:normal; font-weight:400; font-display:swap; src:url(fonts/noto-sans-jp-subset.woff2) format('woff2'); }
 /* ============================================================= tokens */
 :root{
-  --ink:#06080b;          /* page black */
+  --ink:#05070a;          /* page black */
   --ink-2:#0a0e12;        /* raised black */
-  --bone:#efe7d8;         /* the warm white of a tube light */
-  --bone-dim:#c9c0ae;
-  --muted:#9c9482;
-  --line:rgba(239,231,216,.16);
-  --line-soft:rgba(239,231,216,.09);
-  --vermilion:#f2a33a;      /* sodium lamp */
-  --flag-red:#c4161c;
-  --flag-yellow:#f2c230;
-  --ember:#ffc261;
+  --bone:#dfe7e0;         /* the pale sage white of the wordmark */
+  --bone-dim:#aab4ad;
+  --muted:#78837c;
+  --line:rgba(223,231,224,.13);
+  --line-soft:rgba(223,231,224,.07);
+  --vermilion:#e0231c;
+  --ember:#ff5a3c;
   --gold:#c9a24a;
   --pad:clamp(20px, 3.4vw, 56px);
   --nav-h:84px;
@@ -44,7 +38,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* ============================================================= layers */
 #gl{
   position:fixed; inset:0; width:100%; height:100%;
-  display:block; z-index:0; background:#06080b;
+  display:block; z-index:0; background:#05070a;
 }
 #grain{
   position:fixed; inset:-1px; z-index:60; pointer-events:none;
@@ -62,7 +56,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   font-size:10px; font-weight:500; letter-spacing:.22em; text-transform:uppercase;
   color:var(--bone-dim); text-shadow:0 1px 16px rgba(3,6,8,.9);
 }
-.kn{ font-family:'Kannada','Onest',sans-serif; font-weight:500; }
+.jp{ font-family:'NotoJP','Onest',sans-serif; font-weight:400; }
 h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .display{
   text-transform:uppercase; line-height:1.055; letter-spacing:-.012em;
@@ -94,7 +88,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 
 /* ============================================================= preloader */
 #pre{
-  position:fixed; inset:0; z-index:100; background:#06080b;
+  position:fixed; inset:0; z-index:100; background:#05070a;
   display:flex; align-items:center; justify-content:center;
   transition:opacity .8s var(--ease), visibility .8s;
 }
@@ -102,8 +96,8 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .pre-in{ width:min(420px,74vw); text-align:center; }
 .pre-mark{ margin:0 auto 26px; width:44px; height:44px; opacity:.9; }
 .pre-mark svg{ width:100%; height:100%; display:block; }
-.pre-kn{ font-size:15px; letter-spacing:.2em; color:var(--bone-dim); margin-bottom:20px; }
-.pre-bar{ position:relative; height:1px; background:rgba(239,231,216,.14); overflow:hidden; }
+.pre-jp{ font-size:12px; letter-spacing:.5em; color:var(--bone-dim); margin-bottom:20px; }
+.pre-bar{ position:relative; height:1px; background:rgba(223,231,224,.14); overflow:hidden; }
 .pre-bar i{ position:absolute; inset:0 100% 0 0; background:var(--bone); transition:right .35s linear; }
 .pre-meta{ display:flex; justify-content:space-between; margin-top:12px;
   font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
@@ -201,18 +195,19 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   transition:transform .8s var(--ease-out);
 }
 .peek-fr{ display:block; aspect-ratio:16/10;
-  outline:1px solid rgba(239,231,216,.16); outline-offset:-1px;
-  transition:outline-color .5s; }
+  background:linear-gradient(180deg, rgba(3,6,9,.04) 24%, rgba(3,6,9,.48) 100%),
+    url('assets/kage/kage-sanmon-preview.webp') center / cover no-repeat;
+  outline:1px solid rgba(223,231,224,.16); outline-offset:-1px;
+  box-shadow:0 34px 70px -30px rgba(0,0,0,.9); transition:outline-color .5s; }
 .peek:hover{ transform:translate3d(0,-5px,0); }
-.peek:hover .peek-fr{ outline-color:rgba(239,231,216,.42); }
+.peek:hover .peek-fr{ outline-color:rgba(223,231,224,.42); }
 .peek-play{ position:absolute; top:0; right:0; left:0; bottom:auto; aspect-ratio:16/10;
   display:grid; place-items:center; pointer-events:none; }
 .peek-play svg{ width:clamp(30px,3.2vw,46px); height:auto; filter:drop-shadow(0 2px 12px rgba(0,0,0,.7));
   transition:transform .55s var(--ease-out); }
 .peek:hover .peek-play svg{ transform:scale(1.14); }
-.peek-cap{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 9px; margin-top:9px; }
-.peek-cap b{ white-space:nowrap; }
-.peek-cap b{ font-size:13px; font-weight:500; letter-spacing:.04em; color:var(--bone-dim); }
+.peek-cap{ display:flex; align-items:baseline; gap:9px; margin-top:9px; }
+.peek-cap b{ font-size:11px; font-weight:400; letter-spacing:.24em; color:var(--bone-dim); }
 .peek-cap i{ font-style:normal; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
 @media (max-width:820px){ .peek{ display:none; } }
 
@@ -220,7 +215,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   position:absolute; z-index:2; right:var(--pad); top:50%; transform:translateY(-50%);
   display:flex; flex-direction:column; align-items:center; gap:14px; pointer-events:none;
 }
-.hero-side .v{ writing-mode:vertical-rl; font-size:13px; letter-spacing:.2em; color:rgba(239,231,216,.62); }
+.hero-side .v{ writing-mode:vertical-rl; font-size:13px; letter-spacing:.62em; color:rgba(223,231,224,.5); }
 @keyframes cue{ 0%{transform:scaleX(0)} 42%{transform:scaleX(1)} 100%{transform:scaleX(1) translateX(100%)} }
 
 /* ============================================================= sections */
@@ -261,7 +256,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .arrowlink .ar svg{ width:13px; height:13px; transition:transform .5s var(--ease-out); }
 .arrowlink:hover .ar{ background:var(--bone); border-color:var(--bone); }
 .arrowlink:hover .ar svg{ transform:translate3d(2px,-2px,0); }
-.arrowlink:hover .ar svg path{ stroke:#06080b; }
+.arrowlink:hover .ar svg path{ stroke:#05070a; }
 .gate-stats{ display:flex; gap:clamp(24px,4vw,62px); margin-top:clamp(46px,8vh,96px); border-top:1px solid var(--line-soft); padding-top:24px; }
 .gate-stats div b{ display:block; font-size:clamp(22px,2.1vw,32px); font-weight:300; letter-spacing:-.02em; }
 .gate-stats div span{ font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
@@ -280,7 +275,22 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   outline:1px solid var(--line-soft); outline-offset:-1px;
   transition:outline-color .5s var(--ease);
 }
-.card:hover .card-fr{ outline-color:rgba(239,231,216,.30); }
+.card:hover .card-fr{ outline-color:rgba(223,231,224,.30); }
+.card:nth-child(1) .card-fr{
+  background:
+    linear-gradient(180deg,rgba(3,6,9,.04) 36%,rgba(3,6,9,.72) 100%),
+    url('assets/kage/kage-approach.webp') center / cover no-repeat;
+}
+.card:nth-child(2) .card-fr{
+  background:
+    linear-gradient(180deg,rgba(3,6,9,.06) 36%,rgba(3,6,9,.74) 100%),
+    url('assets/kage/kage-lantern-court.webp') center / cover no-repeat;
+}
+.card:nth-child(3) .card-fr{
+  background:
+    linear-gradient(180deg,rgba(3,6,9,.05) 36%,rgba(3,6,9,.74) 100%),
+    url('assets/kage/kage-moonwater.webp') center / cover no-repeat;
+}
 .card-fr::after{ content:''; position:absolute; inset:0;
   background:linear-gradient(transparent 46%, rgba(4,6,9,.80)); pointer-events:none; }
 /* The fabric overdraws its card by CL_BLEED on every side so the billow and
@@ -291,21 +301,68 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .on-cloth{ background:none !important; outline:0 !important; overflow:visible; }
 .on-cloth::after{ display:none; }
 
-.no-webgl .card-fr{ background:#1b1610; }
+/* ------------------------------------------------- the lights in the stills
+   The three plates each have one source in them — two blood moons and a lit
+   stone lantern — and they are the only warm thing in an otherwise cold set of
+   images. A glow laid over each one, screened so it adds light rather than
+   painting over it, is enough to make a flat still look like it is burning.
+
+   Two tracks per light, at durations that do not divide into each other: the
+   wrapper swells, the gradient inside it pulses. One track on its own reads as
+   a loop within a couple of seconds; two beating against each other do not
+   come back around inside the time anyone looks at a card.
+
+   The moon and the lantern are not the same event. A flame gutters — short,
+   irregular, deep — so the lantern's track is written unevenly by hand. A moon
+   only breathes through moving air, so the moons get a slow, shallow swell and
+   nothing more. Giving them both a flicker is what makes this kind of thing
+   look like a novelty; the difference is the whole effect. */
+.card-fr{ isolation:isolate; }        /* keep the screen blend inside the card */
+.glow{
+  position:absolute; z-index:1; pointer-events:none;
+  left:var(--gx); top:var(--gy); width:calc(var(--gr) * 2); aspect-ratio:1;
+  translate:-50% -50%;                /* leaves transform free for the swell */
+  mix-blend-mode:screen;
+  animation:glow-swell var(--gt2) var(--ease-io) infinite alternate;
+}
+.glow::before{
+  content:''; position:absolute; inset:0; border-radius:50%;
+  background:radial-gradient(closest-side, var(--gc1), var(--gc2) 40%, transparent 72%);
+  animation:glow-pulse var(--gt) var(--ease-io) infinite;
+}
+@keyframes glow-swell{ from{ transform:scale(.93); } to{ transform:scale(1.07); } }
+@keyframes glow-pulse{ from{ opacity:.78; } 50%{ opacity:1; } to{ opacity:.78; } }
+/* a flame does not breathe, it gutters */
+@keyframes glow-flame{
+  0%{ opacity:.74 }   6%{ opacity:.97 }  12%{ opacity:.63 }  19%{ opacity:.90 }
+  27%{ opacity:.55 }  34%{ opacity:.94 } 42%{ opacity:.71 }  51%{ opacity:1 }
+  58%{ opacity:.60 }  66%{ opacity:.88 } 74%{ opacity:.67 }  83%{ opacity:.96 }
+  91%{ opacity:.72 } 100%{ opacity:.74 }
+}
+.glow--flame::before{ animation-name:glow-flame; }
+.glow--flame{ animation-duration:var(--gt2); }
+@media (prefers-reduced-motion:reduce){
+  .glow, .glow::before{ animation:none; }
+}
+.no-webgl .card-fr{ background:linear-gradient(150deg,#101a1d,#0a0d10 62%,#1a0c0b); }
 /* If WebGL will not start, the page stays a page: the scene simply becomes a
    still, and the wordmark moves from the 3-D layer into the document. */
 .word-fb{ display:none; }
 .no-webgl #gl, .no-webgl .peek-play{ display:none; }
 /* fixed, or the gradient is measured against a 6000-pixel body box and the
    moon ends up somewhere around the curriculum table */
-.no-webgl body{ background:linear-gradient(rgba(6,8,11,.25), rgba(6,8,11,.65)), url('assets/street-poster.webp') center top / cover no-repeat, #06080b;
+.no-webgl body{ background:
+  radial-gradient(11vw 11vw at 73% 17%, rgba(232,52,28,.95), rgba(158,20,16,.62) 44%, rgba(96,12,12,.20) 64%, transparent 72%),
+  radial-gradient(38vw 32vw at 50% 46%, rgba(228,104,24,.40), rgba(122,42,10,.18) 54%, transparent 74%),
+  radial-gradient(120% 80% at 50% 0%, rgba(120,150,158,.16), transparent 60%), #05070a;
   background-attachment:fixed; }
-.no-webgl .peek-fr{ background:#1b1610; }
+.no-webgl .peek-fr{ background:linear-gradient(160deg,#162326,#0b1013 55%,#241010); }
 .no-webgl .word-fb{
   display:block; position:absolute; left:0; right:0; bottom:16%; z-index:1;
-  font-family:'Wordmark','Onest',sans-serif; font-weight:900; font-size:24vw; line-height:.78;
-  letter-spacing:.01em; text-align:center; pointer-events:none;
-  color:rgba(239,231,216,.86);
+  font-family:'Wordmark','Onest',sans-serif; font-weight:600; font-size:15vw; line-height:.78;
+  letter-spacing:.02em; text-align:center; pointer-events:none;
+  background:linear-gradient(#e2ece5, #97a89c); -webkit-background-clip:text; background-clip:text;
+  color:transparent;
 }
 /* The live hero has no foot scrim, but the fallback still needs one: there it
    stands on a bright CSS sky rather than a night scene, and the chips and the
@@ -317,7 +374,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .card-lab{ position:absolute; left:16px; right:16px; bottom:14px; z-index:2;
   display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
 .card-lab b{ font-size:clamp(13px,1.15vw,17px); font-weight:400; letter-spacing:.02em; text-transform:uppercase; }
-.card-lab .kn{ font-size:13px; letter-spacing:.02em; color:rgba(239,231,216,.8); }
+.card-lab .jp{ font-size:11px; letter-spacing:.3em; color:rgba(223,231,224,.62); }
 .card-ar{ position:absolute; top:14px; right:14px; z-index:2; width:26px; height:26px;
   opacity:0; transform:translate3d(-4px,4px,0); transition:.5s var(--ease-out); }
 .card:hover .card-ar{ opacity:1; transform:none; }
@@ -343,7 +400,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .les .k{ font-size:11px; letter-spacing:.16em; color:var(--muted); font-variant-numeric:tabular-nums; transition:color .4s; }
 .les:hover .k{ color:var(--vermilion); }
 .les h3{ font-size:clamp(16px,1.5vw,23px); font-weight:400; letter-spacing:-.005em; }
-.les h3 em{ font-style:normal; font-family:'Kannada',sans-serif; font-size:.72em; color:var(--muted); margin-left:12px; letter-spacing:.02em; }
+.les h3 em{ font-style:normal; font-family:'NotoJP',sans-serif; font-size:.72em; color:var(--muted); margin-left:12px; letter-spacing:.24em; }
 .les p{ margin:0; font-size:13px; line-height:1.6; color:#909b95; text-shadow:0 1px 16px rgba(3,6,8,.92); }
 .les .t{ text-align:right; font-size:11px; letter-spacing:.14em; color:#8b958f; font-variant-numeric:tabular-nums; text-shadow:0 1px 16px rgba(3,6,8,.92); }
 .les .bar{ position:absolute; left:0; bottom:-1px; height:1px; width:100%; background:var(--vermilion);
@@ -364,9 +421,9 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .cta i{ position:absolute; inset:0; background:var(--bone); transform:translate3d(0,101%,0);
   transition:transform .62s var(--ease-out); z-index:-1; }
 .cta span,.cta svg{ position:relative; z-index:1; }
-.cta:hover{ color:#06080b; border-color:var(--bone); }
+.cta:hover{ color:#05070a; border-color:var(--bone); }
 .cta:hover i{ transform:none; }
-.cta:hover svg path{ stroke:#06080b; }
+.cta:hover svg path{ stroke:#05070a; }
 
 /* — footer */
 .foot{ position:relative; padding:clamp(50px,8vh,96px) var(--pad) clamp(26px,4vh,40px);
@@ -386,16 +443,16 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
 .rail{ position:fixed; right:calc(var(--pad) - 4px); top:50%; transform:translateY(-50%); z-index:45;
   display:flex; flex-direction:column; gap:12px; align-items:center; }
 .rail button{ width:22px; height:10px; display:grid; place-items:center; }
-.rail i{ display:block; width:14px; height:1px; background:rgba(239,231,216,.26); transition:.5s var(--ease-out); }
+.rail i{ display:block; width:14px; height:1px; background:rgba(223,231,224,.26); transition:.5s var(--ease-out); }
 .rail button.on i{ width:22px; background:var(--bone); }
 .rail button:hover i{ width:22px; background:var(--bone-dim); }
 
 /* ============================================================= cursor */
 .cur-dot{ position:fixed; z-index:80; top:0; left:0; width:26px; height:26px; margin:-13px 0 0 -13px;
-  border:1px solid rgba(239,231,216,.42); border-radius:50%; pointer-events:none;
+  border:1px solid rgba(223,231,224,.42); border-radius:50%; pointer-events:none;
   transition:width .35s var(--ease-out), height .35s var(--ease-out), margin .35s var(--ease-out),
              background .35s, border-color .35s, opacity .3s; opacity:0; }
-.cur-dot.act{ width:52px; height:52px; margin:-26px 0 0 -26px; background:rgba(239,231,216,.07); border-color:rgba(239,231,216,.6); }
+.cur-dot.act{ width:52px; height:52px; margin:-26px 0 0 -26px; background:rgba(223,231,224,.07); border-color:rgba(223,231,224,.6); }
 @media (hover:hover) and (pointer:fine){ .cur-dot{ opacity:1 } }
 
 /* ============================================================= responsive */
@@ -412,7 +469,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
     display:flex; position:fixed; top:0; right:0; bottom:0; width:min(84vw,360px);
     padding:calc(var(--nav-h) + 28px) var(--pad) 34px; flex-direction:column; align-items:flex-start; gap:0;
     background:rgba(3,6,9,.98); border-left:1px solid var(--line-soft);
-    transform:translate3d(0,-14px,0); opacity:0; visibility:hidden; pointer-events:none;
+    transform:translate3d(100%,0,0); opacity:0; visibility:hidden; pointer-events:none;
     transition:transform .65s var(--ease-out), opacity .4s, visibility 0s linear .65s;
   }
   .nav.menu-open .nav-links{
@@ -446,6 +503,7 @@ h1,h2,h3{ font-weight:400; margin:0; letter-spacing:-.005em; }
   .chapters{ grid-template-columns:repeat(2,1fr); gap:18px 14px; }
   .chip p{ font-size:10px; }
   .cards{ grid-template-columns:1fr; gap:14px; }
+  .card:nth-child(2),.card:nth-child(3){ transform:none; }
   .gate-stats{ flex-wrap:wrap; gap:20px 34px; }
   .foot-grid{ grid-template-columns:1fr; }
   .hero-cue{ display:none; }
@@ -482,7 +540,7 @@ body[data-layout-hero="b"] .chip .tx{
 body[data-layout-hero="b"] .peek{
   left:auto; right:var(--pad); top:auto; bottom:clamp(38px,7vh,96px);
 }
-body[data-layout-hero="b"] .peek-cap b.kn{ font-size:clamp(18px,1.8vw,28px); letter-spacing:.02em; }
+body[data-layout-hero="b"] .peek-cap b.jp{ font-size:clamp(20px,2.2vw,34px); letter-spacing:.18em; }
 /* The Japanese title reads down the right edge, hung under the navigation —
    the one mark on that side of the frame now that the romanization has gone. */
 body[data-layout-hero="b"] .hero-side{
@@ -491,7 +549,7 @@ body[data-layout-hero="b"] .hero-side{
 }
 body[data-layout-hero="b"] .hero-side .v{
   position:static; transform:none;
-  font-size:clamp(28px,2.8vw,46px); letter-spacing:.06em; color:rgba(239,231,216,.7);
+  font-size:clamp(30px,3.2vw,54px); letter-spacing:.12em; color:rgba(223,231,224,.62);
 }
 
 /* — story B · spread: the title crosses two columns, the reading column is
@@ -572,6 +630,177 @@ body[data-layout-footer="b"] .foot-grid > div:nth-child(n+3){
 body[data-layout-footer="b"] .foot-base{ display:grid; grid-template-columns:1fr auto 1fr; }
 body[data-layout-footer="b"] .foot-base span:last-child{ text-align:right; }
 
+/* ================================================= foreground layers (KAGE)
+   The transparent PNG library in secret-pathways-assets/foreground/png is
+   introduced as a near plane. Each section carries one .fg box holding a few
+   cut-outs that stand between the live sanctuary and the reading: the scene
+   itself is untouched, this is only the garden that grows in front of it.
+
+   The cut-outs are the nearest plane on the page, so they sit in front of the
+   reading rather than behind it. Inside .page — itself z-index:10, above the
+   #gl canvas at 0:
+     -1   .sec::before / .foot::before   the section scrims
+      2   headings, copy, links, cards, stats, CTA
+      3   .fg                            the cut-outs: aria-hidden, inert
+   .page caps everything it holds at tier 10, which is under the fixed
+   furniture (rail 45, nav 50), so the chapter's live near plane is moved out
+   to #fg-sky at 52 — over the layout and the navigation both, and still under
+   the passes that treat the frame as one image: vignette 55, grain 60,
+   cursor 80.
+
+   A stage is only ever shown while its own chapter holds the viewport, and
+   only in the fixed bottom-anchored form. Parked back in its section it is
+   inert and invisible: a near plane that scrolls with the page reads as
+   wallpaper printed on the document rather than as something standing between
+   the camera and the scene, so there is no second, section-owned appearance.
+   Every piece is therefore placed from the bottom edge of that fixed plane —
+   left/right and bottom, never top.
+
+   The entrance is driven by the chapter, not by the scroll observer: each
+   [data-fg-in] piece rises from the edge it is anchored to when its stage goes
+   live, one every 90ms in DOM order, and the reduced-motion block at the foot
+   of this sheet flattens it. The wrapper owns the entrance and animates
+   opacity and transform only; the artwork itself remains at full opacity, with
+   the reading protected by the layer order rather than a translucent
+   foreground treatment. */
+.fg{
+  position:absolute; inset:0; z-index:3;
+  overflow:visible; pointer-events:none;
+}
+/* Nothing inside a section may widen the document. The foreground cut-outs and
+   the cloth canvases are placed to hang past the frame edges on purpose, and as
+   ordinary in-flow descendants they dragged the page box out with them — 194px
+   past a 1440 frame. Clip the horizontal axis at the section, which is exactly
+   viewport-wide, so each overhang is cut precisely where it leaves the screen.
+   `clip` pairs with `visible` without coercing it, so no scroll container is
+   created and every bit of vertical bleed survives. */
+.sec, .foot{ overflow-x:clip; overflow-y:visible; }
+/* the host for whichever chapter currently owns the near plane — no box of
+   its own, since every stage it holds is position:fixed to the viewport */
+#fg-sky{
+  position:fixed; left:0; top:0; width:0; height:0;
+  z-index:52; pointer-events:none;
+}
+.sec > *:not(.fg), .foot > *:not(.fg){ position:relative; z-index:2; }
+.fg-el{ position:absolute; display:block; opacity:0; }
+.fg-el > img{
+  width:100%; height:auto;   /* the width/height attrs hold the box before the lazy image lands */
+  opacity:1;
+  filter:saturate(.88) brightness(.86);
+}
+.fg-el--flip > img{ transform:scaleX(-1); }
+/* each piece waits off the edge it is anchored to until its chapter is called */
+[data-fg-in="up"]   { transform:translate3d(0,13%,0); }
+[data-fg-in="left"] { transform:translate3d(-11%,6%,0); }
+[data-fg-in="right"]{ transform:translate3d(11%,6%,0); }
+/* one slow breath, on the two lightest layers only */
+@keyframes fg-sway{
+  from{ transform:rotate(-.45deg) translate3d(0,2px,0); }
+  to  { transform:rotate(.45deg)  translate3d(0,-6px,0); }
+}
+.fg-el--sway > img{ animation:fg-sway 21s var(--ease-io) infinite alternate; transform-origin:0% 45%; }
+
+/* The active chapter owns a bottom-anchored near plane. Its former stage is
+   retained only long enough to dissolve into the next chapter's scene. */
+.fg.fg-active,.fg.fg-retiring{
+  position:fixed; left:0; right:0; top:auto; bottom:0; height:min(56svh,680px);
+  z-index:1; overflow:visible; pointer-events:none;
+}
+.fg.fg-active .fg-el{
+  opacity:1; transform:none;
+  transition:opacity 1.2s var(--ease-out), transform 1.5s var(--ease-out);
+  transition-delay:var(--fg-delay,0ms);
+}
+.fg .fg-el:nth-child(2){ --fg-delay:90ms; }
+.fg .fg-el:nth-child(3){ --fg-delay:180ms; }
+.fg .fg-el:nth-child(4){ --fg-delay:270ms; }
+.fg.fg-retiring .fg-el{
+  opacity:0; transform:translate3d(0,8vh,0) scale(.98); filter:blur(18px);
+  transition:opacity .68s var(--ease-out),transform .78s var(--ease-out),filter .78s var(--ease-out);
+}
+
+/* Placement is keyed off [data-fg] rather than the section id, because the
+   stage of the live chapter is re-parented into #fg-sky and stops being a
+   descendant of its own section for as long as it holds the near plane.
+
+   Every piece is anchored from the bottom of that plane, which is the bottom
+   of the viewport. The cut-outs in png/ are trimmed flush to their own lowest
+   opaque row, so a negative bottom here is a real amount of artwork buried off
+   the foot of the frame, not slack in the file — the ground-sitting pieces
+   carry enough of it that their base line never lifts off the edge. */
+
+/* — I · the gate: the wall runs along the lower-left frame, a pine holds the
+     far edge, and one bank of grass closes the foot of the chapter */
+/* Wall against the left edge, pine against the right: the chapter is framed
+   by the two of them with the court open between.
+
+   left:0, not a negative offset — the plate is trimmed to its own artwork, so
+   pulling it off-frame cuts the gate itself rather than trimming empty margin.
+   Its left edge sits on the viewport's. */
+[data-fg="gate"] .fg-wall  { left:0; bottom:-30px; width:clamp(430px,47vw,780px); }
+[data-fg="gate"] .fg-pine  { right:-4%; bottom:-46px; width:clamp(190px,21vw,370px); }
+[data-fg="gate"] .fg-grass { left:3%;   bottom:-150px; width:clamp(420px,60vw,1050px); }
+
+/* — II · still gardens: sakura and maple sweep in from the two lower corners
+     and carry their whole length, a lit lantern and a low bush hold the edges */
+[data-fg="pathways"] .fg-sakura { left:-6%;  bottom:-86px;  width:clamp(430px,50vw,880px); }
+[data-fg="pathways"] .fg-leaves { right:-6%; bottom:-62px;  width:clamp(330px,38vw,670px); }
+[data-fg="pathways"] .fg-lantern{ left:-1%;  bottom:-96px;  width:clamp(120px,13vw,215px); }
+[data-fg="pathways"] .fg-bush   { right:-4%; bottom:-38px;  width:clamp(250px,30vw,530px); }
+/* the lantern is the one lit object in the library — it keeps its ember */
+[data-fg="pathways"] .fg-lantern > img{ filter:saturate(.96) brightness(1); }
+[data-fg="pathways"] .fg-leaves > img{ transform-origin:100% 40%; }
+
+/* — III · sacred craft: basalt and a low wall fragment bracket the atlas and
+     a stand of grass ties them together, all three below the plate grid */
+[data-fg="lessons"] .fg-wall   { right:-8%; bottom:-78px; width:clamp(390px,50vw,870px); }
+[data-fg="lessons"] .fg-stones { left:-4%;  bottom:-48px; width:clamp(250px,30vw,530px); }
+[data-fg="lessons"] .fg-grass  { left:24%;  bottom:-84px; width:clamp(280px,33vw,580px); }
+
+/* — IV · afterlight: a far hill closes the horizon, the shrine ruins stand at
+     the left of it, grass banks the right, one branch hangs into the corner */
+[data-fg="eternity"] .fg-hill   { left:-8%; width:min(150vh,116%); bottom:calc(-1 * min(20vh,15.5vw)); }
+[data-fg="eternity"] .fg-ruins  { left:-5%;  bottom:-32px; width:clamp(240px,28vw,500px); }
+[data-fg="eternity"] .fg-grass  { right:-7%; bottom:-60px; width:clamp(300px,37vw,670px); }
+[data-fg="eternity"] .fg-sakura { left:-15%; bottom:-70px; width:clamp(280px,33vw,580px); }
+
+/* — colophon: one restrained planting along the lower edge, nothing above it */
+[data-fg="foot"] .fg-bush   { left:-6%;  bottom:-110px; width:clamp(230px,28vw,480px); }
+[data-fg="foot"] .fg-grass  { right:-5%; bottom:-98px;  width:clamp(255px,30vw,530px); }
+[data-fg="foot"] .fg-stones { left:36%;  bottom:-104px; width:clamp(190px,22vw,370px); }
+
+@media (max-width:1080px){
+  /* the columns have collapsed and the copy has taken the width back, so the
+     framing layers step down rather than crowd it */
+  [data-fg="gate"] .fg-wall      { width:clamp(390px,42vw,600px); }
+  [data-fg="pathways"] .fg-sakura{ width:clamp(400px,46vw,660px); }
+  [data-fg="pathways"] .fg-leaves{ width:clamp(310px,35vw,500px); }
+  [data-fg="lessons"] .fg-wall   { width:clamp(360px,45vw,640px); }
+  [data-fg="eternity"] .fg-sakura{ width:clamp(260px,30vw,430px); }
+}
+@media (max-width:820px){
+  /* one or two anchors per section: the stacked cards, the atlas plates and
+     the call to action own the whole width here, so every duplicated piece
+     of ornament goes and what stays is smaller */
+  [data-fg="gate"] .fg-pine, [data-fg="pathways"] .fg-sakura,
+  [data-fg="pathways"] .fg-leaves, [data-fg="lessons"] .fg-wall,
+  [data-fg="eternity"] .fg-sakura, [data-fg="foot"] .fg-stones{ display:none; }
+  [data-fg="gate"] .fg-wall     { left:-14%; bottom:-22px; width:min(82vw,440px); }
+  [data-fg="gate"] .fg-grass    { left:auto; right:-10%; bottom:-76px; width:min(94vw,530px); }
+  [data-fg="pathways"] .fg-lantern{ left:-4%;   bottom:-58px; width:clamp(80px,20vw,128px); }
+  [data-fg="pathways"] .fg-bush   { right:-10%; bottom:-38px; width:min(72vw,400px); }
+  [data-fg="lessons"] .fg-stones  { left:-8%; bottom:-34px; width:min(66vw,360px); }
+  [data-fg="lessons"] .fg-grass   { left:auto; right:-8%; bottom:-44px; width:min(70vw,380px); }
+  [data-fg="eternity"] .fg-ruins  { left:-8%;   bottom:-25px; width:min(54vw,300px); }
+  [data-fg="eternity"] .fg-grass  { right:-12%; bottom:-34px; width:min(80vw,440px); }
+  [data-fg="foot"] .fg-bush  { left:-12%;  bottom:-26px; width:min(68vw,340px); }
+  [data-fg="foot"] .fg-grass { right:-12%; bottom:-30px; width:min(74vw,380px); }
+}
+@media (prefers-reduced-motion:reduce){
+  .fg-el--sway > img{ animation:none; }
+  .fg.fg-retiring .fg-el{ transition:none !important; filter:none !important; }
+}
+
 @media (max-width:1080px){
   body[data-layout-hero="b"] .chapters{ gap:16px 20px; }
   body[data-layout-story="b"] .gate-grid{ grid-template-columns:1fr; }
@@ -647,81 +876,75 @@ body[data-layout-footer="b"] .foot-base span:last-child{ text-align:right; }
   .mask-line > span,.word{ opacity:1 !important; transform:none !important; }
 }
 
-/* Nothing inside a section may widen the document: each scrim is inset past
-   the frame edges so it never lands as a seam, so the section clips its x
-   axis (clip, unlike hidden, makes no scroll container). */
-.sec, .foot{ overflow-x:clip; overflow-y:visible; }
-.sec > *, .foot > *{ position:relative; z-index:2; }
-.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-
-/* ================================================================ the street
-   Everything below is this page's own: the readable sizes and warm greys,
-   the demo phone, the contact board, the lists that were divs in Kage. */
+/* ================================================================ this page
+   Kage's stylesheet above is kept as it is; below are this page's own parts:
+   readable sizes, the demo phone, the contact plaque and the lists that were
+   divs in Kage. */
 .skip{ position:absolute; left:-9999px; top:0; }
 .skip:focus{ left:var(--pad); top:12px; z-index:120; padding:10px 14px; background:var(--bone); color:var(--ink); }
-:focus-visible{ outline:2px solid var(--vermilion); outline-offset:3px; }
-.eyebrow{ margin:0; font-size:11px; }
-.eyebrow b{ color:var(--vermilion); font-weight:500; }
-.body{ font-size:15px; color:#bdb4a1; }
-.body-lg{ color:#cfc6b3; }
-.gate-copy .lead{ color:#ddd4c2; }
-.sec-head .k{ font-size:11px; color:#a8a08d; }
-.sec-head .k.kn{ font-size:14px; letter-spacing:.02em; text-transform:none; }
-.hero-sub{ max-width:390px; }
-.hero-top .eyebrow .dot{ background:var(--vermilion); box-shadow:0 0 10px var(--vermilion); }
+:focus-visible{ outline:2px solid var(--ember); outline-offset:3px; }
+.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 
-/* the nav carries the one action on every screen */
-.nav-cta{ margin-left:clamp(18px,2.6vw,42px); padding:10px 18px; border-radius:100px;
+/* reading sizes: Kage sets its labels at 9-10px; nothing read here goes below 12px, running text is 16px */
+body{ font-size:16px; }
+.eyebrow{ margin:0; font-size:12px; }
+.eyebrow b{ color:var(--vermilion); font-weight:500; }
+.body{ font-size:16px; color:#a9b4ae; }
+.body-lg{ color:#bec9c1; }
+.gate-copy .lead{ color:#c9d3cc; }
+.sec-head .k, .brand-tx i, .nav-link, .hero-cue, .card-meta, .les .k, .les .t, .foot-base, .pre-meta, .peek-cap i{ font-size:12px; }
+.sec-head .k{ color:#909a94; }
+.brand-tx i{ color:#909a94; }
+.hero-sub{ max-width:380px; }
+
+/* the one action on every screen */
+.nav-cta{ margin-left:clamp(18px,2.6vw,42px); padding:10px 18px; border-radius:100px; flex:0 0 auto;
   background:var(--bone); color:var(--ink); font-size:12px; font-weight:600; letter-spacing:.04em;
   transition:background .35s var(--ease), transform .2s; }
-.nav-cta:hover{ background:var(--ember); }
+.nav-cta:hover{ background:#fff; }
 .nav-cta:active{ transform:scale(.97); }
-.brand-tx i{ font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:#a8a08d; }
 @media (min-width:821px){ .nav-burger{ display:none; } }
-
-/* a filled call to action: light on the dark street, sodium on hover */
 .cta.solid{ background:var(--bone); color:var(--ink); border-color:var(--bone); font-size:12px; letter-spacing:.14em; }
-.cta.solid i{ background:var(--ember); }
-.cta.solid:hover{ color:var(--ink); border-color:var(--ember); }
-.cta.solid:hover svg path{ stroke:var(--ink); }
+.cta.solid i{ background:#fff; }
+.cta.solid:hover{ color:var(--ink); }
+.cta.solid svg path{ stroke:var(--ink); }
 .cta:active{ transform:scale(.98); }
-.hero-cta{ margin-top:26px; padding:15px 26px; }
+.hero-cta{ margin-top:24px; padding:15px 26px; }
 
-/* the four things I make, as a list */
+/* what I make, as a list */
 .chapters{ list-style:none; margin:0; padding-left:0; padding-right:0; padding-bottom:0; }
-.chip .tx > span{ display:block; margin:0; font-size:12px; line-height:1.5; color:#a8a08d; max-width:22ch; transition:color .4s; }
-.chip b{ font-size:11px; }
+.chip .tx > span{ display:block; margin:0; font-size:13px; line-height:1.5; color:#909a94; max-width:22ch; transition:color .4s; }
+.chip b{ font-size:12px; }
 .chip:hover .tx > span{ color:var(--bone-dim); }
 
 /* the figures, as a definition list */
 .gate-stats{ margin-bottom:0; }
 .gate-stats div{ display:flex; flex-direction:column-reverse; justify-content:flex-end; }
 .gate-stats dd{ margin:0; font-size:clamp(24px,2.3vw,36px); font-weight:300; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-.gate-stats dt{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#a8a08d; }
-.gate-stats dt .kn{ letter-spacing:0; font-size:13px; }
+.gate-stats dt{ font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:#909a94; }
 
 /* ---------------------------------------------------------- the demo shops */
 .demo-grid{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:clamp(32px,6vw,110px); align-items:center; }
-.demo-text h2{ max-width:12ch; }
+.demo-text h2{ max-width:16ch; }
 .demo-text .body-lg{ max-width:46ch; margin:22px 0 0; }
 .demos-note{ margin:22px 0 0; }
 .demo-text .cards{ grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:34px; gap:clamp(10px,1.2vw,18px); }
 .cards .card{ transform:none; display:block; width:100%; padding:0; text-align:left; font:inherit; }
 .card-fr{ display:block; }
-.card[aria-selected="true"] .card-fr{ outline:2px solid var(--vermilion); outline-offset:-2px; }
+.card[aria-selected="true"] .card-fr, .card[aria-selected="true"] .card-fr.on-cloth{ outline:2px solid var(--vermilion) !important; outline-offset:-2px; }
 .card[aria-selected="true"] .card-meta{ color:var(--bone); }
 .card-lab b{ font-size:clamp(13px,1.1vw,16px); }
-.card-meta{ display:flex; font-size:11px; color:#a8a08d; }
-.card:active .card-fr{ transform:scale(.985); }
+.card-lab .jp{ font-size:12px; }
+.card-meta{ display:flex; color:#909a94; }
 
-.phone{ width:min(330px,86vw); aspect-ratio:9 / 18.5; background:#050608; border-radius:42px; padding:12px;
-  outline:1px solid var(--line); box-shadow:0 50px 90px -40px rgba(0,0,0,.95), 0 0 0 1px rgba(0,0,0,.6); }
+.phone{ width:min(330px,86vw); aspect-ratio:9 / 18.5; background:#040506; border-radius:42px; padding:12px;
+  outline:1px solid var(--line); box-shadow:0 50px 90px -40px rgba(0,0,0,.95); }
 .phone-screen{ height:100%; border-radius:32px; overflow:hidden auto; background:#F0F0EC; color:#3B1F0E;
   font:15px/1.4 'Onest',system-ui,sans-serif; overscroll-behavior:contain; }
 .shop{ min-height:100%; display:flex; flex-direction:column; padding:28px 18px 18px; }
 .shop[hidden]{ display:none; }
 .shop-head{ display:flex; flex-direction:column; margin-bottom:14px; }
-.shop-head b{ font:900 1.55rem/1.02 'Wordmark','Onest',sans-serif; letter-spacing:.01em; text-transform:uppercase; }
+.shop-head b{ font:600 1.3rem/1.1 'Wordmark','Onest',sans-serif; letter-spacing:.01em; text-transform:uppercase; }
 .shop-head span{ font-size:.8125rem; opacity:.85; }
 .menu{ list-style:none; margin:0; padding:0; }
 .menu li{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed rgba(59,31,14,.35); }
@@ -752,93 +975,65 @@ body[data-layout-footer="b"] .foot-base span:last-child{ text-align:right; }
 
 /* ---------------------------------------------------------- the process */
 ol.cur{ list-style:none; margin:0; padding:0; }
-.les p{ color:#b3aa98; }
-.les .t{ color:#aba390; }
-.les .k{ color:#a8a08d; }
-.les::before{ background:linear-gradient(90deg, rgba(242,163,58,.10), transparent 46%); }
-body[data-layout-curriculum="b"] .les::before{ background:linear-gradient(145deg, rgba(242,163,58,.12), transparent 58%); }
-body[data-layout-curriculum="b"] .les{ background:rgba(6,8,11,.82); }
+.les p{ font-size:16px; color:#a3aea8; }
+.les .t{ color:#99a39d; }
+@media (min-width:821px){ body[data-layout-curriculum="b"] .cur-head{ grid-template-columns:minmax(0,1fr) minmax(0,.9fr); } }
+.h-sec{ max-width:16ch; }
+body[data-layout-story="b"] .gate-grid h2{ max-width:16ch; }
 
 /* ---------------------------------------------------------- your shop
-   The copy holds the left; the board it writes to is in the scene, lit at
-   the end of the street on the right. */
-.fin{ align-items:flex-start; text-align:left; }
+   The copy holds the left; the plaque it writes to hangs on the hall, right. */
+#contact.fin{ align-items:flex-start; text-align:left; }
 .fin-copy{ max-width:540px; }
 .fin-copy .eyebrow{ margin-bottom:22px; }
-.fin h2{ font-size:clamp(40px,6.2vw,104px); }
-.fin .fin-copy p{ margin:24px 0 0; max-width:46ch; }
-#street::before{ background:radial-gradient(120% 70% at 50% 50%, rgba(4,6,9,.86), rgba(4,6,9,.62) 46%, rgba(4,6,9,.20) 78%, rgba(4,6,9,0)); }
-#contact::before{ background:radial-gradient(70% 70% at 18% 50%, rgba(4,6,9,.86), rgba(4,6,9,.55) 55%, rgba(4,6,9,0) 80%); }
+#contact h2{ font-size:clamp(40px,6.2vw,104px); }
+#contact .fin-copy p{ margin:24px 0 0; max-width:46ch; }
+#contact::before{ background:radial-gradient(70% 70% at 18% 50%, rgba(4,7,10,.88), rgba(4,7,10,.55) 55%, rgba(4,7,10,0) 80%); }
 .namecard{ margin-top:30px; padding:24px; display:flex; flex-direction:column; gap:12px; max-width:460px;
-  background:rgba(6,8,11,.74); border:1px solid var(--line);
+  background:rgba(5,7,10,.76); border:1px solid var(--line);
   -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
 .namecard label{ font-size:13px; font-weight:500; color:var(--bone); }
 .namecard input{ min-height:50px; padding:10px 14px; font:400 16px 'Onest',sans-serif; color:var(--bone);
-  background:rgba(239,231,216,.06); border:1px solid rgba(239,231,216,.32); border-radius:4px; }
-.namecard input::placeholder{ color:#8f8775; }
-.namecard input:focus{ outline:none; border-color:var(--vermilion); box-shadow:0 0 0 3px rgba(242,163,58,.25); }
-.fin .namecard .namecard-note{ margin:4px 0 0; font-size:14px; color:#c3baa7; }
+  background:rgba(223,231,224,.06); border:1px solid rgba(223,231,224,.32); border-radius:4px; }
+.namecard input::placeholder{ color:#7e8983; }
+.namecard input:focus{ outline:none; border-color:var(--ember); box-shadow:0 0 0 3px rgba(255,90,60,.25); }
+#contact .namecard .namecard-note{ margin:4px 0 0; font-size:14px; color:#b4bfb7; }
 .namecard-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px; margin-top:6px; }
 .namecard-actions .cta{ margin-top:0; }
 .mail{ font-size:14px; color:var(--bone-dim); text-decoration:underline; text-underline-offset:4px; text-decoration-color:var(--line); }
 .mail:hover{ color:var(--bone); }
-/* the board on the page is only for when there is no street to light it */
+/* the plaque on the page is only for when the hall is out of view (a phone) or not drawn at all */
 .mini-board{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .no-webgl .mini-board{ position:static; width:auto; height:auto; clip-path:none; white-space:normal; margin:4px 0 0;
-  padding:14px 16px; background:linear-gradient(var(--flag-yellow) 72%, var(--flag-red) 72%); color:#7d0e0b;
-  font:900 1.7rem/1 'Wordmark','Onest',sans-serif; text-transform:uppercase; overflow-wrap:anywhere; }
+  padding:14px 16px; background:#1c1512; outline:3px solid #8f6f2e; outline-offset:-3px; color:#e9c46e;
+  font:600 1.4rem/1.1 'Onest',sans-serif; text-transform:uppercase; text-align:center; overflow-wrap:anywhere; }
 
 /* ---------------------------------------------------------- footer */
-.foot h3{ margin:0 0 16px; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:#a8a08d; }
-.foot li{ font-size:14px; color:#b3aa98; }
-.foot li a{ font-size:14px; color:#c3baa7; }
-.foot-brand p{ color:#b3aa98; }
-.credits p{ margin:0; font-size:13px; line-height:1.6; color:#b3aa98; max-width:48ch; }
+.foot h3{ margin:0 0 16px; font-size:12px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+.foot li{ font-size:14px; color:#8f9a93; }
+.foot li a{ font-size:14px; }
+.credits p{ margin:0; font-size:13px; line-height:1.6; color:#909a94; max-width:48ch; }
 .credits a{ text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line); }
-.foot-base{ font-size:11px; color:#a8a08d; }
-.foot-base .kn{ font-size:14px; letter-spacing:.02em; text-transform:none; }
 
 @media (max-width:820px){
   .nav-cta{ margin-left:auto; padding:9px 14px; }
   .nav-burger{ margin-left:16px; }
   .demo-grid{ grid-template-columns:1fr; justify-items:center; }
   .demo-text{ justify-self:stretch; }
-  .demo-text .cards{ grid-template-columns:repeat(3,minmax(0,1fr)); }
   .card-lab{ left:8px; right:8px; bottom:8px; flex-direction:column; align-items:flex-start; gap:2px; }
   .card-meta{ display:none; }
-  .fin h2{ font-size:clamp(40px,12vw,64px); }
+  #contact h2{ font-size:clamp(40px,12vw,64px); }
+  body[data-layout-hero="b"] .hero-side{ display:none; }
+  .mini-board{ position:static; width:auto; height:auto; clip-path:none; white-space:normal; margin:4px 0 0;
+    padding:12px 14px; background:#1c1512; outline:3px solid #8f6f2e; outline-offset:-3px; color:#e9c46e;
+    font:600 1.25rem/1.1 'Onest',sans-serif; text-transform:uppercase; text-align:center; overflow-wrap:anywhere; }
 }
 @media (max-width:560px){
   .brand-tx i{ display:none; }
-}
-/* On a phone the scene's board falls behind the form, so the form carries
-   its own small copy of it, and the vertical script would cross the moon. */
-@media (max-width:820px){
-  body[data-layout-hero="b"] .hero-side{ display:none; }
-  .mini-board{ position:static; width:auto; height:auto; clip-path:none; white-space:normal; margin:4px 0 0;
-    padding:12px 14px; background:linear-gradient(var(--flag-yellow) 72%, var(--flag-red) 72%); color:#7d0e0b;
-    font:900 1.5rem/1 'Wordmark','Onest',sans-serif; text-transform:uppercase; overflow-wrap:anywhere; }
+  .h-sec{ max-width:none; }
 }
 
-/* reading sizes: Kage sets its labels at 9-10px; on this page nothing that is
-   read goes below 12px and the running text is 16px */
-body{ font-size:16px; }
-.body{ font-size:16px; }
-.eyebrow, .sec-head .k, .brand-tx i, .nav-link, .hero-cue, .card-meta, .gate-stats dt,
-.les .k, .les .t, .foot h3, .foot-base, .pre-meta, .peek-cap i{ font-size:12px; }
-.chip b{ font-size:12px; }
-.chip .tx > span, .les p, .credits p, .foot li, .foot li a{ font-size:14px; }
-.h-sec{ max-width:16ch; }
-body[data-layout-story="b"] .gate-grid h2{ max-width:16ch; }
-.demo-text h2{ max-width:16ch; }
-body[data-layout-curriculum="b"] .cur-head h2{ max-width:16ch; }
-.h-hero{ font-size:clamp(28px,3.2vw,50px); }
-/* the poster already carries the street, the word and the end board */
-.no-webgl .word-fb, .no-webgl .peek{ display:none; }
-body[data-layout-hero="b"] .hero-top{ max-width:min(720px,54vw); }
-@media (min-width:821px){ body[data-layout-curriculum="b"] .cur-head{ grid-template-columns:minmax(0,1fr) minmax(0,.9fr); } }
-.les p{ font-size:16px; }
-@media (max-width:820px){ body[data-layout-hero="b"] .hero-top{ max-width:none; } }
-@media (max-width:560px){ .h-hero{ font-size:6.5vw; } }
-@media (max-width:560px){ .h-sec{ max-width:none; } }
-.hero-cue{ display:none; }   /* it sat on the wordmark; the street itself says scroll */
+/* Kage stands its cut-outs in front of the reading; here they stand between the scene and the page, so a
+   branch or a wall never hides a price, a step or a button */
+#fg-sky{ z-index:9; }
+.brand-tx i{ text-transform:uppercase; letter-spacing:.3em; }

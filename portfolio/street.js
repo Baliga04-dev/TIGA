@@ -1,10 +1,8 @@
-
 /* =====================================================================
-   A Bengaluru shop street, after dark, for adithya's portfolio.
-   Adapted from "Kage" in ThreeUI by Meng To (MIT License, Copyright (c)
-   2026 Meng To, https://github.com/MengTo/threeui): the renderer, the
-   procedural textures, the camera rig, the post pass and the page wiring
-   are his; the street, its shops, boards, arch, lamps and autos are new.
+   Adithya's portfolio: "Kage" from ThreeUI by Meng To (MIT License,
+   Copyright (c) 2026 Meng To, https://github.com/MengTo/threeui), with
+   the wordmark set to ADITHYA and a plaque on the hall that shows the
+   visitor's shop name as they type it.
    ===================================================================== */
 (function () {
 'use strict';
@@ -558,30 +556,6 @@ function texLeaf() {
   return c;
 }
 
-/* one gulmohar petal: a narrow claw opening into a broad, crinkled spoon.
-   White, so the material's colour decides how red the tree is. */
-function texPetal() {
-  const S = 128, c = cvs(S, S), x = c.getContext('2d');
-  x.translate(S / 2, S * .96); x.scale(S / 2.3, -S / 2.3);
-  x.beginPath();
-  x.moveTo(-.05, 0);
-  x.bezierCurveTo(-.10, .35, -.78, .55, -.70, 1.12);
-  x.bezierCurveTo(-.62, 1.62, -.25, 1.90, 0, 1.86);
-  x.bezierCurveTo(.25, 1.90, .62, 1.62, .70, 1.12);
-  x.bezierCurveTo(.78, .55, .10, .35, .05, 0);
-  x.closePath();
-  x.fillStyle = '#fff'; x.fill();
-  x.setTransform(1, 0, 0, 1, 0, 0);
-  /* the crinkle at the rim, and the fine veins */
-  x.globalCompositeOperation = 'destination-out';
-  const rnd = mulberry32(5);
-  for (let i = 0; i < 14; i++) { x.beginPath(); x.arc(S * (.2 + rnd() * .6), S * (.04 + rnd() * .1), 2 + rnd() * 3, 0, TAU); x.fill(); }
-  x.globalCompositeOperation = 'source-atop';
-  x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = 1;
-  for (let i = -3; i <= 3; i++) { x.beginPath(); x.moveTo(S / 2, S * .92); x.quadraticCurveTo(S / 2 + i * 6, S * .5, S / 2 + i * 13, S * .14); x.stroke(); }
-  return c;
-}
-
 /* the night sky itself: black at altitude, going to the fog colour at the
    horizon so the backdrop and the depth cue meet without a seam */
 function texSky() {
@@ -1048,21 +1022,21 @@ function texBranchCutout(seed) {
       const k = depth === 0 ? 3 : 2;
       for (let i = 0; i < k; i++) bough(cx2, cy, a + (rnd() - .5) * 1.25, len * (.58 + rnd() * .18), wid * .58, depth + 1);
     } else {
-      for (let i = 0; i < 16; i++)
-        leaves.push([cx2 + (rnd() - .5) * 84, cy + (rnd() - .5) * 84, rnd() * TAU, 6 + rnd() * 10, rnd()]);
+      for (let i = 0; i < 9; i++)
+        leaves.push([cx2 + (rnd() - .5) * 78, cy + (rnd() - .5) * 78, rnd() * TAU, 12 + rnd() * 20, rnd()]);
     }
   }
   bough(W * 1.02, H * .06, Math.PI * .78, 420, 26, 0);
   bough(W * .86, -H * .02, Math.PI * .62, 330, 18, 1);
 
-  const leafImg = texPetal();
+  const leafImg = texLeaf();
   const tint = cvs(128, 128), tx = tint.getContext('2d');
   leaves.forEach(l => {
     tx.clearRect(0, 0, 128, 128);
     tx.drawImage(leafImg, 0, 0);
     tx.globalCompositeOperation = 'source-in';
     const v = l[4];
-    tx.fillStyle = hex(150 + v * 80, 26 + v * 44, 8 + v * 14);
+    tx.fillStyle = hex(96 + v * 96, 14 + v * 22, 16 + v * 18);
     tx.fillRect(0, 0, 128, 128);
     tx.globalCompositeOperation = 'source-over';
     x.save(); x.translate(l[0], l[1]); x.rotate(l[2]);
@@ -1117,7 +1091,7 @@ function initGL() {
      moved the hall by 0.18 of a luminance unit, the fog colour moves it
      properly. And it reaches by distance, so the foreground does not
      follow it down. */
-  scene.fog = new THREE.FogExp2(0x070a0f, 0.0125);
+  scene.fog = new THREE.FogExp2(0x050a0e, 0.0168);
   scene.background = new THREE.Color(0x060a0d);
   camera = new THREE.PerspectiveCamera(36, vpW() / vpH(), .35, 220);
   scene.add(camera);
@@ -1297,335 +1271,253 @@ function mergeGeos(list) {
 const WORLD = {};                 /* named handles the page can animate */
 const swayers = [];               /* things the wind touches */
 
-/* ---- the street plan, in metres ---------------------------------------
-   The road runs away from the camera down −z. Shops line both kerbs and a
-   wider building closes the far end, so every waypoint, lamp and arch is
-   pinned to these and the street can be re-proportioned in one place.   */
-const ROAD_W   = 10.0;            /* kerb to kerb                              */
-const WALK_W   = 2.4;             /* the footpath in front of each shop row    */
-const ROW_X    = ROAD_W / 2 + WALK_W;   /* the shopfront line, ±7.4           */
-const PITCH    = 6.0;             /* one shop's frontage, centre to centre     */
-const FIRST_Z  = -3.0;            /* the first shop on each side               */
-const END_Z    = -44.0;           /* the building that closes the street       */
-const ARCH_Z   = -9.0;            /* the festival arch over the road           */
-const KERB_H   = .18;
-
-/* The shops. Each board carries its Kannada name over its English one, the
-   way the street really signs itself. The first three are the demo shops the
-   phone on the page runs; the rest are the neighbours. */
-const SHOPS = [
-  /* side, kn, en, board, ink, floors, open */
-  [-1, 'ಮಲ್ಲೇಶ್ವರಂ ಅಯ್ಯಂಗಾರ್ ಬೇಕರಿ', 'MALLESWARAM IYENGAR BAKERY', '#b3161b', '#ffe9a8', 2, 1],
-  [-1, 'ಗ್ಲೋ ಸಲೂನ್', 'GLOW SALON', '#1d1d24', '#f6b6d0', 1, 1],
-  [-1, 'ಸನ್‌ರೈಸ್ ಡೆಂಟಲ್ ಕ್ಲಿನಿಕ್', 'SUNRISE DENTAL CLINIC', '#f4f1e6', '#0d5b8c', 2, 1],
-  [-1, 'ಶ್ರೀ ಗಣೇಶ ಸ್ಟೋರ್ಸ್', 'SRI GANESH STORES', '#f2c230', '#9b1111', 1, 1],
-  [-1, 'ಉಪಹಾರ ದರ್ಶಿನಿ', 'UPAHARA DARSHINI', '#0f6b3a', '#fff3c4', 2, 1],
-  [-1, 'ಸಾಯಿ ಮೆಡಿಕಲ್ಸ್', 'SAI MEDICALS', '#0a7a52', '#ffffff', 1, 0],
-  [ 1, 'ಮೊಬೈಲ್ ರಿಪೇರಿ', 'MOBILE REPAIRS', '#0b3f8f', '#ffe14d', 1, 1],
-  [ 1, 'ಶ್ರೀ ಲಕ್ಷ್ಮಿ ಸಿಲ್ಕ್ಸ್', 'SRI LAKSHMI SILKS', '#6d0f3a', '#f3cf72', 2, 1],
-  [ 1, 'ನ್ಯೂ ಸ್ಟೈಲ್ ಟೈಲರ್ಸ್', 'NEW STYLE TAILORS', '#f4f1e6', '#b3161b', 1, 0],
-  [ 1, 'ಹೂವಿನ ಅಂಗಡಿ', 'FLOWERS AND GARLANDS', '#e8761c', '#fffbe8', 1, 1],
-  [ 1, 'ಕಾಫಿ ಕಾರ್ನರ್', 'COFFEE CORNER', '#3a1d10', '#ffd08a', 2, 1],
-  [ 1, 'ಸ್ಟೇಷನರಿ ಮತ್ತು ಜೆರಾಕ್ಸ್', 'STATIONERY AND XEROX', '#ffffff', '#1846a3', 1, 1]
-];
-const KN = "'Kannada','Noto Sans Kannada',sans-serif";
-
-/* where shop i stands, and the point on its board a camera can aim at */
-function shopSpot(i) {
-  const side = SHOPS[i][0], k = SHOPS.slice(0, i).filter(s => s[0] === side).length;
-  return { side: side, x: side * ROW_X, z: FIRST_Z - k * PITCH };
-}
-
-/* ---------------------------------------------------------- the boards
-   A lit flex board: a flat field of colour, the Kannada name set large, the
-   English underneath, and the hot spots of the tube lights behind the flex
-   showing through as a brighter band. Drawn once per shop.               */
-function texBoard(kn, en, bg, ink, W, H) {
-  W = W || 1024; H = H || 256;
-  const c = cvs(W, H), x = c.getContext('2d');
-  x.fillStyle = bg; x.fillRect(0, 0, W, H);
-  /* the tubes behind the flex */
-  const lit = x.createLinearGradient(0, 0, 0, H);
-  lit.addColorStop(0, 'rgba(255,255,255,.10)'); lit.addColorStop(.45, 'rgba(255,255,255,.22)');
-  lit.addColorStop(1, 'rgba(0,0,0,.18)');
-  x.fillStyle = lit; x.fillRect(0, 0, W, H);
-  /* a thin inner border, as every printed board has */
-  x.strokeStyle = ink; x.globalAlpha = .55; x.lineWidth = H * .025;
-  x.strokeRect(H * .05, H * .05, W - H * .1, H - H * .1); x.globalAlpha = 1;
-  x.fillStyle = ink; x.textAlign = 'center'; x.textBaseline = 'middle';
-  const fit = (txt, font, size, max) => {
-    let s = size; x.font = font.replace('$', s);
-    while (x.measureText(txt).width > max && s > 10) { s -= 2; x.font = font.replace('$', s); }
-  };
-  fit(kn, '600 $px ' + KN, H * .40, W * .88);
-  x.fillText(kn, W / 2, H * .40);
-  fit(en, '700 $px Onest, sans-serif', H * .17, W * .80);
-  if (x.letterSpacing !== undefined) x.letterSpacing = (H * .012) + 'px';
-  x.fillText(en, W / 2, H * .78);
-  if (x.letterSpacing !== undefined) x.letterSpacing = '0px';
-  /* dust and weather */
-  x.globalCompositeOperation = 'multiply'; x.globalAlpha = .22;
-  x.drawImage(fbmCanvas(256, 64, kn.length * 31 + 7, 4, 3, 1.2), 0, 0, W, H);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-  return c;
-}
-
-/* a rolling shutter: horizontal ribs in galvanised grey, half rust */
-function texShutter() {
-  const W = 256, H = 256, c = cvs(W, H), x = c.getContext('2d');
-  x.fillStyle = '#4a4f52'; x.fillRect(0, 0, W, H);
-  for (let y = 0; y < H; y += 8) {
-    x.fillStyle = 'rgba(255,255,255,.10)'; x.fillRect(0, y, W, 2);
-    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, y + 6, W, 2);
-  }
-  x.globalCompositeOperation = 'multiply'; x.globalAlpha = .5;
-  x.drawImage(fbmCanvas(W, H, 515, 5, 4, 1.3), 0, 0);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-  return c;
-}
-
-/* inside an open shop: shelves and stock as soft bars of colour under a tube */
-function texInterior(seed, warm) {
-  const W = 512, H = 256, c = cvs(W, H), x = c.getContext('2d'), rnd = mulberry32(seed);
-  const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, warm ? '#fff1d0' : '#eef6ff'); g.addColorStop(1, warm ? '#c98d4a' : '#9fb6c8');
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
-  for (let r = 0; r < 4; r++) {
-    const y = 30 + r * 52;
-    x.fillStyle = 'rgba(60,40,24,.55)'; x.fillRect(0, y + 38, W, 6);
-    for (let px = 6; px < W - 10;) {
-      const w = 8 + rnd() * 30, h = 14 + rnd() * 24;
-      x.fillStyle = 'hsla(' + Math.floor(rnd() * 360) + ',' + (40 + rnd() * 40) + '%,' + (38 + rnd() * 30) + '%,.85)';
-      x.fillRect(px, y + 38 - h, w, h);
-      px += w + 2 + rnd() * 6;
-    }
-  }
-  /* the counter, and a figure behind it */
-  x.fillStyle = 'rgba(40,28,20,.9)'; x.fillRect(0, H - 54, W, 54);
-  x.fillStyle = 'rgba(30,22,18,.85)';
-  const fx = 120 + rnd() * 260;
-  x.beginPath(); x.arc(fx, H - 112, 15, 0, TAU); x.fill();
-  x.fillRect(fx - 22, H - 96, 44, 44);
-  return c;
-}
-
-/* upper-floor window: a lit or dark pane behind a painted grille */
-function texWindow(lit, seed) {
-  const W = 128, H = 128, c = cvs(W, H), x = c.getContext('2d'), rnd = mulberry32(seed);
-  if (lit) {
-    const g = x.createRadialGradient(W * .5, H * .4, 4, W * .5, H * .5, W * .7);
-    g.addColorStop(0, rnd() > .5 ? '#ffe6b0' : '#dff0ff'); g.addColorStop(1, '#6d4a26');
-    x.fillStyle = g;
-  } else x.fillStyle = '#0b0f12';
-  x.fillRect(0, 0, W, H);
-  if (lit && rnd() > .4) { x.fillStyle = 'rgba(40,20,10,.55)'; x.fillRect(W * .12, 0, W * .3, H); }  /* a curtain */
-  x.strokeStyle = '#1b2226'; x.lineWidth = 5;
-  for (let i = 1; i < 4; i++) { x.beginPath(); x.moveTo(i * W / 4, 0); x.lineTo(i * W / 4, H); x.stroke(); }
-  x.lineWidth = 3; x.beginPath(); x.moveTo(0, H / 2); x.lineTo(W, H / 2); x.stroke();
-  x.lineWidth = 8; x.strokeRect(0, 0, W, H);
-  return c;
-}
-
-/* the city past the end of the street: apartment blocks, mostly dark */
-function texSkyline() {
-  const W = 2048, H = 512, c = cvs(W, H), x = c.getContext('2d'), rnd = mulberry32(2041);
-  for (let px = 0; px < W;) {
-    const w = 40 + rnd() * 120, h = 90 + rnd() * 300;
-    x.fillStyle = '#06090c'; x.fillRect(px, H - h, w, h);
-    for (let wy = H - h + 12; wy < H - 10; wy += 14)
-      for (let wx = px + 6; wx < px + w - 8; wx += 12)
-        if (rnd() < .07) { x.fillStyle = rnd() > .3 ? 'rgba(255,196,120,.75)' : 'rgba(200,226,255,.6)'; x.fillRect(wx, wy, 5, 6); }
-    if (rnd() < .18) { x.fillStyle = '#06090c'; x.fillRect(px + w * .4, H - h - 30, 3, 30);
-      x.fillStyle = 'rgba(255,60,40,.9)'; x.fillRect(px + w * .4 - 2, H - h - 34, 7, 5); }   /* aviation light */
-    px += w + rnd() * 10;
-  }
-  return c;
-}
+/* ---- the site plan, in metres ----------------------------------------
+   Everything downstream — camera waypoints, lantern rows, the moon — is
+   pinned to these, so the approach can be re-proportioned in one place. */
+const PODIUM    = 7.0;            /* how far the hall stands above the court */
+const STEPS     = 40;
+const STAIR_Z0  = -11.0;          /* the bottom riser                        */
+const STAIR_RUN = .55;            /* → the flight tops out at z = −33        */
+const STAIR_W   = 8.4;
+const TEMPLE_Z  = -44;            /* the hall's centre line                   */
 
 function buildShell() {
+  const wallT = texWall();
+  const wallMap = tx(wallT.map, { wrap: THREE.RepeatWrapping, repeat: [4, 1.4] });
+  const wallNrm = tx(wallT.normal, { wrap: THREE.RepeatWrapping, repeat: [4, 1.4], srgb: false });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: wallMap, normalMap: wallNrm, normalScale: new THREE.Vector2(.85, .85),
+    roughness: .78, metalness: .05, color: 0x525c60
+  });
+  /* The court used to be a roofless box. It is now an open mountain approach:
+     nothing encloses the frame but the night, the ridge and the fog. */
+
   /* the sky, hung far enough back that the whole frustum sits inside it */
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(360, 190),
-    new THREE.MeshBasicMaterial({ color: hdr(.60, .66, .78), map: tx(texSky()),
+    new THREE.MeshBasicMaterial({ color: hdr(.60, .70, .80), map: tx(texSky()),
       depthWrite: false, fog: false, toneMapped: false }));
   sky.position.set(0, 62, -108); sky.renderOrder = 0; scene.add(sky);
   WORLD.sky = sky;
 
-  /* the city beyond: two rows of blocks, the nearer one darker */
-  [[-96, 14, 320, 34, 0, .9], [-74, 10, 230, 24, 22, .7]].forEach((r, i) => {
+  /* the wooded ridge that closes the valley — three-quarters eaten by fog,
+     which is the only reason the ground plane can just stop out there */
+  /* z, centre y, width, height, x — kept low: a crest that climbs past the
+     hall's eaves stops reading as distance and starts reading as a cut-out */
+  const ridgeMap = tx(texRidge(), { wrap: THREE.RepeatWrapping, repeat: [1.7, 1] });
+  [[-90, 13, 300, 26, 0], [-63, 9.5, 210, 19, 16]].forEach((r, i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(r[2], r[3]),
-      new THREE.MeshBasicMaterial({ map: tx(texSkyline()), transparent: true,
-        color: hdr(r[5], r[5], r[5]), depthWrite: false, fog: false }));
+      /* fog off: at a hundred metres it would lift a black silhouette to 80%
+         of the fog colour, and the treeline came back as a *pale* band */
+      new THREE.MeshBasicMaterial({ map: i ? tx(texRidge()) : ridgeMap, transparent: true,
+        color: i ? 0x0a1015 : 0x06090d, depthWrite: false, fog: false }));
     m.position.set(r[4], r[1], r[0]); m.renderOrder = 1; scene.add(m);
   });
 
-  /* the road: wet asphalt, dark and barely metallic, lit rather than mirrored */
+  /* floor + podium */
   const fT = texFloor();
-  const roadMat = new THREE.MeshStandardMaterial({
-    map: tx(fT.map, { wrap: THREE.RepeatWrapping, repeat: [9, 9], aniso: 16 }),
-    normalMap: tx(fT.normal, { wrap: THREE.RepeatWrapping, repeat: [9, 9], srgb: false, aniso: 16 }),
-    roughnessMap: tx(fT.rough, { wrap: THREE.RepeatWrapping, repeat: [4, 4], srgb: false }),
-    normalScale: new THREE.Vector2(.22, .22), roughness: .58, metalness: .10, color: 0x4a5257
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: tx(fT.map, { wrap: THREE.RepeatWrapping, repeat: [7, 7], aniso: 16 }),
+    normalMap: tx(fT.normal, { wrap: THREE.RepeatWrapping, repeat: [7, 7], srgb: false, aniso: 16 }),
+    roughnessMap: tx(fT.rough, { wrap: THREE.RepeatWrapping, repeat: [3.4, 3.4], srgb: false }),
+    normalScale: new THREE.Vector2(.30, .30),
+    /* The court used to carry a planar mirror and this was tuned to feed it —
+       near-polished, and metal enough to hold a reflection. With the mirror
+       gone those numbers only made the paving read as sheet metal, so it goes
+       back to being wet stone: rough, barely metallic, and lit rather than
+       reflecting. */
+    roughness: .74, metalness: .06, color: 0x69757a
   });
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), roadMat);
-  road.rotation.x = -Math.PI / 2; road.position.set(0, 0, -18); road.receiveShadow = true;
-  scene.add(road);
-  WORLD.floor = road; WORLD.floorMat = roadMat;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), floorMat);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, -18); floor.receiveShadow = true;
+  scene.add(floor);
+  WORLD.floor = floor; WORLD.floorMat = floorMat;
 
-  /* the dashed centre line, worn */
-  const dash = new THREE.MeshStandardMaterial({ color: 0xb9b49a, roughness: .7, metalness: 0 });
-  const dashes = [];
-  for (let z = 12; z > END_Z + 2; z -= 4.2) dashes.push(new THREE.BoxGeometry(.16, .01, 2.0).translate(0, .006, z));
-  scene.add(new THREE.Mesh(mergeGeos(dashes), dash));
-
-  /* footpaths, and the black-and-yellow kerb every Bengaluru road wears */
-  const walkMat = surface(texWall(), [6, 1], { color: 0x6c6a64, roughness: .9, normal: .5 });
-  const kerbDark = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: .8 });
-  const kerbYellow = new THREE.MeshStandardMaterial({ color: 0xb8952a, roughness: .7 });
-  const dark = [], yellow = [];
-  [-1, 1].forEach(s => {
-    const walk = new THREE.Mesh(new THREE.BoxGeometry(WALK_W, KERB_H, 70), walkMat);
-    walk.position.set(s * (ROAD_W / 2 + WALK_W / 2), KERB_H / 2, -16); walk.receiveShadow = true;
-    scene.add(walk);
-    let k = 0;
-    for (let z = 18; z > END_Z + 3; z -= .9, k++)
-      (k % 2 ? dark : yellow).push(new THREE.BoxGeometry(.2, KERB_H + .04, .88).translate(s * ROAD_W / 2, (KERB_H + .04) / 2, z));
+  /* The podium and the flight use their own material: the mirror shader below
+     is only ever attached to the water-level floor, and sharing it would make
+     the reflection buffer sample itself. It is also deliberately matte — with
+     the floor's metalness the forty risers strobed as the camera drifted. */
+  const platMat = new THREE.MeshStandardMaterial({
+    map: tx(fT.map, { wrap: THREE.RepeatWrapping, repeat: [3, 1.2], aniso: 16 }),
+    normalMap: tx(fT.normal, { wrap: THREE.RepeatWrapping, repeat: [3, 1.2], srgb: false, aniso: 16 }),
+    normalScale: new THREE.Vector2(.18, .18), roughness: .93, metalness: .02, color: 0x58636a
   });
-  scene.add(new THREE.Mesh(mergeGeos(dark), kerbDark));
-  scene.add(new THREE.Mesh(mergeGeos(yellow), kerbYellow));
+  /* the podium the hall stands on */
+  const plat = new THREE.Mesh(new THREE.BoxGeometry(42, PODIUM, 24), platMat);
+  plat.position.set(0, PODIUM / 2, -45); plat.receiveShadow = true; plat.castShadow = true;
+  scene.add(plat);
+  const cope = new THREE.Mesh(new THREE.BoxGeometry(43, .34, 25), wallMat);
+  cope.position.set(0, PODIUM - .17, -45); cope.receiveShadow = true; scene.add(cope);
+
+  /* The flight. Twenty-six risers merged into one buffer — as separate meshes
+     it is twenty-six draw calls for a shape nobody ever gets close to. */
+  const treads = [], cheeks = [];
+  for (let i = 0; i < STEPS; i++) {
+    const y = (i + 1) * (PODIUM / STEPS), z = STAIR_Z0 - (i + .5) * STAIR_RUN;
+    const w = STAIR_W + (STEPS - i) * .052;               /* splayed at the foot */
+    treads.push(new THREE.BoxGeometry(w, PODIUM / STEPS + .04, STAIR_RUN + .04)
+      .translate(0, y - (PODIUM / STEPS) / 2, z));
+    [-1, 1].forEach(s => cheeks.push(new THREE.BoxGeometry(.9, 1.5, STAIR_RUN + .06)
+      .translate(s * (w / 2 + .45), y - .3, z)));
+  }
+  const stair = new THREE.Mesh(mergeGeos(treads), platMat);
+  stair.receiveShadow = true; stair.castShadow = true; scene.add(stair);
+  const rail = new THREE.Mesh(mergeGeos(cheeks), wallMat);
+  rail.receiveShadow = true; rail.castShadow = true; scene.add(rail);
 }
 
-/* -------------------------------------------------------------- the shops
-   One builder, run once per frontage. Built facing +z in its own frame and
-   turned to face the road: ground floor open on to the footpath, the board
-   above it, a sunshade over each upper window and, on most roofs, the black
-   water tank no Bengaluru building is without.                           */
-function buildShopAt(i) {
-  const S = SHOPS[i], spot = shopSpot(i), rnd = mulberry32(900 + i * 37);
-  const W = PITCH - .25, D = 7, GF = 3.5, FL = 3.0, H = GF + S[5] * FL;
-  const g = new THREE.Group();
-
-  const paints = [0x8c8270, 0x6f7f74, 0x8a6f62, 0x7a7f86, 0x8f8a6e, 0x6a6f78];
-  const wall = surface(lib('wall', () => texWall()), [1.4, 1.4],
-    { color: paints[i % paints.length], roughness: .92, normal: .9 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), wall);
-  body.position.set(0, H / 2, -D / 2); body.castShadow = true; body.receiveShadow = true; g.add(body);
-
-  /* ground floor: an opening, the lit inside or a pulled-down shutter */
-  const OW = W - .9, OH = 2.55;
-  if (S[6]) {
-    const inside = new THREE.Mesh(new THREE.PlaneGeometry(OW, OH),
-      new THREE.MeshBasicMaterial({ map: tx(texInterior(70 + i, rnd() > .35)), color: hdr(1.25, 1.12, .98),
-        fog: true, toneMapped: false }));
-    inside.position.set(0, KERB_H + OH / 2, .02); g.add(inside);
-    /* the shutter, rolled up into its box */
-    const box = new THREE.Mesh(new THREE.BoxGeometry(OW + .2, .32, .34),
-      new THREE.MeshStandardMaterial({ map: tx(lib('shutter', () => texShutter())), color: 0x9aa0a3, roughness: .6, metalness: .5 }));
-    box.position.set(0, KERB_H + OH + .16, .12); g.add(box);
-    /* light thrown on to the footpath */
-    const spill = new THREE.Mesh(new THREE.PlaneGeometry(OW * 1.3, 4.2),
-      new THREE.MeshBasicMaterial({ map: tx(lib('spill', () => texGlow('rgba(255,214,150,.85)', 'rgba(255,170,90,.30)'))),
-        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: true, opacity: .55 }));
-    spill.rotation.x = -Math.PI / 2; spill.position.set(0, KERB_H + .02, 1.4); spill.renderOrder = 2; g.add(spill);
-  } else {
-    const sh = new THREE.Mesh(new THREE.PlaneGeometry(OW, OH),
-      new THREE.MeshStandardMaterial({ map: tx(lib('shutter', () => texShutter()), { wrap: THREE.RepeatWrapping, repeat: [2, 2] }),
-        color: 0x8a9094, roughness: .55, metalness: .55 }));
-    sh.position.set(0, KERB_H + OH / 2, .03); g.add(sh);
-  }
-
-  /* the board: a dark box with the lit flex on its face */
-  const BW = W - .3, BH = 1.05, BY = KERB_H + OH + .95;
-  const back = new THREE.Mesh(new THREE.BoxGeometry(BW + .1, BH + .1, .16),
-    new THREE.MeshStandardMaterial({ color: 0x15181a, roughness: .7, metalness: .3 }));
-  back.position.set(0, BY, .16); g.add(back);
-  const faceMat = new THREE.MeshBasicMaterial({ map: tx(texBoard(S[1], S[2], S[3], S[4]), { aniso: 16 }),
-    color: hdr(1.18, 1.18, 1.18), fog: true, toneMapped: false });
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), faceMat);
-  face.position.set(0, BY, .25); g.add(face);
-  WORLD.boards = WORLD.boards || [];
-  WORLD.boards.push({ mat: faceMat, base: 1.18, ph: rnd() * TAU, flicker: rnd() < .18 });
-
-  /* upper floors: two windows each, a sunshade over every one */
-  const shade = new THREE.MeshStandardMaterial({ color: 0x5d5a55, roughness: .9 });
-  for (let f = 0; f < S[5]; f++) {
-    const y = GF + f * FL + 1.45;
-    [-1, 1].forEach(s => {
-      const lit = rnd() > .45;
-      const win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.35),
-        new THREE.MeshBasicMaterial({ map: tx(texWindow(lit, i * 10 + f * 2 + s)), color: lit ? hdr(1.05, 1, .95) : 0xffffff,
-          fog: true, toneMapped: !lit }));
-      win.position.set(s * W * .24, y, .02); g.add(win);
-      const sun = new THREE.Mesh(new THREE.BoxGeometry(1.9, .09, .55), shade);
-      sun.position.set(s * W * .24, y + .86, .27); sun.castShadow = true; g.add(sun);
-    });
-  }
-  /* parapet and the tank */
-  const par = new THREE.Mesh(new THREE.BoxGeometry(W, .55, .18), wall);
-  par.position.set(0, H + .27, -.09); g.add(par);
-  if (rnd() > .3) {
-    const tank = new THREE.Mesh(new THREE.CylinderGeometry(.62, .62, 1.15, 18),
-      new THREE.MeshStandardMaterial({ color: 0x0d0f10, roughness: .55, metalness: .05 }));
-    tank.position.set((rnd() - .5) * W * .5, H + .58, -2.4 - rnd() * 2); tank.castShadow = true; g.add(tank);
-  }
-
-  g.position.set(spot.x, 0, spot.z);
-  g.rotation.y = spot.side < 0 ? Math.PI / 2 : -Math.PI / 2;
-  scene.add(g);
-}
-
-/* the wider building that closes the street. Its board is the visitor's:
-   it reads "Your shop" until they type their shop's name on the page. */
-const ENDBOARD = { canvas: null, tex: null, name: '' };
-function drawEndBoard(name) {
-  const c = ENDBOARD.canvas || (ENDBOARD.canvas = cvs(1536, 384));
+/* ------------------------------------------------------- the worship hall
+   A two-storey Sanmon on the podium at the head of the flight: charred
+   timber, two flaring tiled roofs, a bracket band under each eave, and a
+   ground floor lit from inside so the lattice reads as the only warm thing
+   for two hundred metres.                                                 */
+const PLAQUE = { canvas: null, tex: null };
+function drawPlaque(name) {
+  const c = PLAQUE.canvas || (PLAQUE.canvas = cvs(1024, 300));
   const x = c.getContext('2d'), W = c.width, H = c.height;
-  x.clearRect(0, 0, W, H);
-  const en = (name || '').trim().toUpperCase();
-  const fresh = texBoard(en ? 'ನಿಮ್ಮ ಅಂಗಡಿ ಇಲ್ಲಿ' : 'ನಿಮ್ಮ ಅಂಗಡಿ', en || 'YOUR SHOP', '#f2c230', '#a3120f', W, H);
-  x.drawImage(fresh, 0, 0);
-  if (ENDBOARD.tex) ENDBOARD.tex.needsUpdate = true;
-}
-function buildEndBuilding() {
-  const g = new THREE.Group(), W = 16, H = 10.5, D = 8;
-  const wall = surface(lib('wall', () => texWall()), [3, 2], { color: 0x837a69, roughness: .92, normal: .9 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), wall);
-  body.position.set(0, H / 2, -D / 2); body.castShadow = true; g.add(body);
-  /* three open bays below */
-  for (let k = -1; k <= 1; k++) {
-    const inside = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.6),
-      new THREE.MeshBasicMaterial({ map: tx(texInterior(300 + k, true)), color: hdr(1.2, 1.08, .94), fog: true, toneMapped: false }));
-    inside.position.set(k * 5, 1.5, .02); g.add(inside);
-  }
-  /* the big board */
-  drawEndBoard('');
-  ENDBOARD.tex = tx(ENDBOARD.canvas, { aniso: 16 });
-  const back = new THREE.Mesh(new THREE.BoxGeometry(12.4, 3.3, .2),
-    new THREE.MeshStandardMaterial({ color: 0x15181a, roughness: .7, metalness: .3 }));
-  back.position.set(0, 4.9, .2); g.add(back);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 3.0),
-    new THREE.MeshBasicMaterial({ map: ENDBOARD.tex, color: hdr(1.3, 1.3, 1.3), fog: true, toneMapped: false }));
-  face.position.set(0, 4.9, .32); g.add(face);
-  WORLD.endBoard = face;
-  /* windows above */
-  for (let f = 0; f < 2; f++) for (let k = 0; k < 5; k++) {
-    const lit = ((k * 7 + f * 3) % 5) < 2;
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.4),
-      new THREE.MeshBasicMaterial({ map: tx(texWindow(lit, 500 + f * 9 + k)), color: lit ? hdr(1.05, 1, .95) : 0xffffff, fog: true, toneMapped: !lit }));
-    win.position.set(-6 + k * 3, 7.4 + f * 2.2 - 0.5, .02); g.add(win);
-  }
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(26, 12),
-    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,206,110,.75)', 'rgba(240,140,40,.22)')),
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .22 }));
-  glow.position.set(0, 4.6, 1.4); glow.renderOrder = 2; g.add(glow);
-  WORLD.endGlow = glow;
-  g.position.set(0, 0, END_Z);
-  scene.add(g);
-}
-function buildShops() {
-  SHOPS.forEach((s, i) => buildShopAt(i));
-  buildEndBuilding();
+  x.fillStyle = '#1c1512'; x.fillRect(0, 0, W, H);
+  x.globalCompositeOperation = 'overlay'; x.globalAlpha = .5;
+  x.drawImage(fbmCanvas(256, 75, 77, 4, 3, 1.2), 0, 0, W, H);
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  const text = (name || '').trim().toUpperCase() || 'YOUR SHOP';
+  let size = 150;
+  x.font = '600 ' + size + 'px Onest, sans-serif';
+  while (x.measureText(text).width > W * .86 && size > 40) { size -= 6; x.font = '600 ' + size + 'px Onest, sans-serif'; }
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = name ? '#e9c46e' : 'rgba(233,196,110,.55)';
+  x.fillText(text, W / 2, H / 2 + size * .04);
+  if (PLAQUE.tex) PLAQUE.tex.needsUpdate = true;
 }
 
+function buildTemple() {
+  const g = new THREE.Group();
+  /* One board library, sampled at two scales: the hall's flanks want the grain
+     long and lying down, the columns want it running their own length. */
+  const timber = surface(wallWood(), [4, 1.6], { color: 0x565150, normal: 1.5 });
+  const post   = surface(postWood(), [1.1, 1.0], { color: 0x8a746d, normal: 1.05, metalness: .03 });
+  const gold   = new THREE.MeshStandardMaterial({ color: 0x8f6f2e, roughness: .38, metalness: .78 });
+  const rf = lib('roof', () => texRoof());
+  /* Nearly a silhouette: the roof carries almost no colour of its own, and
+     what reads on it is relief rather than tone — so the normal goes up as
+     the albedo comes down. */
+  const tileMat = surface(rf, [1, 1], { color: 0x2b343a, roughness: .74, metalness: .10, normal: 1.4 });
+  /* the paper the lamps burn through — the only thing in the hall that is
+     allowed to be bright, and even then only just above white */
+  const paper = new THREE.MeshBasicMaterial({ color: hdr(1.06, .48, .18), fog: true, toneMapped: false });
+  const grid  = new THREE.MeshBasicMaterial({ map: tx(texShoji()), transparent: true,
+    depthWrite: false, fog: true });
+  WORLD.paper = paper;
+
+  /* one lit bay: a glowing sheet with a lattice hung just in front of it */
+  function bay(w, h, x, y, z) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), paper);
+    p.position.set(x, y, z); g.add(p);
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(w, h), grid);
+    s.position.set(x, y, z + .06); s.renderOrder = 3; g.add(s);
+  }
+  /* The block-and-arm band that carries every eave. The pieces are merged, so
+     they carry absolute coordinates — TEMPLE_Z has to go in here, not on the
+     mesh, or the whole band ends up hanging in the air by the camera. */
+  function brackets(halfW, halfD, y, step) {
+    const parts = [];
+    for (let x = -halfW; x <= halfW + 1e-3; x += step) {
+      [-halfD, halfD].forEach(dz => {
+        parts.push(new THREE.BoxGeometry(.34, .46, .34).translate(x, y, TEMPLE_Z + dz));
+        parts.push(new THREE.BoxGeometry(.92, .17, .24).translate(x, y + .30, TEMPLE_Z + dz));
+      });
+    }
+    for (let dz = -halfD + step; dz < halfD - 1e-3; dz += step) {
+      [-halfW, halfW].forEach(x => {
+        parts.push(new THREE.BoxGeometry(.34, .46, .34).translate(x, y, TEMPLE_Z + dz));
+        parts.push(new THREE.BoxGeometry(.24, .17, .92).translate(x, y + .30, TEMPLE_Z + dz));
+      });
+    }
+    const m = new THREE.Mesh(mergeGeos(parts), post);
+    m.castShadow = false; g.add(m);
+  }
+
+  const F = PODIUM;                                   /* the hall's floor level */
+
+  /* ---- ground storey: six bays of lit lattice between charred columns --- */
+  const core = new THREE.Mesh(new THREE.BoxGeometry(13.6, 5.0, 8.2), timber);
+  core.position.set(0, F + 2.5, TEMPLE_Z); core.castShadow = true; g.add(core);
+  for (let i = 0; i < 5; i++) {
+    const x = -5.6 + i * 2.8;
+    bay(1.55, 2.5, x, F + 2.6, TEMPLE_Z + 4.16);
+  }
+  for (let i = 0; i < 6; i++) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(.30, .34, 5.0, 14), post);
+    c.position.set(-7.0 + i * 2.8, F + 2.5, TEMPLE_Z + 4.24); c.castShadow = true; g.add(c);
+  }
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(14.6, .40, 8.9), post);
+  sill.position.set(0, F + .20, TEMPLE_Z); g.add(sill);
+  brackets(7.0, 4.4, F + 5.15, 1.40);
+
+  /* ---- the pent roof over the ground storey ---------------------------- */
+  const lower = new THREE.Mesh(roofGeo(9.6, 6.4, 3.2, 2.9, .40, .26), tileMat);
+  lower.position.set(0, F + 5.6, TEMPLE_Z); lower.castShadow = true; g.add(lower);
+
+  /* ---- upper storey: railed gallery, dark boards, the temple's name ----- */
+  const up = new THREE.Mesh(new THREE.BoxGeometry(10.0, 3.4, 6.0), timber);
+  up.position.set(0, F + 9.4, TEMPLE_Z); up.castShadow = true; g.add(up);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(12.4, .26, 8.4), post);
+  deck.position.set(0, F + 7.72, TEMPLE_Z); g.add(deck);
+  [.10, .94].forEach(dy => [4.2, -4.2].forEach(dz => {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(12.4, .17, .17), post);
+    r.position.set(0, F + 7.85 + dy, TEMPLE_Z + dz); g.add(r);
+  }));
+  for (let i = 0; i <= 16; i++) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(.10, 1.05, .10), post);
+    b.position.set(-6.2 + i * .775, F + 8.42, TEMPLE_Z + 4.2); g.add(b);
+  }
+  for (let i = 0; i < 4; i++)
+    bay(1.0, 1.35, -4.5 + i * 3.0, F + 9.5, TEMPLE_Z + 3.06);
+  /* the plaque: it carries the visitor's shop name once they type one */
+  const plq = new THREE.Mesh(new THREE.BoxGeometry(3.9, 1.34, .16), gold);
+  plq.position.set(0, F + 9.7, TEMPLE_Z + 3.12); g.add(plq);
+  drawPlaque('');
+  PLAQUE.tex = tx(PLAQUE.canvas, { aniso: 16 });
+  const plqIn = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 1.02),
+    new THREE.MeshBasicMaterial({ map: PLAQUE.tex, color: hdr(1.25, 1.2, 1.1), fog: true, toneMapped: false }));
+  plqIn.position.set(0, F + 9.7, TEMPLE_Z + 3.21); g.add(plqIn);
+  brackets(5.2, 3.3, F + 11.2, 1.30);
+
+  /* ---- the main roof: the silhouette the whole page hangs on ----------- */
+  const upper = new THREE.Mesh(roofGeo(10.8, 7.2, 3.6, 5.2, .48, .26), tileMat);
+  upper.position.set(0, F + 11.7, TEMPLE_Z); upper.castShadow = true; g.add(upper);
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(7.6, .60, 1.05), tileMat);
+  ridge.position.set(0, F + 17.10, TEMPLE_Z); g.add(ridge);
+  [-1, 1].forEach(s => {
+    const oni = new THREE.Mesh(new THREE.ConeGeometry(.46, 1.15, 4), tileMat);
+    oni.position.set(s * 3.9, F + 17.6, TEMPLE_Z); oni.rotation.y = Math.PI / 4; g.add(oni);
+  });
+  WORLD.templeTop = F + 18.2;
+
+  /* ---- the two flanking wings, lit the same way ------------------------ */
+  [-1, 1].forEach(s => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(7.6, 3.4, 5.2), timber);
+    w.position.set(s * 10.6, F + 1.7, TEMPLE_Z + 1.4); w.castShadow = true; g.add(w);
+    for (let i = 0; i < 3; i++)
+      bay(1.3, 1.6, s * 10.6 + (i - 1) * 2.4, F + 1.8, TEMPLE_Z + 4.06);
+    const r = new THREE.Mesh(roofGeo(5.0, 4.0, 1.4, 1.9, .32, .26), tileMat);
+    r.position.set(s * 10.6, F + 3.4, TEMPLE_Z + 1.4); r.castShadow = true; g.add(r);
+  });
+
+  scene.add(g); WORLD.temple = g;
+
+  /* the glow the hall pushes out over its own steps */
+  const spill = new THREE.Mesh(new THREE.PlaneGeometry(30, 16),
+    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,150,66,.80)', 'rgba(240,96,26,.24)')),
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .30 }));
+  spill.position.set(0, F + 3.0, TEMPLE_Z + 5.6); spill.renderOrder = 2;
+  scene.add(spill); WORLD.hallHalo = spill;
+
+  /* the band of mist that separates the hall from the trees behind it — the
+     one thing that stops the whole background reading as a single flat cut-out */
+  const mist = new THREE.Mesh(new THREE.PlaneGeometry(64, 20),
+    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(150,178,190,.62)', 'rgba(104,138,154,.20)')),
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .17 }));
+  mist.position.set(0, F - 1.4, TEMPLE_Z + 10); mist.renderOrder = 2; scene.add(mist);
+}
 
 /* --------------------------------------------------- the vermilion moon
    Hung well behind the hall so the roof crosses its lower left — near
@@ -1639,14 +1531,14 @@ function buildMoon() {
        is decoded out of sRGB before this multiplies it, so the tint has to be
        written in linear, where the same look is ≈ .21. Reading the ratio
        straight off the reference is what left the moon a pale pink. */
-    new THREE.MeshBasicMaterial({ map: tx(texMoon()), color: hdr(3.6, 1.50, .50),
+    new THREE.MeshBasicMaterial({ map: tx(texMoon()), color: hdr(3.6, .64, .61),
       transparent: true, depthWrite: false, fog: false, toneMapped: false }));
   disc.position.set(MOON.x, MOON.y, MOON.z); disc.renderOrder = 1;
   scene.add(disc); WORLD.moon = disc;
 
   /* the air around it — a wide, weak corona that the bloom picks up */
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(MOON.r * 6.4, MOON.r * 6.4),
-    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,196,128,.90)', 'rgba(224,128,46,.26)')),
+    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,124,112,.90)', 'rgba(206,52,48,.26)')),
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .44 }));
   halo.position.set(MOON.x, MOON.y, MOON.z - .3); halo.renderOrder = 0;
   scene.add(halo); WORLD.moonHalo = halo;
@@ -1660,201 +1552,123 @@ function placeMoon() {
   WORLD.moonHalo.position.x = x;
 }
 
-/* ------------------------------------------------- the festival arch
-   Two cloth-wrapped posts at the kerbs, the yellow-over-red banner of the
-   Rajyotsava between them with ಸುಸ್ವಾಗತ (welcome) on it, a toran of mango
-   leaves along its foot and a bow of bulbs over the top.                  */
-function texBanner() {
-  const W = 1536, H = 256, c = cvs(W, H), x = c.getContext('2d');
-  x.fillStyle = '#f2c230'; x.fillRect(0, 0, W, H / 2);
-  x.fillStyle = '#c4161c'; x.fillRect(0, H / 2, W, H / 2);
-  x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.font = '600 150px ' + KN;
-  x.lineJoin = 'round'; x.lineWidth = 16; x.strokeStyle = '#5a0a0a';
-  x.strokeText('ಸುಸ್ವಾಗತ', W / 2, H * .50);
-  x.fillStyle = '#fffaf0'; x.fillText('ಸುಸ್ವಾಗತ', W / 2, H * .50);
-  x.globalCompositeOperation = 'multiply'; x.globalAlpha = .25;
-  x.drawImage(fbmCanvas(256, 48, 4417, 4, 3, 1.2), 0, 0, W, H);
-  x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-  return c;
-}
-
-/* every bulb on the street is one instance of one mesh, so the whole
-   festival costs a single draw call and can chase in one loop */
-const BULBS = { pos: [], col: [], ph: [], mesh: null };
-const BULB_COLS = [[2.6, 1.7, .7], [2.6, 1.7, .7], [2.8, 1.2, .4], [2.4, .5, .4], [.6, 2.0, .9], [.6, 1.1, 2.6], [2.6, 2.2, 1.6]];
-function bulb(x, y, z, k) {
-  BULBS.pos.push(x, y, z);
-  BULBS.col.push(BULB_COLS[k % BULB_COLS.length]);
-  BULBS.ph.push(BULBS.ph.length);
-}
-function catenary(a, b, sag, n, fn) {
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    fn(lerp(a.x, b.x, t), lerp(a.y, b.y, t) - Math.sin(t * Math.PI) * sag, lerp(a.z, b.z, t), i);
-  }
-}
-const WIRE = new THREE.LineBasicMaterial({ color: 0x050607 });
-function wire(a, b, sag) {
-  const pts = [];
-  catenary(a, b, sag, 24, (x, y, z) => pts.push(new THREE.Vector3(x, y, z)));
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), WIRE));
-}
-
-function buildArch() {
+function buildTorii() {
+  /* the weathering costs the gate a lot of its chroma, so the tint puts it
+     back: red lifted well past green and blue rather than a flat brightening,
+     or the vermilion comes out of the grade as brick */
+  const lac = surface(lib('lacquer', () => texLacquer()), [2, 2],
+    { color: hdr(1.72, 1.02, .94), roughness: .92, metalness: .05, normal: .75 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0x7a5d2a, roughness: .50, metalness: .60 });
   const g = new THREE.Group();
-  const X = ROAD_W / 2 - .25, TOP = 6.9;
-  const cloth = new THREE.MeshStandardMaterial({ color: 0x9b1414, roughness: .85 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0x9a7a2e, roughness: .45, metalness: .6 });
+  const BASE = .78, H = 8.2, SPAN = 3.55;
+
   [-1, 1].forEach(s => {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(.42, TOP, .42), cloth);
-    post.position.set(s * X, TOP / 2, 0); post.castShadow = true; g.add(post);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(.42, .9, 4), gold);
-    cap.position.set(s * X, TOP + 2.3, 0); cap.rotation.y = Math.PI / 4; g.add(cap);
-    /* a spiral of bulbs up each post */
-    for (let k = 0; k < 34; k++) {
-      const a = k * .9, y = .6 + k * .18;
-      bulb(s * X + Math.cos(a) * .3, y, ARCH_Z + Math.sin(a) * .3, k);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(.30, .38, H, 26), lac);
+    col.position.set(s * SPAN, BASE + H / 2, 0); col.castShadow = true; g.add(col);
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(.46, .50, .52, 26), gold);
+    foot.position.set(s * SPAN, BASE + .26, 0); foot.castShadow = true; g.add(foot);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(.345, .345, .26, 26), gold);
+    collar.position.set(s * SPAN, BASE + H - 1.42, 0); g.add(collar);
+    /* the ornate bracket where the beams cross the column */
+    const br = new THREE.Mesh(new THREE.BoxGeometry(.86, .30, .86), gold);
+    br.position.set(s * SPAN, BASE + H - .72, 0); g.add(br);
+    const br2 = new THREE.Mesh(new THREE.BoxGeometry(.60, .52, .60), gold);
+    br2.position.set(s * SPAN, BASE + H - .34, 0); g.add(br2);
+    [-1, 1].forEach(d => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(.24, .70, .18), gold);
+      wing.position.set(s * SPAN + d * .40, BASE + H - .62, .30); g.add(wing);
+      const wing2 = wing.clone(); wing2.position.z = -.30; g.add(wing2);
+    });
+  });
+
+  /* nuki — the straight beam that pierces the columns */
+  const nuki = new THREE.Mesh(new THREE.BoxGeometry(9.4, .52, .46), lac);
+  nuki.position.set(0, BASE + H - 2.15, 0); nuki.castShadow = true; g.add(nuki);
+
+  /* gakuzuka — the little strut at the centre */
+  const gak = new THREE.Mesh(new THREE.BoxGeometry(.46, 1.22, .40), lac);
+  gak.position.set(0, BASE + H + .10, 0); g.add(gak);
+  const gakG = new THREE.Mesh(new THREE.BoxGeometry(.60, .18, .50), gold);
+  gakG.position.set(0, BASE + H + .68, 0); g.add(gakG);
+
+  /* shimaki + kasagi — the two crowning beams, swept upward at the ends */
+  function beamPath(half, rise, power) {
+    const p = [];
+    for (let i = 0; i <= 26; i++) {
+      const u = i / 26 * 2 - 1;
+      p.push(new THREE.Vector3(u * half, Math.pow(Math.abs(u), power) * rise, 0));
     }
-  });
-  /* the banner */
-  const banner = new THREE.Mesh(new THREE.PlaneGeometry(X * 2 + .4, 1.7),
-    new THREE.MeshStandardMaterial({ map: tx(texBanner(), { aniso: 16 }), roughness: .8, side: THREE.DoubleSide,
-      emissive: 0xffffff, emissiveMap: tx(texBanner()), emissiveIntensity: .28 }));
-  banner.position.set(0, TOP + .85 - .1, 0); g.add(banner);
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(X * 2 + .9, .22, .3), gold);
-  beam.position.set(0, TOP + 1.78, 0); g.add(beam);
-  /* the bow of bulbs over the banner */
-  const bow = [];
-  for (let k = 0; k <= 48; k++) {
-    const t = k / 48 * Math.PI, x = Math.cos(t) * X, y = TOP + 1.9 + Math.sin(t) * 1.6;
-    bow.push(new THREE.Vector3(x, y, 0));
-    bulb(x, y, ARCH_Z, k + 3);
+    return p;
   }
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bow), 48, .05, 6, false), gold));
-  /* the toran: mango leaves hung point-down along the foot of the banner */
-  const leaf = cvs(64, 128), lx = leaf.getContext('2d');
-  lx.fillStyle = '#2f6b1f'; lx.beginPath(); lx.moveTo(32, 128); lx.quadraticCurveTo(0, 50, 32, 0);
-  lx.quadraticCurveTo(64, 50, 32, 128); lx.fill();
-  lx.strokeStyle = '#7fae4a'; lx.lineWidth = 2; lx.beginPath(); lx.moveTo(32, 4); lx.lineTo(32, 124); lx.stroke();
-  const N = 44, toran = new THREE.InstancedMesh(new THREE.PlaneGeometry(.2, .42),
-    new THREE.MeshStandardMaterial({ map: tx(leaf), alphaTest: .4, side: THREE.DoubleSide, roughness: .8 }), N);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
-  for (let k = 0; k < N; k++) {
-    const x = -X + (k + .5) / N * X * 2;
-    e.set(0, 0, Math.sin(k * 2.1) * .12); q.setFromEuler(e);
-    m4.compose(new THREE.Vector3(x, TOP - .25, .04), q, one);
-    toran.setMatrixAt(k, m4);
-  }
-  g.add(toran);
-  WORLD.archLeaves = toran;
-  g.position.set(0, 0, ARCH_Z);
-  scene.add(g); WORLD.arch = g;
+  const shimaki = new THREE.Mesh(sweepPoly(beamPath(5.05, .40, 2.6),
+    [[-.30, -.19], [.30, -.19], [.32, .06], [.28, .21], [-.28, .21], [-.32, .06]]), lac);
+  shimaki.position.set(0, BASE + H - .52, 0); shimaki.castShadow = true; g.add(shimaki);
+
+  const kasagi = new THREE.Mesh(sweepPoly(beamPath(5.85, .62, 2.4),
+    [[-.42, -.24], [.42, -.24], [.46, .04], [.30, .28], [-.30, .28], [-.46, .04]]), lac);
+  kasagi.position.set(0, BASE + H + .96, 0); kasagi.castShadow = true; g.add(kasagi);
+  /* a black lacquer cap along the top of the kasagi */
+  const cap = new THREE.Mesh(sweepPoly(beamPath(5.95, .62, 2.4),
+    [[-.48, .22], [.48, .22], [.48, .34], [-.48, .34]]),
+    new THREE.MeshStandardMaterial({ color: 0x120c0c, roughness: .42, metalness: .14 }));
+  cap.position.set(0, BASE + H + .96, 0); g.add(cap);
+
+  /* the gate stands at the foot of the flight, not over the court — small
+     enough that the hall keeps the top of the frame to itself */
+  /* The lowest thing on the gate is the foot of each column, and it starts
+     at BASE — so anchoring the group at y=0 left the whole torii hanging
+     BASE*scale above the court. Drop it by exactly that and the feet land. */
+  const GS = .72;
+  g.position.set(0, -BASE * GS, -8.6); g.scale.setScalar(GS);
+  scene.add(g); WORLD.torii = g;
 }
 
-/* string lights strung across the road between the shop rows, the way the
-   streets dress up for every festival */
-function buildStreetLights() {
-  [-3.6, -18.0, -24.0, -30.0, -36.0].forEach((z, r) => {
-    const a = new THREE.Vector3(-ROW_X + .3, 7.1 + (r % 2) * .4, z), b = new THREE.Vector3(ROW_X - .3, 7.3 - (r % 2) * .3, z - 1.2);
-    wire(a, b, 1.1);
-    catenary(a, b, 1.1, 34, (x, y, zz, i) => { if (i % 1 === 0) bulb(x, y - .08, zz, i + r * 2); });
-  });
-  /* plain cables too, sagging between the roofs */
-  wire(new THREE.Vector3(-ROW_X, 8.9, -6), new THREE.Vector3(ROW_X, 9.4, -4), .9);
-  wire(new THREE.Vector3(-ROW_X, 9.6, -12.5), new THREE.Vector3(ROW_X, 8.7, -13.2), 1.2);
-  wire(new THREE.Vector3(-ROW_X, 9.1, -27), new THREE.Vector3(ROW_X, 9.8, -28), 1.0);
-}
-function finishBulbs() {
-  const n = BULBS.pos.length / 3;
-  const mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(.055, 8, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, fog: true }), n);
-  const m4 = new THREE.Matrix4(), c = new THREE.Color();
-  for (let i = 0; i < n; i++) {
-    m4.makeTranslation(BULBS.pos[i * 3], BULBS.pos[i * 3 + 1], BULBS.pos[i * 3 + 2]);
-    mesh.setMatrixAt(i, m4);
-    c.setRGB(BULBS.col[i][0], BULBS.col[i][1], BULBS.col[i][2]); mesh.setColorAt(i, c);
-  }
-  mesh.frustumCulled = false; mesh.renderOrder = 6;
-  scene.add(mesh); BULBS.mesh = mesh;
-}
-/* a slow chase: a third of the bulbs dim and the dip walks along the strings */
-let BULB_ACC = 0, BULB_STEP = 0;
-function updateBulbs(dt) {
-  if (!BULBS.mesh || REDUCE) return;
-  BULB_ACC += dt; if (BULB_ACC < .14) return;
-  BULB_ACC = 0; BULB_STEP++;
-  const c = new THREE.Color(), arr = BULBS.col;
-  for (let i = 0; i < arr.length; i++) {
-    const k = ((i + BULB_STEP) % 3 === 0) ? .28 : 1;
-    c.setRGB(arr[i][0] * k, arr[i][1] * k, arr[i][2] * k);
-    BULBS.mesh.setColorAt(i, c);
-  }
-  BULBS.mesh.instanceColor.needsUpdate = true;
-}
-
-/* --------------------------------------------------- the sodium lamps
-   A tall pole at the kerb, an arm reaching over the road, and the orange
-   cone the drizzle makes visible under every head.                       */
-function buildLamp(side, z, withLight) {
-  const g = new THREE.Group(), H = 7.4, REACH = 2.1;
-  const metal = lib('lampMetal', () => new THREE.MeshStandardMaterial({ color: 0x3a3f42, roughness: .55, metalness: .6 }));
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(.07, .11, H, 10), metal);
-  pole.position.y = H / 2; pole.castShadow = true; g.add(pole);
-  const arm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
-    new THREE.Vector3(0, H - .4, 0), new THREE.Vector3(0, H + .35, 0), new THREE.Vector3(REACH, H + .2, 0)), 12, .045, 6), metal);
-  g.add(arm);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(.72, .16, .3), metal);
-  head.position.set(REACH, H + .12, 0); g.add(head);
-  const lens = new THREE.Mesh(new THREE.PlaneGeometry(.6, .22),
-    new THREE.MeshBasicMaterial({ color: hdr(3.4, 1.55, .42), toneMapped: false, fog: false }));
-  lens.rotation.x = Math.PI / 2; lens.position.set(REACH, H + .035, 0); g.add(lens);
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2),
-    new THREE.MeshBasicMaterial({ map: tx(lib('sodium', () => texGlow('rgba(255,170,70,.95)', 'rgba(255,110,30,.32)'))),
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .62 }));
-  glow.position.set(REACH, H, 0); glow.renderOrder = 3; g.add(glow);
-  const cone = new THREE.Mesh(new THREE.ConeGeometry(2.6, H, 24, 1, true),
-    lib('coneMat', () => new THREE.MeshBasicMaterial({ color: 0xff9a3c, transparent: true, opacity: .035,
-      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true })));
-  cone.position.set(REACH, H / 2, 0); cone.renderOrder = 3; g.add(cone);
-  WORLD.lampGlows = WORLD.lampGlows || []; WORLD.lampGlows.push(glow);
-  if (withLight) {
-    const lt = new THREE.PointLight(0xff9440, 3.6, 17, 2);
-    lt.position.set(REACH, H - .3, 0); g.add(lt);
-    WORLD.lampLights = WORLD.lampLights || []; WORLD.lampLights.push(lt);
-  }
-  g.position.set(side * (ROAD_W / 2 + .45), KERB_H, z);
-  g.rotation.y = side < 0 ? 0 : Math.PI;
-  scene.add(g);
-}
-
-/* ------------------------------------------------------- the autos
-   Green below, yellow above, a black hood: parked against the kerb with
-   the meter off. Built from a dozen boxes; the silhouette is the point.  */
-function buildAuto(x, z, rot) {
+function buildLantern(x, z, s, y) {
+  const stone = lib('lanternStone', () => surface(lib('granite', () => texStone(17)), [1.5, 1.5],
+    { color: 0x9aa5a5, metalness: 0, normal: 1.45 }));
+  const dark  = lib('lanternDark', () => surface(postWood(), [.9, .9],
+    { color: 0xd8c2b6, metalness: .1, normal: .7 }));
   const g = new THREE.Group();
-  const green = lib('autoGreen', () => new THREE.MeshStandardMaterial({ color: 0x1d6b34, roughness: .4, metalness: .25 }));
-  const yellow = lib('autoYellow', () => new THREE.MeshStandardMaterial({ color: 0xd9ab1f, roughness: .4, metalness: .2 }));
-  const black = lib('autoBlack', () => new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: .8 }));
-  const add = (geo, mat, px, py, pz) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = true; g.add(m); return m; };
-  add(new THREE.BoxGeometry(1.32, .42, 1.5), green, 0, .62, -.45);          /* passenger tub   */
-  add(new THREE.BoxGeometry(1.32, .2, 1.5), yellow, 0, .93, -.45);           /* the yellow band */
-  add(new THREE.BoxGeometry(.74, .62, .62), yellow, 0, .82, .82);            /* the cowl        */
-  add(new THREE.BoxGeometry(.9, .34, .2), green, 0, .5, 1.05);               /* the nose        */
-  add(new THREE.BoxGeometry(1.36, .07, 2.15), black, 0, 1.86, -.15);         /* hood            */
-  add(new THREE.BoxGeometry(1.36, .9, .08), black, 0, 1.42, -1.2);           /* hood's back     */
-  [-1, 1].forEach(s => add(new THREE.BoxGeometry(.05, .85, .05), black, s * .64, 1.42, .78));
-  add(new THREE.BoxGeometry(1.2, .55, .05), black, 0, 1.45, .82).material = lib('glass',
-    () => new THREE.MeshStandardMaterial({ color: 0x1a2a30, roughness: .1, metalness: .6, transparent: true, opacity: .55 }));
-  const wheel = lib('wheel', () => new THREE.CylinderGeometry(.24, .24, .14, 14).rotateZ(Math.PI / 2));
-  add(wheel, black, 0, .24, 1.05); add(wheel, black, -.6, .24, -.8); add(wheel, black, .6, .24, -.8);
-  const lamp = add(new THREE.CircleGeometry(.08, 12),
-    new THREE.MeshBasicMaterial({ color: hdr(1.6, 1.4, 1.0), toneMapped: false }), 0, .78, 1.16);
-  lamp.castShadow = false;
-  g.position.set(x, 0, z); g.rotation.y = rot;
-  scene.add(g);
-}
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(.44, .52, .26, 20), stone);
+  base.position.y = .13; base.castShadow = true; g.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.15, .18, 1.02, 16), stone);
+  post.position.y = .77; post.castShadow = true; g.add(post);
+  const shelf = new THREE.Mesh(new THREE.CylinderGeometry(.42, .34, .13, 20), stone);
+  shelf.position.y = 1.34; shelf.castShadow = true; g.add(shelf);
 
+  const box = new THREE.Mesh(new THREE.BoxGeometry(.50, .50, .50), dark);
+  box.position.y = 1.66; box.castShadow = true; g.add(box);
+  const paneMat = new THREE.MeshBasicMaterial({ color: hdr(2.3, .30, .085), fog: false, toneMapped: false });
+  [[0, 0, .256, 0], [0, 0, -.256, Math.PI], [.256, 0, 0, Math.PI / 2], [-.256, 0, 0, -Math.PI / 2]].forEach(p => {
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(.34, .34), paneMat);
+    pane.position.set(p[0], 1.66, p[2]); pane.rotation.y = p[3]; g.add(pane);
+  });
+  WORLD.lanternPane = WORLD.lanternPane || paneMat;
+
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(.10, .62, .34, 4, 1), stone);
+  roof.position.y = 2.06; roof.rotation.y = Math.PI / 4; roof.castShadow = true; g.add(roof);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(.66, .70, .07, 4, 1), stone);
+  brim.position.y = 1.93; brim.rotation.y = Math.PI / 4; g.add(brim);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(.09, 12, 10), stone);
+  knob.position.y = 2.28; g.add(knob);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(.055, .16, 10), stone);
+  tip.position.y = 2.4; g.add(tip);
+
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4),
+    new THREE.MeshBasicMaterial({ map: tx(texGlow('rgba(255,120,60,.9)', 'rgba(255,60,24,.28)')),
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: .5 }));
+  glow.position.y = 1.66; glow.renderOrder = 2; g.add(glow);
+  glow.userData.billboard = true;
+
+  const lt = new THREE.PointLight(0xff5a24, 2.6, 9, 2);
+  lt.position.set(0, 1.66, 0); g.add(lt);
+  WORLD.lanternLights = WORLD.lanternLights || [];
+  WORLD.lanternLights.push(lt); WORLD.lanternGlows = WORLD.lanternGlows || []; WORLD.lanternGlows.push(glow);
+
+  g.position.set(x, y || 0, z); g.scale.setScalar(s || 1);
+  scene.add(g);
+  return g;
+}
 
 function buildMaple(seed, x, z, scale) {
   const rnd = mulberry32(seed);
@@ -1897,8 +1711,8 @@ function buildMaple(seed, x, z, scale) {
 
   const leafGeo = new THREE.PlaneGeometry(.36, .36);
   const leafMat = new THREE.MeshStandardMaterial({
-    map: tx(lib('petal', () => texPetal())), color: 0xa01a08, alphaTest: .42, side: THREE.DoubleSide,
-    roughness: .86, metalness: 0, emissive: 0x3e0700, emissiveIntensity: .34
+    map: tx(texLeaf()), color: 0x2b0406, alphaTest: .42, side: THREE.DoubleSide,
+    roughness: .86, metalness: 0, emissive: 0x080000, emissiveIntensity: .12
   });
   const per = LOW ? 5 : 9;
   const inst = new THREE.InstancedMesh(leafGeo, leafMat, tips.length * per);
@@ -1935,6 +1749,27 @@ function buildMaple(seed, x, z, scale) {
   return g;
 }
 
+function buildRocks() {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x141a1c, roughness: .46, metalness: .10 });
+  const rnd = mulberry32(404), n = noise2D(88);
+  const spots = [[-6.2, -5.4, .95], [-7.4, -2.1, .7], [6.6, -7.2, .8], [8.0, -4.0, 1.05],
+                 [-9.0, -8.4, 1.15], [9.6, -9.2, .9], [3.4, -7.8, .55], [-3.2, -8.6, .6]];
+  spots.forEach((s, i) => {
+    const geo = new THREE.IcosahedronGeometry(s[2], 2);
+    const p = geo.attributes.position;
+    for (let v = 0; v < p.count; v++) {
+      const vx = p.getX(v), vy = p.getY(v), vz = p.getZ(v);
+      const d = 1 + .34 * fbm(n, vx * 1.6 + i * 7, vz * 1.6 + vy, 3, 2.2, .5);
+      p.setXYZ(v, vx * d, vy * d * .68, vz * d);
+    }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(s[0], s[2] * .30, s[1]);
+    m.rotation.set(rnd(), rnd() * TAU, rnd() * .4);
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+  });
+}
 
 /* ------------------------------- the transparent-PNG foreground layers */
 function cutoutMaterial(canvasEl, sway) {
@@ -1973,12 +1808,16 @@ function buildForeground() {
   const layers = [
     /* name        canvas                                                                     x     y     z     w     h   sway */
     ['grassFar',  texGrassCutout(101, { crest: .30, peak: .46, wide: .42, blades: 11000, len: 34, warm: .70, crest2: .46, crest3: .40 }),
-                  -11.0, 1.60, -0.4, 16, 10, .040],
+                  -3.4,  2.85, -0.4, 24, 12, .040],
+    ['rockLeft',  texRockCutout(404, { blobs: [[.24, .78, .48, .38], [.58, .94, .46, .30], [.84, 1.06, .42, .28]] }),
+                  -7.2,  2.55,  1.8, 17, 11.3, .010],
     ['grassMid',  texGrassCutout(202, { crest: .60, peak: .55, wide: .40, blades: 13000, len: 40, warm: .95, crest2: -.44, crest3: .34 }),
-                   8.6,  1.70,  3.6, 11,  6.5, .062],
+                   3.9,  2.86,  3.6, 15,  7.5, .062],
     ['grassNear', texGrassCutout(303, { crest: .42, peak: .62, wide: .48, blades: 16000, len: 50, warm: .85, crest2: .42, crest3: .44 }),
-                  -6.6,  2.10,  5.6, 9,  5.4, .092],
-    ['bough',     texBranchCutout(505), 4.6, 2.95, 6.4, 13, 8.7, .045]
+                  -1.9,  2.92,  5.6, 12,  6, .092],
+    ['bough',     texBranchCutout(505), 4.6, 2.95, 6.4, 13, 8.7, .045],
+    ['rockNear',  texRockCutout(606, { blobs: [[.18, .86, .54, .44], [.54, 1.02, .50, .36], [.86, .92, .40, .32]] }),
+                  -6.6,  1.70,  6.0, 9, 6, .008]
   ];
   WORLD.fg = [];
   layers.forEach(L => {
@@ -1999,9 +1838,9 @@ function buildWordmark() {
      Four letters at the old tracking put a 400-pixel cap height across the
      scene; the letters are spaced out instead, which keeps the type edge to
      edge while the caps come back down to the height of the headline block. */
-  const SZ = 320, TRACK = .30, PAD = 26;
+  const SZ = 320, TRACK = .12, PAD = 26;
   const m = cvs(4, 4).getContext('2d');
-  m.font = '900 ' + SZ + 'px Wordmark, sans-serif';
+  m.font = '600 ' + SZ + 'px Wordmark, sans-serif';
   m.textBaseline = 'alphabetic'; m.textAlign = 'left';
   const word = 'ADITHYA', gl = [];
   let pen = 0, ascMax = 0, descMax = 0, xMin = 1e9, xMax = -1e9;
@@ -2019,14 +1858,14 @@ function buildWordmark() {
   gl.forEach((g, i) => {
     const cw = Math.ceil(g.l + g.r) + PAD * 2, chh = Math.ceil(g.asc + g.desc) + PAD * 2;
     const c = cvs(cw, chh), x = c.getContext('2d');
-    x.font = '900 ' + SZ + 'px Wordmark, sans-serif';
+    x.font = '600 ' + SZ + 'px Wordmark, sans-serif';
     x.textBaseline = 'alphabetic'; x.textAlign = 'left';
     /* the vertical wash is baked per glyph so the whole word shares one ramp */
     const gy0 = PAD + g.asc - ascMax, gy1 = PAD + g.asc + descMax * .4;
     const grad = x.createLinearGradient(0, gy0, 0, gy1);
-    grad.addColorStop(0, 'rgb(250,240,218)');
-    grad.addColorStop(.52, 'rgb(232,206,160)');
-    grad.addColorStop(1, 'rgb(170,128,84)');
+    grad.addColorStop(0, 'rgb(226,236,229)');
+    grad.addColorStop(.52, 'rgb(198,214,203)');
+    grad.addColorStop(1, 'rgb(150,170,157)');
     x.fillStyle = grad;
     x.fillText(g.ch, PAD + g.l, PAD + g.asc);
 
@@ -2166,13 +2005,13 @@ const LEAF_AHEAD = 11, LEAF_SPREAD = 12, LEAF_R = 30;
 function buildLeafFall() {
   const N = LOW ? 110 : 260;
   const mat = new THREE.MeshStandardMaterial({
-    map: tx(lib('petal', () => texPetal())), alphaTest: .42, side: THREE.DoubleSide,
-    color: 0x7a1606, roughness: .84, metalness: 0,
+    map: tx(texLeaf()), alphaTest: .42, side: THREE.DoubleSide,
+    color: 0x40080a, roughness: .84, metalness: 0,
     /* green and blue driven to nothing: the composite tone-maps at the end,
        and an emissive red with any green in it comes back out of that pink */
-    emissive: 0x8a2600, emissiveIntensity: .62
+    emissive: 0x780200, emissiveIntensity: .72
   });
-  const inst = new THREE.InstancedMesh(new THREE.PlaneGeometry(.26, .26), mat, N);
+  const inst = new THREE.InstancedMesh(new THREE.PlaneGeometry(.40, .40), mat, N);
   inst.frustumCulled = false; inst.renderOrder = 5;
   inst.castShadow = inst.receiveShadow = false;
   const rnd = mulberry32(404), list = [];
@@ -2357,40 +2196,547 @@ function updateWisps(dt) {
   g.attributes.aS.needsUpdate = true;
 }
 
-function buildLights() {
-  scene.add(new THREE.HemisphereLight(0x5f7590, 0x0a0806, .16));
+/* ====================================================== cloth · the plates
+   Canvas UI's Cloth, ported off React and off the experimental html-in-canvas
+   path it ships with. That path exists so the effect can hang arbitrary live
+   HTML on the fabric — it captures the subtree with drawElementImage(), which
+   is Chrome-behind-a-flag only, and the component falls back to a flat render
+   everywhere else.
 
-  /* moonlight: cool, from high on the right, the only light that casts */
-  const key = new THREE.DirectionalLight(0xa9c2df, .62);
-  key.position.set(8, 30, 4);
-  key.target.position.set(0, 0, -18); scene.add(key.target);
+   Here the fabric only ever carries a still, so the capture is not needed at
+   all: the plate is drawn cover-cropped into a 2-D canvas with the card's own
+   two scrims baked on, and that canvas is uploaded straight to the texture.
+   The simulation, both shader passes and the option set are the component's,
+   unchanged. The result is that the effect runs in every WebGL2 browser
+   rather than one flag.
+
+   The grid is the component's 96 squared. Three of these on one page is a
+   third of a million cell updates a second, so each one hard-stops when its
+   card leaves the viewport and again once the wind dies and the fabric has
+   settled — both already in the component, and both load-bearing here. */
+const CLOTH_VERT = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aGrid;
+layout(location = 1) in vec4 aData;
+layout(location = 2) in vec2 aOffset;
+uniform vec2 uRes; uniform vec2 uOut; uniform float uBleed; uniform float uFocal;
+out vec2 vUv; out vec3 vNormal; out float vFold; out vec2 vLocal;
+void main () {
+  vUv = aGrid;
+  float z = aData.x;
+  vec2 nxy = aData.yz;
+  vNormal = vec3(nxy, sqrt(max(1.0 - dot(nxy, nxy), 0.04)));
+  vFold = aData.w;
+  vLocal = aGrid * uRes;
+  vec2 px = vLocal + aOffset + vec2(uBleed);
+  vec2 ndc = (px / uOut) * 2.0 - 1.0;
+  ndc.y = -ndc.y;
+  float w = (uFocal - z) / uFocal;
+  gl_Position = vec4(ndc, -z / uFocal, w);
+}`;
+const CLOTH_SDF = `
+float fabricDist (vec2 p, vec2 size, float radius) {
+  vec2 half_ = size * 0.5;
+  float r = min(radius, min(half_.x, half_.y));
+  vec2 q = abs(p - half_) - (half_ - vec2(r));
+  return length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+}`;
+const CLOTH_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv; in vec3 vNormal; in float vFold; in vec2 vLocal;
+out vec4 outColor;
+uniform sampler2D uContent; uniform float uMaxX; uniform float uLight;
+uniform float uSheen; uniform vec3 uBacking; uniform vec2 uRes;
+uniform float uRadius; uniform float uDark; uniform float uEdge;
+${CLOTH_SDF}
+void main () {
+  vec2 uv = clamp(vUv, vec2(0.001), vec2(uMaxX - 0.001, 0.999));
+  vec4 tex = texture(uContent, uv);
+  vec3 fabric = mix(uBacking, tex.rgb, tex.a);
+  vec3 n = normalize(vNormal);
+  vec3 lightDir = normalize(vec3(-0.3, 0.42, 0.86));
+  float diffFlat = 0.58 + 0.42 * lightDir.z;
+  float diff = 0.58 + 0.42 * dot(n, lightDir);
+  float shade = mix(1.0, (diff / diffFlat) * vFold, uLight);
+  vec3 lit = fabric * shade;
+  vec3 halfway = normalize(lightDir + vec3(0.0, 0.0, 1.0));
+  float specFlat = pow(halfway.z, 34.0);
+  float spec = max(pow(max(dot(n, halfway), 0.0), 34.0) - specFlat, 0.0) / (1.0 - specFlat);
+  lit += uSheen * spec * mix(vec3(1.0), fabric, 0.35);
+  float broadFlat = pow(halfway.z, 6.0);
+  float broad = max(pow(max(dot(n, halfway), 0.0), 6.0) - broadFlat, 0.0) / (1.0 - broadFlat);
+  lit += uDark * uLight * 0.3 * broad * vec3(1.0);
+  float d = fabricDist(vLocal, uRes, uRadius);
+  float hemT = smoothstep(0.0, 6.0, -d);
+  lit *= mix(1.0, mix(0.93, 1.0, hemT), uLight * (1.0 - uDark));
+  lit += vec3(uDark * uLight * 0.08 * (1.0 - hemT));
+  /* The card's outline, drawn here rather than as a rule on the box: off the
+     same distance field that cuts the fabric out, so it rides every fold,
+     takes the perspective with it and rounds itself on the corners. A CSS
+     outline can only ever trace the flat rectangle the cloth has left. */
+  /* A hairline: the band is under a pixel wide and pulled tight against the
+     cut, so it reads as an edge on the fabric rather than a drawn stroke. */
+  float rim = smoothstep(1.05, 0.2, abs(d + 0.7));
+  lit += rim * uEdge * vec3(0.874, 0.906, 0.878);
+
+  float alpha = clamp(0.5 - d, 0.0, 1.0);
+  outColor = vec4(clamp(lit, 0.0, 1.0), 1.0) * alpha;
+}`;
+const CLOTH_SHADOW_VERT = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aGrid;
+layout(location = 1) in vec4 aData;
+layout(location = 2) in vec2 aOffset;
+uniform vec2 uRes; uniform vec2 uOut; uniform float uBleed;
+out vec2 vLocal; out float vLift;
+void main () {
+  float z = aData.x;
+  vLift = z;
+  vLocal = aGrid * uRes;
+  vec2 px = vLocal + aOffset + vec2(uBleed) + vec2(10.0, 14.0) + vec2(0.3, 0.42) * z;
+  vec2 ndc = (px / uOut) * 2.0 - 1.0;
+  ndc.y = -ndc.y;
+  gl_Position = vec4(ndc, 0.0, 1.0);
+}`;
+const CLOTH_SHADOW_FRAG = `#version 300 es
+precision highp float;
+in vec2 vLocal; in float vLift;
+out vec4 outColor;
+uniform float uShadow; uniform vec2 uRes; uniform float uRadius; uniform float uDark;
+${CLOTH_SDF}
+void main () {
+  float d = fabricDist(vLocal, uRes, uRadius);
+  float a = uShadow * smoothstep(0.0, 30.0, -d);
+  a *= mix(1.0, 0.55, clamp(vLift / 50.0, 0.0, 1.0));
+  a *= mix(1.0, 0.55, uDark);
+  outColor = vec4(vec3(uDark) * a, a);
+}`;
+
+const CL_SEG = 96, CL_NODES = CL_SEG + 1, CL_DT = 1 / 120;
+const CL_WAVE = 30, CL_STIFF = 0.55, CL_GAIN = 5.0, CL_BLEED = 48;
+const CLOTH_DEFAULTS = {
+  pin: 'top', wind: 3, speed: .5, amplitude: 30, drape: 40, brush: 2.05,
+  brushSize: 150, damping: 1, light: .5, sheen: .1, shadow: .25,
+  cornerRadius: 20, backing: 'auto', perspective: 1200
+};
+
+function createCloth(output, plate, options) {
+  const config = Object.assign({}, CLOTH_DEFAULTS, options || {});
+  const wrapper = output.parentElement || output;
+  output.style.top = output.style.left = -CL_BLEED + 'px';
+  output.style.width = 'calc(100% + ' + CL_BLEED * 2 + 'px)';
+  output.style.height = 'calc(100% + ' + CL_BLEED * 2 + 'px)';
+
+  const gl = output.getContext('webgl2', { alpha: true, depth: false, stencil: false,
+    antialias: true, premultipliedAlpha: true });
+  if (!gl || gl.isContextLost()) return null;
+
+  const compile = (type, text) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, text); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) console.error('Cloth:', gl.getShaderInfoLog(sh));
+    return sh;
+  };
+  const link = (v, f) => {
+    const prog = gl.createProgram();
+    const vs = compile(gl.VERTEX_SHADER, v), fs = compile(gl.FRAGMENT_SHADER, f);
+    gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+    const u = {}, n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(prog, i);
+      u[info.name] = gl.getUniformLocation(prog, info.name); }
+    return { program: prog, vert: vs, frag: fs, uniforms: u };
+  };
+  const cloth = link(CLOTH_VERT, CLOTH_FRAG);
+  const shadow = link(CLOTH_SHADOW_VERT, CLOTH_SHADOW_FRAG);
+
+  const gridVerts = new Float32Array(CL_NODES * CL_NODES * 2);
+  for (let y = 0; y < CL_NODES; y++) for (let x = 0; x < CL_NODES; x++) {
+    const i = (y * CL_NODES + x) * 2;
+    gridVerts[i] = x / CL_SEG; gridVerts[i + 1] = y / CL_SEG;
+  }
+  const idx = new Uint32Array(CL_SEG * CL_SEG * 6);
+  let o = 0;
+  for (let y = 0; y < CL_SEG; y++) for (let x = 0; x < CL_SEG; x++) {
+    const a = y * CL_NODES + x, b = a + 1, c = a + CL_NODES, d = c + 1;
+    idx[o++] = a; idx[o++] = c; idx[o++] = b; idx[o++] = b; idx[o++] = c; idx[o++] = d;
+  }
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const gridBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, gridBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, gridVerts, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const dataBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, dataBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, CL_NODES * CL_NODES * 16, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+  const offBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, offBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, CL_NODES * CL_NODES * 8, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+  const idxBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+    new Uint8Array([0, 0, 0, 0]));
+
+  /* the one place this differs from the component: the plate goes straight in */
+  function upload() {
+    const c = plate();
+    if (!c || !c.width) return;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  }
+
+  function syncSize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(output.clientWidth * dpr));
+    const h = Math.max(1, Math.round(output.clientHeight * dpr));
+    if (output.width !== w || output.height !== h) { output.width = w; output.height = h; }
+  }
+
+  let hCur = new Float32Array(CL_NODES * CL_NODES);
+  let hPrev = new Float32Array(CL_NODES * CL_NODES);
+  let hNext = new Float32Array(CL_NODES * CL_NODES);
+  const vData = new Float32Array(CL_NODES * CL_NODES * 4);
+  const oData = new Float32Array(CL_NODES * CL_NODES * 2);
+  const zF = new Float32Array(CL_NODES * CL_NODES);
+  const rowF = new Float32Array(CL_NODES), colF = new Float32Array(CL_NODES);
+  const hang = new Float32Array(CL_NODES);
+  for (let a = 0; a < CL_NODES; a++) hang[a] = Math.pow(a / CL_SEG, 1.3);
+
+  let simTime = Math.random() * 60, gust = .5, energy = 1;
+  let edge = .048, edgeTo = .048;   /* barely there at rest, found on hover */
+  const ptr = { x: -1e5, y: -1e5, inside: false };
+  const touch = { x: -1e5, y: -1e5, vx: 0, vy: 0, s: 0 };
+  const axisA = (x, y) => config.pin === 'top' ? y : config.pin === 'bottom' ? CL_SEG - y
+    : config.pin === 'left' ? x : CL_SEG - x;
+  const axisB = (x, y) => (config.pin === 'top' || config.pin === 'bottom') ? x : y;
+
+  function stepSim(dt) {
+    simTime += dt * Math.max(config.speed, 0);
+    const t = simTime, windAmp = CL_GAIN * Math.max(config.wind, 0) * gust;
+    const kb1 = (Math.PI * 2) / (CL_SEG / 1.5), kb2 = (Math.PI * 2) / (CL_SEG / 3.8);
+    const ka = (Math.PI * 2) / (CL_SEG / 2.2);
+    const w1 = CL_WAVE * kb1, w2 = CL_WAVE * kb2, drift = 1.8 * Math.sin(.23 * t);
+    for (let b = 0; b < CL_NODES; b++)
+      rowF[b] = Math.sin(kb1 * b - w1 * t + drift) + .45 * Math.sin(kb2 * b + w2 * t * .8 + 3);
+    for (let a = 0; a < CL_NODES; a++)
+      colF[a] = (.7 + .3 * Math.sin(ka * a - 1.7 * t)) * hang[a];
+    const c2 = CL_WAVE * CL_WAVE, dt2 = dt * dt;
+    const decay = Math.exp(-Math.min(Math.max(config.damping, .05), 8) * dt);
+    for (let y = 0; y < CL_NODES; y++) {
+      const up = Math.max(y - 1, 0) * CL_NODES, down = Math.min(y + 1, CL_SEG) * CL_NODES;
+      const row = y * CL_NODES;
+      for (let x = 0; x < CL_NODES; x++) {
+        const i = row + x;
+        const h = hCur[i];
+        const lap = hCur[row + Math.max(x - 1, 0)] + hCur[row + Math.min(x + 1, CL_SEG)]
+          + hCur[up + x] + hCur[down + x] - 4 * h;
+        const force = windAmp * rowF[axisB(x, y)] * colF[axisA(x, y)];
+        const next = 2 * h - hPrev[i] + dt2 * (c2 * lap - CL_STIFF * h + force);
+        let v = h + (next - h) * decay;
+        if (v > 3.5) v = 3.5; else if (v < -3.5) v = -3.5;
+        hNext[i] = v;
+      }
+    }
+    for (let b = 0; b < CL_NODES; b++) {
+      let x = b, y = 0;
+      if (config.pin === 'bottom') y = CL_SEG;
+      else if (config.pin === 'left') { x = 0; y = b; }
+      else if (config.pin === 'right') { x = CL_SEG; y = b; }
+      hNext[y * CL_NODES + x] = 0;
+    }
+    const spent = hPrev; hPrev = hCur; hCur = hNext; hNext = spent;
+  }
+
+  function imprint(delta, width, height) {
+    if (config.brush <= 0 || touch.s < .01) return;
+    const cw = width / CL_SEG, ch = height / CL_SEG;
+    const rx = Math.max(config.brushSize, 12) / cw, ry = Math.max(config.brushSize, 12) / ch;
+    const gx = touch.x / cw, gy = touch.y / ch;
+    const x0 = Math.max(Math.ceil(gx - 2.5 * rx), 0), x1 = Math.min(Math.floor(gx + 2.5 * rx), CL_SEG);
+    const y0 = Math.max(Math.ceil(gy - 2.5 * ry), 0), y1 = Math.min(Math.floor(gy + 2.5 * ry), CL_SEG);
+    const lift = 1.1 * Math.min(config.brush, 3) * touch.s, rate = Math.min(delta * 4, 1);
+    for (let y = y0; y <= y1; y++) {
+      const oy = (y - gy) / ry, row = y * CL_NODES;
+      for (let x = x0; x <= x1; x++) {
+        const ox = (x - gx) / rx, g = Math.exp(-(ox * ox + oy * oy));
+        if (g < .02) continue;
+        const i = row + x, pull = rate * g, goal = lift * g;
+        hCur[i] += (goal - hCur[i]) * pull;
+        hPrev[i] += (goal - hPrev[i]) * pull;
+      }
+    }
+  }
+
+  function foreshorten(stride, lineStride, ds, anchor, comp) {
+    const ds2 = ds * ds;
+    for (let l = 0; l < CL_NODES; l++) {
+      const base = l * lineStride;
+      oData[(base + anchor * stride) * 2 + comp] = 0;
+      let cum = 0;
+      for (let k = anchor + 1; k < CL_NODES; k++) {
+        const i = base + k * stride, dz = zF[i] - zF[i - stride];
+        cum += ds - Math.sqrt(Math.max(ds2 - dz * dz, 0));
+        oData[i * 2 + comp] = -cum;
+      }
+      cum = 0;
+      for (let k = anchor - 1; k >= 0; k--) {
+        const i = base + k * stride, dz = zF[i] - zF[i + stride];
+        cum += ds - Math.sqrt(Math.max(ds2 - dz * dz, 0));
+        oData[i * 2 + comp] = cum;
+      }
+    }
+  }
+
+  function compose(width, height) {
+    const amp = Math.max(config.amplitude, 0);
+    const drape = config.drape * (.3 + .7 * gust);
+    const cw = width / CL_SEG, ch = height / CL_SEG;
+    let e = 0;
+    for (let y = 0; y < CL_NODES; y++) {
+      const row = y * CL_NODES;
+      for (let x = 0; x < CL_NODES; x++) {
+        const i = row + x, h = hCur[i];
+        if (Math.abs(h) > e) e = Math.abs(h);
+        zF[i] = amp * Math.tanh(h) + drape * hang[axisA(x, y)];
+      }
+    }
+    energy = e;
+    for (let y = 0; y < CL_NODES; y++) {
+      const up = Math.max(y - 1, 0) * CL_NODES, down = Math.min(y + 1, CL_SEG) * CL_NODES;
+      const row = y * CL_NODES;
+      for (let x = 0; x < CL_NODES; x++) {
+        const i = row + x;
+        const l = row + Math.max(x - 1, 0), r = row + Math.min(x + 1, CL_SEG);
+        const dzdx = (zF[r] - zF[l]) / (2 * cw), dzdy = (zF[down + x] - zF[up + x]) / (2 * ch);
+        const inv = 1 / Math.hypot(dzdx, dzdy, 1);
+        const curve = zF[l] + zF[r] + zF[up + x] + zF[down + x] - 4 * zF[i];
+        let fold = 1 - curve * .01;
+        if (fold < .86) fold = .86; else if (fold > 1.06) fold = 1.06;
+        const q = i * 4;
+        vData[q] = zF[i]; vData[q + 1] = -dzdx * inv; vData[q + 2] = -dzdy * inv; vData[q + 3] = fold;
+      }
+    }
+    const mid = CL_SEG >> 1;
+    if (config.pin === 'top' || config.pin === 'bottom') {
+      foreshorten(CL_NODES, 1, ch, config.pin === 'top' ? 0 : CL_SEG, 1);
+      foreshorten(1, CL_NODES, cw, mid, 0);
+    } else {
+      foreshorten(1, CL_NODES, cw, config.pin === 'left' ? 0 : CL_SEG, 0);
+      foreshorten(CL_NODES, 1, ch, mid, 1);
+    }
+  }
+
+  const backing = config.backing === 'auto' ? [.02, .026, .035] : config.backing;
+
+  function draw() {
+    const resW = Math.max(wrapper.clientWidth, 1), resH = Math.max(wrapper.clientHeight, 1);
+    const outW = Math.max(output.clientWidth, 1), outH = Math.max(output.clientHeight, 1);
+    const light = Math.min(Math.max(config.light, 0), 1);
+    const radius = Math.max(config.cornerRadius, 0);
+    const lum = .299 * backing[0] + .587 * backing[1] + .114 * backing[2];
+    const dark = Math.min(Math.max((.5 - lum) / .35, 0), 1);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, output.width, output.height);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, dataBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, vData);
+    gl.bindBuffer(gl.ARRAY_BUFFER, offBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, oData);
+
+    gl.useProgram(shadow.program);
+    gl.uniform2f(shadow.uniforms.uRes, resW, resH);
+    gl.uniform2f(shadow.uniforms.uOut, outW, outH);
+    gl.uniform1f(shadow.uniforms.uBleed, CL_BLEED);
+    gl.uniform1f(shadow.uniforms.uShadow, Math.min(Math.max(config.shadow, 0), 1));
+    gl.uniform1f(shadow.uniforms.uRadius, radius);
+    gl.uniform1f(shadow.uniforms.uDark, dark);
+    gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_INT, 0);
+
+    gl.useProgram(cloth.program);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(cloth.uniforms.uContent, 0);
+    gl.uniform2f(cloth.uniforms.uRes, resW, resH);
+    gl.uniform2f(cloth.uniforms.uOut, outW, outH);
+    gl.uniform1f(cloth.uniforms.uBleed, CL_BLEED);
+    gl.uniform1f(cloth.uniforms.uFocal, Math.max(config.perspective, 200));
+    gl.uniform1f(cloth.uniforms.uMaxX, 1);
+    gl.uniform1f(cloth.uniforms.uLight, light);
+    gl.uniform1f(cloth.uniforms.uSheen, Math.max(config.sheen, 0));
+    gl.uniform1f(cloth.uniforms.uRadius, radius);
+    gl.uniform1f(cloth.uniforms.uDark, dark);
+    gl.uniform1f(cloth.uniforms.uEdge, edge);
+    gl.uniform3f(cloth.uniforms.uBacking, backing[0], backing[1], backing[2]);
+    gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_INT, 0);
+    gl.bindVertexArray(null);
+  }
+
+  let raf = 0, last = performance.now(), debt = 0, running = false, visible = false, dead = false;
+  function frame(now) {
+    if (dead) return;
+    if (!visible) { running = false; return; }
+    const delta = Math.min((now - last) / 1000, 1 / 20);
+    last = now;
+    const width = Math.max(wrapper.clientWidth, 1), height = Math.max(wrapper.clientHeight, 1);
+    if (!REDUCE) {
+      const t = simTime;
+      const target = Math.max(.55 + .35 * Math.sin(t * .31 + 1.3)
+        + .25 * Math.sin(t * .83) * (.5 + .5 * Math.sin(t * .17)), .15);
+      gust += (target - gust) * Math.min(delta * 2, 1);
+      const sT = ptr.inside && config.brush > 0 ? 1 : 0;
+      touch.s += (sT - touch.s) * Math.min(delta * (ptr.inside ? 8 : 2.5), 1);
+      const om = 14;
+      touch.vx += ((ptr.x - touch.x) * om * om - 2 * om * touch.vx) * delta;
+      touch.vy += ((ptr.y - touch.y) * om * om - 2 * om * touch.vy) * delta;
+      touch.x += touch.vx * delta; touch.y += touch.vy * delta;
+      imprint(delta, width, height);
+      edge += (edgeTo - edge) * Math.min(delta * 5, 1);
+      debt = Math.min(debt + delta, CL_DT * 5);
+      while (debt >= CL_DT) { stepSim(CL_DT); debt -= CL_DT; }
+    }
+    compose(width, height);
+    draw();
+    if (REDUCE || (config.wind <= .001 && energy < .004 && touch.s < .01)) { running = false; return; }
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    if (dead || running || !visible) return;
+    running = true; last = performance.now(); raf = requestAnimationFrame(frame);
+  }
+
+  const ro = new ResizeObserver(() => { syncSize(); upload(); start(); });
+  ro.observe(output);
+  const io = new IntersectionObserver(es => {
+    visible = es[es.length - 1] ? es[es.length - 1].isIntersecting : false;
+    if (visible) start();
+  });
+  io.observe(output);
+  const onMove = e => {
+    const r = wrapper.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (touch.s < .01) { touch.x = x; touch.y = y; touch.vx = touch.vy = 0; }
+    ptr.x = x; ptr.y = y; ptr.inside = true; start();
+  };
+  const onLeave = () => { ptr.inside = false; };
+  wrapper.addEventListener('pointermove', onMove, { passive: true });
+  wrapper.addEventListener('pointerleave', onLeave, { passive: true });
+  const onHidden = () => { if (document.hidden) { running = false; cancelAnimationFrame(raf); } else start(); };
+  document.addEventListener('visibilitychange', onHidden);
+
+  syncSize(); upload(); compose(Math.max(wrapper.clientWidth, 1), Math.max(wrapper.clientHeight, 1));
+  return { refresh(){ syncSize(); upload(); start(); }, wake: start,
+           setEdge(v){ edgeTo = v; start(); } };
+}
+
+/* the plate: the card's own still, cover-cropped, carrying the two scrims the
+   CSS used to lay over it — baked in so they ripple with the cloth instead of
+   sitting flat on top of it */
+function clothPlate(img, w, h) {
+  const c = cvs(Math.max(1, w | 0), Math.max(1, h | 0)), x = c.getContext('2d');
+  const s = Math.max(c.width / img.width, c.height / img.height);
+  const dw = img.width * s, dh = img.height * s;
+  x.drawImage(img, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+  let g = x.createLinearGradient(0, 0, 0, c.height);
+  g.addColorStop(.36, 'rgba(3,6,9,.05)'); g.addColorStop(1, 'rgba(3,6,9,.73)');
+  x.fillStyle = g; x.fillRect(0, 0, c.width, c.height);
+  g = x.createLinearGradient(0, 0, 0, c.height);
+  g.addColorStop(.46, 'rgba(4,6,9,0)'); g.addColorStop(1, 'rgba(4,6,9,.80)');
+  x.fillStyle = g; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+function buildCardCloth() {
+  if (COARSE) return;                     /* no pointer to brush it with */
+  $$('.cards .card-fr').forEach(fr => {
+    const url = (getComputedStyle(fr).backgroundImage.match(/url\(["']?([^"')]+)/) || [])[1];
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      let plate = null, pw = 0, ph = 0;
+      const get = () => {
+        const w = Math.round(fr.clientWidth * dpr), h = Math.round(fr.clientHeight * dpr);
+        if (!plate || w !== pw || h !== ph) { plate = clothPlate(img, w, h); pw = w; ph = h; }
+        return plate;
+      };
+      const out = document.createElement('canvas');
+      out.className = 'cloth-out'; out.setAttribute('aria-hidden', 'true');
+      fr.appendChild(out);
+      const inst = createCloth(out, get, { wind: 3, speed: .5, amplitude: 30, drape: 40,
+        brush: 2.05, brushSize: 150, damping: 1, light: .5, sheen: .1, shadow: .25,
+        cornerRadius: 20, perspective: 1200, pin: 'top' });
+      /* only hide the card's own painting once the fabric is really carrying it */
+      if (!inst) { out.remove(); return; }
+      fr.classList.add('on-cloth');
+      const card = fr.closest('.card') || fr;
+      card.addEventListener('pointerenter', () => inst.setEdge(.185), { passive: true });
+      card.addEventListener('pointerleave', () => inst.setEdge(.048), { passive: true });
+    };
+    img.onerror = () => {};
+    img.src = url;
+  });
+}
+
+function buildLights() {
+  scene.add(new THREE.HemisphereLight(0x53838f, 0x060a08, .13));
+
+  const key = new THREE.DirectionalLight(0xb6dbe4, 1.22);
+  key.position.set(2.6, 21, 2.5);
+  key.target.position.set(0, 2.2, -12.5); scene.add(key.target);
   if (WANT_SHADOW) {
     key.castShadow = true;
     const S = LOW ? 1024 : 2048;
     key.shadow.mapSize.set(S, S);
     const c = key.shadow.camera;
-    c.left = -22; c.right = 22; c.top = 34; c.bottom = -30; c.near = 3; c.far = 80;
+    c.left = -26; c.right = 26; c.top = 34; c.bottom = -16; c.near = 3; c.far = 78;
     key.shadow.bias = -0.0012; key.shadow.normalBias = .035; key.shadow.radius = 2.2;
   }
   scene.add(key); WORLD.key = key;
 
-  /* a warm rim off the moon, so the rooflines do not go flat against the sky */
-  const moonKey = new THREE.DirectionalLight(0xffa064, .36);
+  /* moonlight: no shadow, no fill, purely a rim down the right-hand slope of
+     every roof — without it the hall is a flat black cut-out against the sky */
+  const moonKey = new THREE.DirectionalLight(0xff6a42, .52);
   moonKey.position.set(26, 30, -60);
-  moonKey.target.position.set(0, 6, -30); scene.add(moonKey.target);
+  moonKey.target.position.set(0, 8, -40); scene.add(moonKey.target);
   scene.add(moonKey);
 
-  /* the shops' own light on the footpaths: two long washes per side */
-  [-1, 1].forEach(s => [-8, -24].forEach(z => {
-    const l = new THREE.PointLight(0xffd29a, 1.7, 15, 2);
-    l.position.set(s * (ROW_X - 1.4), 2.6, z); scene.add(l);
-  }));
-  /* the arch, and the building at the end of the street */
-  const archL = new THREE.PointLight(0xffb45a, 2.6, 14, 2);
-  archL.position.set(0, 6.4, ARCH_Z + 1.6); scene.add(archL); WORLD.archLight = archL;
-  const endL = new THREE.PointLight(0xffc66a, 3.2, 18, 2);
-  endL.position.set(0, 4.2, END_Z + 5.5); scene.add(endL); WORLD.endLight = endL;
+  /* The hall's own lamps. They light the podium and the top of the flight and
+     nothing else — a range that reaches the roof turns the whole building into
+     a paper lantern and the silhouette disappears. */
+  const hallL = new THREE.PointLight(0xff8a26, 2.3, 15, 2);
+  hallL.position.set(0, PODIUM + 1.2, TEMPLE_Z + 8.6); scene.add(hallL); WORLD.hallLight = hallL;
+  [-1, 1].forEach(s => {
+    const w = new THREE.PointLight(0xff8420, 2.2, 11, 2);
+    w.position.set(s * 11.4, PODIUM + 1.2, TEMPLE_Z + 5.6); scene.add(w);
+  });
+
+  /* the moon throws almost nothing, but a trace of red high on the right
+     keeps it attached to the scene instead of floating on top of it */
+  const moonL = new THREE.PointLight(0xff3a1c, 3.0, 46, 2);
+  moonL.position.set(11.0, 17.0, -24.0); scene.add(moonL); WORLD.moonLight = moonL;
+
+  const fill = new THREE.PointLight(0x86c6d2, 0.95, 30, 2);
+  fill.position.set(-1, 13.5, -16.0); scene.add(fill);
+
+  /* the flight is the spine of the composition — without a lamp of its own it
+     falls into the same black as the ground and the eye has nothing to climb */
+  const stairL = new THREE.PointLight(0xffa049, 4.2, 17, 2);
+  stairL.position.set(0, 7.6, -26.0); scene.add(stairL);
 }
+/* ====================================================== 6 · planar mirror */
 /* ================================================== 7 · post-processing */
 const POST = { levels: [] };
 const QUAD_VS = 'varying vec2 vUv;\nvoid main(){ vUv = uv; gl_Position = vec4( position.xy, 0.0, 1.0 ); }';
@@ -2502,12 +2848,12 @@ function renderPost() {
 
 /* ================================================= 8 · the camera rig */
 const CAM = [
-  { p: [  0.0, 4.05,  13.6 ], t: [  0.0, 5.40, -18.0 ], fov: 38 },  /* 0 hero: down the street      */
-  { p: [ -2.6, 2.10,   7.0 ], t: [  5.0, 4.20, -12.0 ], fov: 46 },  /* 1 the street: the right row  */
-  { p: [  2.8, 2.60,  -1.0 ], t: [ -7.4, 3.40, -10.0 ], fov: 46 },  /* 2 demos: the demo shops     */
-  { p: [  0.0, 1.70,  -3.0 ], t: [  0.0, 8.60, -13.0 ], fov: 54 },  /* 3 process: under the arch   */
-  { p: [  2.2, 4.00, -22.0 ], t: [ -4.2, 5.00, -44.0 ], fov: 42 },  /* 4 contact: your board       */
-  { p: [  0.0, 11.0, -23.0 ], t: [  0.0, 2.50, -44.0 ], fov: 48 }   /* 5 footer                    */
+  { p: [  0.0, 4.05, 13.6 ], t: [  0.0, 6.60, -18.0 ], fov: 36 },  /* 0 hero        */
+  { p: [ -5.6, 2.35, 11.6 ], t: [  1.2, 5.60, -14.0 ], fov: 48 },  /* 1 the sanmon  */
+  { p: [  1.2, 3.60,  2.2 ], t: [ -0.6, 7.50, -22.0 ], fov: 40 },  /* 2 gardens     */
+  { p: [  5.2, 2.10, -3.4 ], t: [ -2.6, 7.00, -20.0 ], fov: 46 },  /* 3 craft       */
+  { p: [ -2.6, 7.60, -16.0 ], t: [ -5.4, 12.6, -40.0 ], fov: 42 }, /* 4 your shop   */
+  { p: [  0.0, 10.5, -20.0 ], t: [  0.0, 3.00, -34.0 ], fov: 46 }  /* 5 footer      */
 ];
 const RIG = { prog: 0, smooth: 0, mx: 0, my: 0, tmx: 0, tmy: 0, intro: 0, focus: -1, focusAmt: 0 };
 let curveP, curveT, tmpCam;
@@ -2598,7 +2944,7 @@ function layoutWord() {
      as the six-letter word could afford to, decapitates the K and the E. The
      narrow branch is held a little inside the edge because a phone frame has
      no gutter to lose the tracking that trails the final letter into. */
-  const fill = narrow ? .92 : .94;
+  const fill = narrow ? .90 : .92;   /* seven letters: keep the outer As inside the frame */
   const s = (R.x - L.x) * fill / WORD.ink.w;
   /* on a tall frame the mounds sit near mid-height, so the baseline has to
      ride above them or the whole word disappears into the grass */
@@ -2640,8 +2986,6 @@ function wireReveals() {
 function splitHeadingWords() {
   if (REDUCE) return;
   $$('h1.display, h2.display').forEach(heading => {
-    /* the heading keeps its whole sentence as its name; the split words are
-       presentation only */
     heading.setAttribute('aria-label', heading.textContent.replace(/\s+/g, ' ').trim());
     const lines = heading.querySelectorAll('.mask-line');
     const targets = lines.length ? [].slice.call(lines) : [heading];
@@ -2801,7 +3145,7 @@ function wireHeroExit() {
 function wireNav() {
   let last = 0;
   const rail = $('#rail');
-  const names = ['Top', 'The street', 'Try a shop', 'How it works', 'Your shop', 'Footer'];
+  const names = ['Top', 'The door online', 'Try a shop', 'How it works', 'Your shop', 'Footer'];
   SECS.forEach((s, i) => {
     const b = document.createElement('button');
     b.innerHTML = '<i></i>'; b.title = names[i] || ''; b.tabIndex = -1;
@@ -2911,13 +3255,12 @@ function makeGrain() {
 /* ============================================ 12 · the card viewports */
 const CARDS = [];
 function buildCards() {
-  /* the three demo shops, each seen square-on from across the road, and the
-     board at the end of the street for the window in the hero */
-  const defs = [0, 1, 2].map(i => {
-    const s = shopSpot(i);
-    return { p: [1.2, 2.5, s.z + 1.8], t: [s.x, 3.1, s.z - .2], fov: 46 };
-  });
-  defs.push({ p: [0, 4.6, -27.0], t: [0, 5.2, END_Z], fov: 30 });
+  const defs = [
+    { p: [-2.0, 1.60, -2.0], t: [0, 10.0, -34.0], fov: 40 },    /* the long climb */
+    { p: [4.2, 2.90, -9.5], t: [6.4, 2.90, -14.4], fov: 40 },   /* lantern court  */
+    { p: [3.4, 2.40, 2.0], t: [-1.0, -.60, -6.0], fov: 40 },    /* the wet court  */
+    { p: [0.6, 3.40, -12.0], t: [0, 12.0, -40.0], fov: 26 }     /* hero window    */
+  ];
   $$('[data-view]').forEach(el => {
     const d = defs[+el.dataset.view]; if (!d) return;
     const c = new THREE.PerspectiveCamera(d.fov, 4 / 5, .3, 200);
@@ -3074,18 +3417,14 @@ function updateWorld(dt) {
   RIG.focusAmt = damp(RIG.focusAmt, RIG.focus >= 0 ? 1 : 0, 5, dt);
   const pulse = Math.sin(clock * 1.9) * .5 + .5;
   const f = RIG.focusAmt;
-  if (WORLD.endGlow) WORLD.endGlow.material.opacity = .22 + f * .10 + Math.sin(clock * .6) * .03;
-  if (WORLD.endLight) WORLD.endLight.intensity = 3.2 * (1 + f * .25);
+  if (WORLD.hallHalo) WORLD.hallHalo.material.opacity = .30 + f * .14 + Math.sin(clock * .6) * .035;
+  if (WORLD.hallLight) WORLD.hallLight.intensity = 3.4 * (1 + f * .30) * (1 + Math.sin(clock * .43) * .045);
   /* the moon only breathes — the haze in front of it is what actually moves */
   if (WORLD.moonHalo) WORLD.moonHalo.material.opacity = .44 + f * .10 + Math.sin(clock * .34) * .05;
-  if (WORLD.lampGlows) WORLD.lampGlows.forEach(g => { g.quaternion.copy(camera.quaternion); });
-  /* a few boards have a tube on its way out */
-  if (WORLD.boards && !REDUCE) WORLD.boards.forEach(b => {
-    if (!b.flicker) return;
-    const off = Math.sin(clock * 21 + b.ph) > .93 && Math.sin(clock * .8 + b.ph) > .4;
-    b.mat.color.setScalar(b.base * (off ? .42 : 1));
+  if (WORLD.lanternLights) WORLD.lanternLights.forEach((l, i) => {
+    l.intensity = 2.6 * (1 + f * .55) * (.86 + .22 * Math.sin(clock * (2.3 + i * .7) + i * 2.1) + .1 * pulse);
   });
-  updateBulbs(dt);
+  if (WORLD.lanternGlows) WORLD.lanternGlows.forEach(g => { g.quaternion.copy(camera.quaternion); });
 
   /* haze slides across the courtyard */
   if (WORLD.haze) WORLD.haze.forEach(h => {
@@ -3178,51 +3517,61 @@ function queue() { TIMER ? setTimeout(() => frame(performance.now()), 16) : requ
 
 /* ======================================================== 14 · booting */
 const JOBS = [
-  ['Reading the type', () => document.fonts && Promise.all([
-    document.fonts.load('900 320px Wordmark'),
-    document.fonts.load('600 80px Kannada', 'ಕನ್ನಡ'),
-    document.fonts.load('700 40px Onest')])],
-  ['Laying the road', () => { initGL(); WORLD.uT = { value: 0 }; buildRig(); buildLights(); buildShell(); }],
-  ['Raising the shops', () => buildShops()],
+  ['Reading the type', () => document.fonts && Promise.all([document.fonts.load('600 320px Wordmark'), document.fonts.load('600 80px Onest')])],
+  ['Pouring the ground', () => { initGL(); WORLD.uT = { value: 0 }; buildRig(); buildLights(); }],
+  ['Cutting the approach', () => buildShell()],
+  ['Raising the hall', () => buildTemple()],
   ['Hanging the moon', () => buildMoon()],
-  ['Tying up the arch', () => { buildArch(); buildStreetLights(); finishBulbs(); }],
-  ['Lighting the lamps', () => {
-    [[-1, 1.5], [1, -6], [-1, -17.5], [1, -21], [-1, -31], [1, -35.5]]
-      .forEach((l, i) => buildLamp(l[0], l[1], !LOW || i % 2 === 0));
+  ['Setting the gate', () => buildTorii()],
+  ['Placing the stones', () => {
+    buildRocks();
+    buildLantern(7.4, -7.0, 1.15); buildLantern(-7.6, -5.2, 1.0);
+    /* The pairs flanking the flight were given flat heights — 2 and PODIUM —
+       and the flight does not reach either at those depths, so both pairs hung
+       in the air. Solve the step under each one from the same constants the
+       treads and cheeks are built from, and they stand on the rail instead of
+       beside it. */
+    const stepAt   = z => Math.max(0, (STAIR_Z0 - z) / STAIR_RUN - .5);
+    const cheekTop = z => (stepAt(z) + 1) * (PODIUM / STEPS) + .45;
+    const cheekX   = z => (STAIR_W + (STEPS - stepAt(z)) * .052) / 2 + .45;
+    [-14.4, -23.5].forEach((z, i) => {
+      const sc = i ? .95 : .90;
+      buildLantern( cheekX(z), z, sc, cheekTop(z));
+      buildLantern(-cheekX(z), z, sc, cheekTop(z));
+    });
   }],
-  ['Parking the autos', () => {
-    buildAuto(-4.1, -12.4, Math.PI * .97); buildAuto(4.0, -26.5, .05); buildAuto(-3.9, -30.0, Math.PI);
-  }],
-  ['Growing the gulmohars', () => {
-    buildMaple(71, -6.5, 5.0, 1.7); buildMaple(73, -6.6, -38.5, 1.5); buildMaple(75, 6.6, 7.0, 1.35);
+  ['Growing the maples', () => {
+    buildMaple(71, 12.6, -13.0, 1.05); buildMaple(72, -11.8, -9.4, .95);
+    buildMaple(73, 9.2, -19.0, .82);   buildMaple(74, -14.5, -17.5, 1.0);
+    buildMaple(75, 16.5, -6.0, .88);
   }],
   ['Painting the near grass', () => buildForeground()],
-  ['Cutting the name', () => buildWordmark()],
-  ['Bringing the drizzle', () => { buildAtmosphere(); buildLeafFall(); buildWisps(); }],
-  ['Switching on the street', () => {
-    initPost(); buildCards();
+  ['Cutting the word', () => buildWordmark()],
+  ['Raising the mist', () => { buildAtmosphere(); buildLeafFall(); buildWisps(); }],
+  ['Polishing the water', () => {
+    initPost(); buildCards(); buildCardCloth();
     WORLD.fg.forEach(m => m.layers.set(1));
     WORD.glyphs.forEach(m => m.layers.set(2));
     if (WORLD.rain) WORLD.rain.layers.set(1);
-    /* the fall is all around the rig, including behind it */
+    /* the fall is all around the rig, including behind it — mirroring it
+       would drop leaves into the water that are nowhere near the water */
     if (WORLD.leaves) WORLD.leaves.mesh.layers.set(1);
     WORLD.ripples.forEach(r => r.layers.set(1));
-    layoutWord(); measure();
+    layoutWord(); measure(); wireShopName();
     /* nothing that casts a shadow ever moves, so bake it once */
     if (WANT_SHADOW && WORLD.key) { WORLD.key.shadow.autoUpdate = false; WORLD.key.shadow.needsUpdate = true; }
-    wireShopName();
   }]
 ];
 
-/* the contact form's shop name goes up on the board at the end of the street */
+/* the contact form's shop name goes up on the hall's plaque */
 function wireShopName() {
   const input = $('#shop-name'); if (!input) return;
   let t = 0;
   input.addEventListener('input', () => {
     clearTimeout(t);
-    t = setTimeout(() => drawEndBoard(input.value.slice(0, 40)), 120);
+    t = setTimeout(() => drawPlaque(input.value.slice(0, 40)), 120);
   });
-  if (input.value) drawEndBoard(input.value.slice(0, 40));
+  if (input.value) drawPlaque(input.value.slice(0, 40));
 }
 
 function boot() {
@@ -3242,7 +3591,7 @@ function boot() {
     let r;
     try { r = j[1](); }
     catch (err) {
-      console.error('[street] job "' + j[0] + '" failed', err);
+      console.error('[portfolio] job "' + j[0] + '" failed', err);
       if (i <= 1) return fallback(err);          /* no renderer, no scene */
     }
     (r && r.then) ? r.then(done, done) : done();
@@ -3256,7 +3605,7 @@ function fallback(err) {
   document.body.classList.remove('is-locked');
   preEl.classList.add('done');
   $$('[data-rv], .mask-line').forEach(e => e.classList.add('rv-in'));
-  window.__street = { fallback: true, error: String(err && err.message || err) };
+  window.__street = window.__kage = { fallback: true, error: String(err && err.message || err) };
 }
 
 function start() {
@@ -3288,7 +3637,7 @@ function start() {
   running = true; tPrev = performance.now();
   INTRO.t0 = shot !== null ? 0 : (REDUCE ? performance.now() - 4000 : performance.now());
   queue();
-  window.__street = { RIG: RIG, WORLD: WORLD, WORD: WORD, CAM: CAM, POST: POST, renderer: renderer, scene: scene, camera: camera, anchors: () => anchors };
+  window.__street = window.__kage = { RIG: RIG, WORLD: WORLD, WORD: WORD, CAM: CAM, POST: POST, renderer: renderer, scene: scene, camera: camera, anchors: () => anchors };
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(boot, 0);
