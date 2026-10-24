@@ -85,13 +85,45 @@ function Customers({ snap }: { snap: LabSnapshot | null }) {
   );
 }
 
+/** The numbers the missions point at: stock (oversold in red), the payment ledger, the WhatsApp queue, the breaker. */
+function ShopState({ snap }: { snap: LabSnapshot | null }) {
+  if (!snap?.stock) return null;
+  const doubled = snap.ledger?.charged_more_than_once ?? [];
+  return (
+    <Card title="Inside the shop">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+        <div>
+          <h3 className="mb-2 text-xs font-medium text-ink-3">Stock</h3>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3" aria-label="Stock">
+            {snap.stock.items.map((i) => (
+              <li key={i.sku} className="flex justify-between gap-2">
+                <span className="truncate">{i.name}</span>
+                <span className={cn('figure', i.stock < 0 && 'font-semibold text-flag')}>{i.stock}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-ink-3">Indexes on items: {snap.stock.indexes.join(', ') || 'none'}</p>
+        </div>
+        <dl className="space-y-2 text-sm">
+          <div className="flex justify-between gap-2"><dt>Charges taken</dt><dd className="figure">{snap.ledger?.charges ?? 0}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Charged twice (last 2 min)</dt><dd className={cn('figure', doubled.length > 0 && 'font-semibold text-flag')}>{doubled.length}</dd></div>
+          <div className="flex justify-between gap-2"><dt>WhatsApp messages waiting</dt><dd className="figure">{snap.queue?.backlog ?? 0}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Dead letters</dt><dd className="figure">{snap.queue?.dead ?? 0}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Payments circuit</dt><dd>{snap.orders?.breaker ?? '–'}</dd></div>
+        </dl>
+      </div>
+    </Card>
+  );
+}
+
 function Incidents({ items, onOpen }: { items: LabIncident[]; onOpen: (mission: string) => void }) {
   const open = items.filter((i) => !i.resolved_at);
+  const shown = [...open, ...items.filter((i) => i.resolved_at).slice(0, 3)];
   return (
     <Card title={`Incidents (${open.length} open)`}>
       {items.length === 0 ? <p className="text-sm text-ink-2">Nothing has broken yet. Break something from a mission and Tiga files it here within 15 seconds.</p> : (
         <ul className="divide-y divide-rule text-sm">
-          {items.slice(0, 12).map((i) => (
+          {shown.map((i) => (
             <li key={i.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
               <div className="min-w-0">
                 <p className={cn('font-medium', i.resolved_at && 'text-ink-3 line-through')}>{i.title}</p>
@@ -185,6 +217,7 @@ export function Learn() {
           </Card>
         )}
         {running && <Customers snap={snap} />}
+        {running && <ShopState snap={snap} />}
         {running && <Incidents items={incidents} onOpen={setCurrent} />}
       </div>
 

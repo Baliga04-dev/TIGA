@@ -39,6 +39,7 @@ class CircuitBreaker:
         self.threshold, self.cooldown_s, self.clock = threshold, cooldown_s, clock
         self.failures = 0
         self.opened_at: float | None = None
+        self.trial = False          # true while the one half-open trial call is in flight
         self._lock = threading.Lock()
 
     @property
@@ -49,16 +50,21 @@ class CircuitBreaker:
 
     def call(self, fn: Callable[[], T]) -> T:
         with self._lock:
-            if self.state == "open":
+            state = self.state
+            # open: refuse. half-open: exactly one caller gets to try; everyone else is refused until it answers
+            if state == "open" or (state == "half-open" and self.trial):
                 raise CircuitOpen("payments are failing; not calling them for a few seconds")
+            if state == "half-open":
+                self.trial = True
         try:
             result = fn()
         except Exception:
             with self._lock:
+                self.trial = False
                 self.failures += 1
                 if self.failures >= self.threshold or self.opened_at is not None:
                     self.opened_at = self.clock()   # open, or re-open after a failed trial call
             raise
         with self._lock:
-            self.failures, self.opened_at = 0, None
+            self.failures, self.opened_at, self.trial = 0, None, False
         return result

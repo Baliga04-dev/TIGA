@@ -138,9 +138,9 @@ MISSIONS: dict[str, dict] = {
         "fix": [{"kind": "sql", "name": "create_index"}],
         "undo": [{"kind": "sql", "name": "drop_index"}, _knobs("customers", rps=2)]}, "check": "index"},
     "race": {"file": "02-race.md", "actions": {
-        "break": [_knobs("menu", atomic_stock=False), {"kind": "restock", "sku": HOT, "stock": 5}, {"kind": "burst", "sku": HOT, "n": 40}],
+        "break": [_knobs("menu", atomic_stock=False, oven=False), {"kind": "restock", "sku": HOT, "stock": 5}, {"kind": "burst", "sku": HOT, "n": 40}],
         "fix": [_knobs("menu", atomic_stock=True)],
-        "undo": [_knobs("menu", atomic_stock=False), {"kind": "restock", "sku": HOT, "stock": 25}]}, "check": "race"},
+        "undo": [_knobs("menu", atomic_stock=False, oven=True), {"kind": "restock", "sku": HOT, "stock": 25}]}, "check": "race"},
     "timeouts": {"file": "03-timeouts.md", "actions": {
         "break": [_knobs("payments", latency_ms=25000), _knobs("orders", payment_timeout_s=0), _knobs("customers", rps=4)],
         "fix": [_knobs("orders", payment_timeout_s=2), _knobs("gateway", upstream_timeout_s=5)],
@@ -172,9 +172,10 @@ MISSIONS: dict[str, dict] = {
         "break": [{"kind": "mystery"}],
         "undo": [{"kind": "mystery_clear"}]}, "check": "mystery"},
     "scaling": {"file": "09-scaling.md", "actions": {
-        "break": [_knobs("payments", latency_ms=1500), _knobs("customers", rps=30)],
+        "break": [{"kind": "sql", "name": "create_index"}, _knobs("payments", latency_ms=1500), _knobs("customers", rps=30)],
         "fix": [{"kind": "compose", "op": "scale", "service": "orders", "n": 3}],
-        "undo": [_knobs("payments", latency_ms=0), _knobs("customers", rps=2), {"kind": "compose", "op": "scale", "service": "orders", "n": 1}]},
+        "undo": [_knobs("payments", latency_ms=0), _knobs("customers", rps=2), {"kind": "compose", "op": "scale", "service": "orders", "n": 1},
+                 {"kind": "sql", "name": "drop_index"}]},
         "check": "scaling"},
     "security": {"file": "10-security.md", "actions": {
         "break": [_knobs("menu", safe_search=False), _knobs("gateway", require_api_key=False, rate_limit_per_min=0), {"kind": "inject"}],
@@ -276,16 +277,24 @@ class Lab:
             rows = parse_metrics(text) if code == 200 and isinstance(text, str) else []
             prev = Lab._last.get(name)
             services[name] = summarize(prev[1], rows, now - prev[0]) if prev else {"rps": 0.0, "error_rate": 0.0, "p95_s": 0.0}
+            if prev:
+                routes = sorted({lb.get("route") for n, lb, _ in rows if n == "shop_requests_total"} - {None})
+                services[name]["routes"] = {r: summarize([x for x in prev[1] if x[1].get("route") == r],
+                                                         [x for x in rows if x[1].get("route") == r], now - prev[0]) for r in routes}
             backlog = next((v for n, _, v in rows if n == "shop_queue_backlog"), None)
             if backlog is not None:
                 services[name]["backlog"] = backlog
+            queries = next((v for n, _, v in rows if n == "shop_db_queries_total"), None)
+            old = next((v for n, _, v in prev[1] if n == "shop_db_queries_total"), None) if prev else None
+            if queries is not None and old is not None:
+                services[name]["db_qps"] = round(max(queries - old, 0) / max(now - prev[0], 1e-6), 2)
             Lab._last[name] = (now, rows)
         get = lambda path: (lambda r: r[1] if r[0] == 200 else {})(self.gateway("GET", path))
         return {"up": True, "health": health.get("services", {}) if isinstance(health, dict) else {},
                 "customers": get("/admin/svc/customers/stats"), "services": services,
                 "stock": get("/admin/svc/menu/stock"), "ledger": get("/admin/svc/payments/ledger"),
                 "queue": get("/admin/svc/notifier/queue"), "orders": get("/admin/svc/orders/stats"),
-                "knobs": get("/admin/knobs")}
+                "knobs": get("/admin/all-knobs")}
 
     @staticmethod
     def incidents(snap: dict) -> list[dict]:
@@ -357,7 +366,13 @@ class Lab:
             done.append(detail)
             if not ok:
                 return {"ok": False, "detail": "; ".join(done)}
+        self._settle(steps)
         return {"ok": True, "detail": "; ".join(done)}
+
+    def _settle(self, steps: list[dict]) -> None:
+        """Services re-read knobs every quarter second; give them that before anyone measures."""
+        if self.gateway is call_gateway and any(s["kind"] == "knobs" for s in steps):
+            self.sleep(0.5)
 
     def _step(self, step: dict) -> tuple[bool, str]:
         kind = step["kind"]
@@ -389,14 +404,16 @@ class Lab:
         if kind == "mystery":
             import random
 
-            target = random.choice(["menu", "orders", "payments", "notifier"])
+            target = random.choice(["menu", "orders", "payments"])
             if self.store is not None:
                 self.store.set_value(_MYSTERY_KEY, target)
-            self.gateway("POST", f"/admin/knobs/{target}", {"latency_ms": 800})
+            self.gateway("POST", "/admin/knobs/orders", {"async_notify": True})
+            self.gateway("POST", f"/admin/knobs/{target}", {"latency_ms": 1200})
             return True, "one service is now slow. Which one?"
         if kind == "mystery_clear":
             for name in ("menu", "orders", "payments", "notifier"):
                 self.gateway("POST", f"/admin/knobs/{name}", {"latency_ms": 0})
+            self.gateway("POST", "/admin/knobs/orders", {"async_notify": False})
             if self.store is not None:
                 self.store.set_value(_MYSTERY_KEY, "")
             return True, "every service is back to normal speed"
@@ -422,6 +439,7 @@ class Lab:
 
     def _check_race(self, answer: str) -> dict:
         self._step({"kind": "restock", "sku": HOT, "stock": 5})
+        self._settle([{"kind": "knobs"}])
         ok_b, burst = self._step({"kind": "burst", "sku": HOT, "n": 40})
         stock = self.gateway("GET", "/admin/svc/menu/stock")[1] or {}
         hot = next((i for i in stock.get("items", []) if i["sku"] == HOT), {"stock": None})
@@ -442,9 +460,9 @@ class Lab:
                    else "Customers still wait too long or orders is stuck. Is the payment timeout on?")}
 
     def _check_double_charge(self, answer: str) -> dict:
-        before = len((self.gateway("GET", "/admin/svc/payments/ledger")[1] or {}).get("charged_more_than_once", []))
+        before = (self.gateway("GET", "/admin/svc/payments/ledger")[1] or {}).get("doubled_ever", 0)
         self.sleep(30)
-        after = len((self.gateway("GET", "/admin/svc/payments/ledger")[1] or {}).get("charged_more_than_once", []))
+        after = (self.gateway("GET", "/admin/svc/payments/ledger")[1] or {}).get("doubled_ever", 0)
         ok = after == before
         return {"ok": ok, "detail": f"In 30 seconds of traffic, {after - before} new order(s) were charged twice. "
                 + ("Retries are now safe." if ok else "Retries still create new charges. Is idempotency on?")}
@@ -458,13 +476,15 @@ class Lab:
 
     def _check_cache(self, answer: str) -> dict:
         self._step(_knobs("menu", cache=True))
-        self.gateway("GET", "/menu")
-        self._step({"kind": "price", "sku": "BAK-002", "price_paise": 3900})
-        menu = self.gateway("GET", "/menu")[1] or {}
-        price = next((i["price_paise"] for i in menu.get("items", []) if i["sku"] == "BAK-002"), None)
+        self._settle([{"kind": "knobs"}])
+        price_of = lambda menu: next((i["price_paise"] for i in (menu or {}).get("items", []) if i["sku"] == "BAK-002"), 0)
+        old = price_of(self.gateway("GET", "/menu")[1])     # this read also fills the cache with the old price
+        new = 3900 if old != 3900 else 4300                  # always a price the cache has not seen
+        self._step({"kind": "price", "sku": "BAK-002", "price_paise": new})
+        price = price_of(self.gateway("GET", "/menu")[1])
         self._step({"kind": "price", "sku": "BAK-002", "price_paise": 3500})
-        ok = price == 3900
-        return {"ok": ok, "detail": f"Changed Dil pasand to ₹39 with the cache on; the menu then showed ₹{(price or 0) / 100:.0f}. "
+        ok = price == new
+        return {"ok": ok, "detail": f"Changed Dil pasand to ₹{new / 100:.0f} with the cache on; the menu then showed ₹{price / 100:.0f}. "
                 + ("The cache was cleared when the price changed." if ok
                    else "Customers still see the old price. The fix is in the code: clear menu:list in set_price.")}
 
@@ -493,7 +513,7 @@ class Lab:
     def _check_security(self, answer: str) -> dict:
         code, body = self.gateway("GET", "/menu?q=" + quote(INJECTION))
         rows = len(body.get("items", [])) if isinstance(body, dict) else 0
-        knobs = (self.gateway("GET", "/admin/knobs")[1] or {}).get("gateway", {})
+        knobs = (self.gateway("GET", "/admin/all-knobs")[1] or {}).get("gateway", {})
         ok = rows == 0 and str(knobs.get("require_api_key")).lower() == "true"
         return {"ok": ok, "detail": f"The injection now returns {rows} rows; API key required: {knobs.get('require_api_key')}."}
 

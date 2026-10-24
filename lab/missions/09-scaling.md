@@ -3,19 +3,21 @@ title: Thirty customers a second
 topic: Scaling out and stateless services
 ---
 ## Why you're doing this
-A festival offer brings 30 orders a second. Each order holds one of orders' 40 threads while payments takes 1.5 s, so one orders container can finish at most about 26 a second, and requests queue, time out and fail. Scaling out means running more copies of the service and spreading the work between them.
+A festival offer brings 30 customers a second, about 18 of them ordering. Each order holds one of orders' 40 threads for about 3 seconds, so one orders container can finish at most about 13 a second; the rest queue, wait past the customers' 10-second patience and fail. Scaling out means running more copies of the service and spreading the work between them.
 
 ## The benefit, and the cost
-Three copies of orders give three times the threads, and if one dies the others keep serving. It only works because orders is stateless: everything it must remember is in Postgres or Redis, so any copy can handle any request. The costs: the database and payments now get three times the concurrent load, anything kept in a process's memory (like the circuit breaker's state) is now per copy, and you need something that spreads requests (here Docker's DNS hands out the copies' addresses in turn; in production, a load balancer).
+Three copies of orders give three times the threads, and if one dies the others keep serving. It only works because orders is stateless: everything it must remember is in Postgres or Redis, so any copy can handle any request. The costs: the database and payments now get three times the concurrent load, anything kept in a process's memory (like the circuit breaker's state) is now per copy, and you need something that spreads requests evenly. Here the gateway does it (`RoundRobin` in `gateway.py`): it looks up every copy's address and takes turns. Plain DNS is not enough, because clients keep connections open and stick to the copy they reached first; before the gateway balanced, one copy took 236 requests while the other two took 87 and 53.
 
 ## Break it
-**Break it** makes payments take 1.5 s and sends 30 customers a second.
+**Break it** adds the index from mission 1 (so the database can keep up), makes payments take 1.5 s and sends 30 customers a second, so each order holds a thread for about 3 seconds (payment, then WhatsApp).
 
 ## Watch it
 Customers' error rate, orders' p95, and the threads running out (orders' rps flattening near 26 while requests keep coming).
 
 ## Fix it: the quick switch
 **Fix** runs `docker compose up --scale orders=3`. Watch the service map show three orders containers and the errors fall. **Check** wants three running copies and fewer than 5% of requests failing.
+
+Then try it the hard way: press **Undo**, run `DROP INDEX idx_items_sku` (or skip mission 1's fix), break it again and scale. Three orders containers now send three times as many full-table scans to Postgres, and customers get *slower*. Scaling one tier only helps if the next tier can take the extra load; otherwise the bottleneck just moves to the database. Finding the real bottleneck first is the whole skill.
 
 ## Fix it: in the code
 Find what in `orders.py` is not stateless: the `breaker` object lives in memory. With three copies, one may have its breaker open while another keeps calling a dead payments service. How would you share it? (Store failure counts in Redis, or accept per-instance breakers, which is what most service meshes do.)

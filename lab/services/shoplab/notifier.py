@@ -51,7 +51,12 @@ def notify(body: Message):
 
 
 def worker() -> None:
-    r = redis_client()
+    import redis
+
+    from .common import REDIS_URL
+
+    # its own connection: a blocking read waits up to 2 s, longer than the shared client's 2 s socket limit
+    r = redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=15, socket_connect_timeout=2)
     wait_for(r.ping, "redis")
     try:
         r.xgroup_create(STREAM, GROUP, id="0", mkstream=True)

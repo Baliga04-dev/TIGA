@@ -131,7 +131,7 @@ def test_mission_buttons_send_only_their_own_steps():
     compose = FakeCompose()
     out = lab.Lab(compose=compose, gateway=gw).act("race", "break")
     assert out["ok"]
-    assert gw.calls[0] == ("POST", "/admin/knobs/menu", {"atomic_stock": False})
+    assert gw.calls[0] == ("POST", "/admin/knobs/menu", {"atomic_stock": False, "oven": False})
     assert gw.calls[1] == ("POST", "/admin/svc/menu/restock", {"sku": "BAK-001", "stock": 5})
     assert gw.calls[2] == ("POST", "/admin/svc/customers/burst", {"sku": "BAK-001", "n": 40})
     assert not lab.Lab(compose=compose, gateway=gw).act("race", "drop-database")["ok"]
@@ -154,7 +154,7 @@ def test_find_the_slow_one():
     lab_ = lab.Lab(compose=FakeCompose(), gateway=gw, store=store)
     lab_.act("find-the-slow-one", "break")
     target = store.get_value("lab.mystery")
-    assert ("POST", f"/admin/knobs/{target}", {"latency_ms": 800}) in gw.calls
+    assert ("POST", f"/admin/knobs/{target}", {"latency_ms": 1200}) in gw.calls and target in ("menu", "orders", "payments")
     assert not lab_.check("find-the-slow-one", "kitchen")["ok"]
     assert lab_.check("find-the-slow-one", target.upper())["ok"]
 

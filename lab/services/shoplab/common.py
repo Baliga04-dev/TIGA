@@ -2,7 +2,7 @@
 
 Knobs are the lab's control panel. Each service has defaults (DEFAULTS) and the live values sit in Redis
 (`lab:knobs:<service>`), so Tiga, or you, can turn a fault on or a fix on for every replica at once. A
-service reads them at most once a second.
+service re-reads them every quarter second.
 
 Every request through `instrument(app, service)`:
   - gets an X-Request-ID (taken from the caller, or made here) that is passed on downstream;
@@ -33,7 +33,7 @@ DEFAULTS: dict[str, dict] = {
     "gateway": {"latency_ms": 0, "error_rate": 0.0, "crash": False,
                 "upstream_timeout_s": 30.0, "rate_limit_per_min": 0, "require_api_key": False},
     "menu": {"latency_ms": 0, "error_rate": 0.0, "crash": False,
-             "cache": False, "atomic_stock": False, "race_window_ms": 60, "safe_search": False},
+             "cache": False, "atomic_stock": False, "race_window_ms": 60, "safe_search": False, "oven": True},
     "orders": {"latency_ms": 0, "error_rate": 0.0, "crash": False,
                "payment_timeout_s": 0.0, "retries": 0, "idempotency": False, "circuit_breaker": False,
                "async_notify": False, "bad_deploy": False},
@@ -69,9 +69,9 @@ def _coerce(default, raw: str):
 
 
 class Knobs:
-    """The live knob values for one service, re-read from Redis at most once a second."""
+    """The live knob values for one service, re-read from Redis at most four times a second."""
 
-    def __init__(self, service: str, store=None, ttl: float = 1.0):
+    def __init__(self, service: str, store=None, ttl: float = 0.25):
         self.service, self.ttl = service, ttl
         self._store = store
         self._values = dict(DEFAULTS.get(service, {}))
@@ -123,7 +123,7 @@ def reset_knobs(store=None) -> None:
 
 
 # ------------------------------------------------------------------------------------------- metrics
-BUCKETS = (0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+BUCKETS = (0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0)
 
 
 class Metrics:

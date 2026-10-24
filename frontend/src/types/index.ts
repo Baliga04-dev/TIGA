@@ -374,7 +374,7 @@ export interface LabStatus {
   job: string | null;
   last_job: { name: string; ok: boolean; detail: string } | null;
 }
-export interface LabRates { rps: number; error_rate: number; p95_s: number; backlog?: number }
+export interface LabRates { rps: number; error_rate: number; p95_s: number; backlog?: number; db_qps?: number; routes?: Record<string, { rps: number; error_rate: number; p95_s: number }> }
 export interface LabSnapshot {
   ok: true;
   up: boolean;
@@ -383,7 +383,7 @@ export interface LabSnapshot {
   customers?: { requests: number; ok: number; failed: number; sold_out: number; rejected: number; error_rate: number; p50_s: number; p95_s: number; rps_target: number };
   services?: Record<string, LabRates>;
   stock?: { items: { sku: string; name: string; price_paise: number; stock: number }[]; oversold: { sku: string; name: string; stock: number }[]; indexes: string[] };
-  ledger?: { charges: number; charged_more_than_once: { order_ref: string; times: number }[] };
+  ledger?: { charges: number; doubled_ever?: number; charged_more_than_once: { order_ref: string; times: number }[] };
   queue?: { backlog: number; dead: number; consumers: number };
   orders?: { by_status: Record<string, number>; breaker: string };
 }

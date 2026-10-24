@@ -19,4 +19,6 @@ browser / pretend customers
 
 Run it from the Learn page, or by hand: `docker compose up -d --build` here, then `curl http://127.0.0.1:8080/menu`. Edit a service, then press its Rebuild button (or `docker compose up -d --build <service>`).
 
+If Docker answers "permission denied" right after installing it, your session predates the `docker` group: run `wsl --shutdown` in Windows PowerShell once and reopen Ubuntu (reloading the VS Code window is not enough).
+
 Unit tests for the shared pieces run without Docker: `cd services && ../../tiga/.venv/bin/python -m pytest -q tests`.

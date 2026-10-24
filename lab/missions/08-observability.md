@@ -3,13 +3,13 @@ title: Something is slow. Which service?
 topic: Observability: metrics, logs and traces
 ---
 ## Why you're doing this
-In production nobody tells you which part is broken; customers just say "it's slow". **Break it** makes one service slow, and the page will not tell you which. You find it with the three tools every on-call engineer uses: metrics (numbers over time), logs (what happened), and traces (one request across services).
+In production nobody tells you which part is broken; customers just say "it's slow". **Break it** makes one of menu, orders or payments slow, and the page will not tell you which. (For this mission orders hands WhatsApp to the queue, so its own time is not blurred by the 1.5 s send.) You find it with the three tools every on-call engineer uses: metrics (numbers over time), logs (what happened), and traces (one request across services).
 
 ## The benefit, and the cost
 Good observability turns a two-hour hunt into a two-minute one. Its cost is real: every service must emit consistent metrics and structured logs, someone pays to store them, and too many alerts teach people to ignore alerts.
 
 ## Break it
-**Break it** adds 800 ms to one of menu, orders, payments or notifier.
+**Break it** adds 1.2 seconds to one of menu, orders or payments.
 
 ## Watch it
 Start from the customer: their p95 went up. Then the service map: compare each service's p95. Careful: orders calls menu and payments, so if menu is slow, orders is slow too. The slow one is the deepest service that is slow. Then confirm in the logs: filter one slow request id and compare each service's `ms`.

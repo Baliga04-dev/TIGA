@@ -25,6 +25,10 @@ const snap = {
   ok: true, up: true, health: { gateway: 'up', orders: 'unhealthy' },
   customers: { requests: 120, ok: 90, failed: 30, sold_out: 0, rejected: 0, error_rate: 0.25, p50_s: 0.2, p95_s: 4.5, rps_target: 2 },
   services: { orders: { rps: 1.5, error_rate: 0.3, p95_s: 2.0 } },
+  stock: { items: [{ sku: 'BAK-001', name: 'Honey cake', price_paise: 4000, stock: -3 }], oversold: [], indexes: ['items_pkey'] },
+  ledger: { charges: 40, charged_more_than_once: [{ order_ref: '12', times: 2 }] },
+  queue: { backlog: 7, dead: 1, consumers: 1 },
+  orders: { by_status: {}, breaker: 'open' },
 }
 
 beforeEach(() => {
@@ -63,6 +67,9 @@ describe('Learn (ShopLab)', () => {
     expect(await screen.findByText('25%')).toBeInTheDocument()
     expect(screen.getByText('4.5s')).toBeInTheDocument()
     expect(screen.getByText('orders is unhealthy (500)')).toBeInTheDocument()
+    const stock = screen.getByRole('list', { name: 'Stock' })
+    expect(within(stock).getByText('-3')).toHaveClass('text-flag')
+    expect(screen.getByText('Indexes on items: items_pkey')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Learn why' }))
     expect(await screen.findByRole('heading', { name: 'The last honey cake, sold twice' })).toBeInTheDocument()
   })

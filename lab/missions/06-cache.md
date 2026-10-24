@@ -12,7 +12,7 @@ A cache answers from memory in microseconds and protects the database from repea
 **Break it** turns the cache off and sends 10 visitors a second.
 
 ## Watch it
-Menu's request rate and p95. Then press **Fix** and watch the `cached: true` answers in the logs and menu's queries drop. Now press **Show the stale price**: it changes Dil pasand from ₹35 to ₹39 in the database. Look at the menu: still ₹35, for up to 30 seconds.
+Menu's tile on the service map shows **menu page database queries** a second: one for every visitor, about four a second. Press **Fix** and watch it fall to almost nothing (one query every 30 seconds) while `cached: true` appears in the logs. At this size the query is quick, so the win you see is load taken off the database; with a bigger menu, a slower query or more visitors, it is also speed. That is usually the first reason to cache: protect the database that everything else needs. Now press **Show the stale price**: it changes Dil pasand from ₹35 to ₹39 in the database. Look at the menu: still ₹35, for up to 30 seconds.
 
 ## Fix it: the quick switch
 **Fix** turns the cache on (cache-aside: look in Redis, else read the database and store the answer for 30 s). The quick switch fixes speed, not staleness: **Check** changes a price with the cache on and expects the menu to show the new price at once. It fails until you fix the code.

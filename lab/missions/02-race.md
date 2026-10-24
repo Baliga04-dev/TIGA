@@ -9,10 +9,10 @@ Menu reserves stock by reading it ("5 left?"), thinking for a moment, then writi
 Doing the check and the change as one atomic step makes the database serialise the buyers for that one row, so it can never oversell. The cost is that buyers of the same item now wait for each other for a moment (lock contention). That is almost always the right trade; the alternative is apologising to customers.
 
 ## Break it
-**Break it** turns the atomic reserve off, sets honey cake stock to 5 and sends 40 customers at it at once.
+**Break it** turns the atomic reserve off, switches off the oven (which normally rebakes anything running low every 20 seconds), sets honey cake stock to 5 and sends 40 customers at it at once.
 
 ## Watch it
-The stock panel shows honey cake below zero, and an incident opens: "Sold more Honey cake than we had". Count the orders that went through against the 5 cakes there were.
+The "Inside the shop" card shows honey cake below zero, in red, and an incident opens: "Sold more Honey cake than we had". Count the orders that went through against the 5 cakes there were.
 
 ## Fix it: the quick switch
 **Fix** turns on `atomic_stock`: one statement, `UPDATE items SET stock = stock - 1 WHERE sku = 'BAK-001' AND stock >= 1 RETURNING stock`. If no row comes back, it is sold out. Press **Check**: it runs the 40-customer rush again and stock must end at 0, never below.

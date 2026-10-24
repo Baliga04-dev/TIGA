@@ -27,6 +27,7 @@ BAKERY = [
     ("BAK-010", "Masala bread", 5000, 30), ("BAK-011", "Butter biscuit", 2500, 100), ("BAK-012", "Chocolate brownie", 6000, 20),
 ]
 CATALOGUE_ROWS = 600_000
+QUERIES = [0]   # menu-page database queries so far (the caching mission watches this)
 
 
 def _ping() -> None:
@@ -52,9 +53,28 @@ def setup() -> None:
             log("seeded", rows=CATALOGUE_ROWS + len(BAKERY))
 
 
+def oven() -> None:
+    """Every 20 s, items that are running low, or were oversold, are baked back to their usual stock.
+    The race mission switches the oven off so the oversell stays visible."""
+    usual = {sku: stock for sku, _, _, stock in BAKERY}
+    while True:
+        time.sleep(20)
+        if not knobs.get("oven"):
+            continue
+        try:
+            with pool().connection() as conn:
+                for sku, stock in usual.items():
+                    conn.execute("UPDATE items SET stock = %s WHERE sku = %s AND stock < %s", (stock, sku, stock // 2))
+        except Exception as exc:
+            log("oven.error", error=str(exc))
+
+
 @app.on_event("startup")
 def _startup() -> None:
+    import threading
+
     setup()
+    threading.Thread(target=oven, daemon=True, name="oven").start()
 
 
 def _row(r) -> dict:
@@ -75,6 +95,8 @@ def menu(q: str = ""):
         cached = redis_client().get("menu:list")
         if cached:
             return {"items": json.loads(cached), "cached": True}
+    QUERIES[0] += 1
+    metrics.gauge("shop_db_queries_total", QUERIES[0])
     with pool().connection() as conn:
         if not q:
             rows = conn.execute("SELECT sku, name, price_paise, stock FROM items WHERE category = 'bakery' ORDER BY sku").fetchall()

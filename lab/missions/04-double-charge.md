@@ -12,7 +12,7 @@ An idempotency key is an id the caller makes once per intended action and sends 
 **Break it** makes 30% of charges succeed-then-fail, and has orders retry twice without sending a key.
 
 ## Watch it
-The ledger panel lists orders charged more than once, and the "charged more than once" incident opens. In the logs, payments writes `charge.taken` two or three times for the same `order_ref`.
+The "Inside the shop" card counts orders charged twice in the last two minutes, and the "charged more than once" incident opens. In the logs, payments writes `charge.taken` two or three times for the same `order_ref`.
 
 ## Fix it: the quick switch
 **Fix** turns on `idempotency`: orders sends the customer's Idempotency-Key on every try, and payments replays the first charge (`charge.replayed` in the logs). **Check** watches 30 seconds of traffic with the faults still on and expects no new double charges.

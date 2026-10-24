@@ -5,7 +5,6 @@ name: shoplab
 
 x-service: &service
   build: ./services
-  image: shoplab:latest
   restart: on-failure
   depends_on:
     postgres: { condition: service_healthy }

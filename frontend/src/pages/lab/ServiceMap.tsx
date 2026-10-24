@@ -68,6 +68,19 @@ export function ServiceMap({ services, snap, onChanged, onError }: {
                 <div><dt className="text-ink-3">p95</dt><dd className={cn('figure', r.p95_s > 1 && 'text-flag')}>{seconds(r.p95_s)}</dd></div>
               </dl>
             )}
+            {r?.db_qps !== undefined && (
+              <p className="mt-1 text-xs text-ink-2">Menu page database queries: <span className="figure">{r.db_qps}/s</span></p>
+            )}
+            {r?.routes && Object.keys(r.routes).length > 1 && (
+              <ul className="mt-2 space-y-0.5 border-t border-rule pt-2 text-xs" aria-label={`${name} routes`}>
+                {Object.entries(r.routes).filter(([, v]) => v.rps > 0).slice(0, 4).map(([route, v]) => (
+                  <li key={route} className="flex justify-between gap-2">
+                    <span className="truncate font-mono text-ink-3">{route}</span>
+                    <span className={cn('figure', v.p95_s > 1 && 'text-flag')}>{seconds(v.p95_s)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {containers.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {up ? (

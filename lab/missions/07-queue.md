@@ -12,7 +12,7 @@ Put the message on a queue (a Redis stream here; Kafka, RabbitMQ or SQS in bigge
 **Break it** makes orders wait for WhatsApp and raises traffic to 3 orders a second.
 
 ## Watch it
-Orders' p95 sits above 1.5 seconds. Press **Fix**: orders' p95 drops, but now watch the queue panel. The notifier sends one message per 1.5 s and 3 arrive each second, so the backlog grows and the "confirmations are waiting" incident opens.
+Orders' p95 sits above 1.5 seconds. Press **Fix**: orders' p95 drops, but now watch "WhatsApp messages waiting" in the "Inside the shop" card. The notifier sends one message per 1.5 s and 3 arrive each second, so the backlog grows and the "confirmations are waiting" incident opens.
 
 ## Fix it: the quick switch
 **Fix** turns on `async_notify`. Then press **Scale the notifier to 3**: three workers in one consumer group share the stream and the backlog drains. Finally press **Poison some messages**: 20% now fail every time; after three tries each goes to the dead-letter queue instead of blocking the line. **Check** wants orders' p95 at 1 s or less and the backlog under 20.

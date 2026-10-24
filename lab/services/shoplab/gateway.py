@@ -4,6 +4,10 @@ It forwards /menu and /orders to the services behind it, gives each request an i
 controls the security and traffic missions switch on: `require_api_key` (X-Api-Key must match SHOP_API_KEY)
 and `rate_limit_per_min` (per client address, counted in Redis). `upstream_timeout_s` is how long it waits
 for the service behind it. /admin/* is the lab's control panel, used by Tiga's Lab page.
+
+Forwarding is asynchronous: a waiting request holds no thread, so the gateway itself never becomes the
+bottleneck (real gateways, from nginx to Envoy, work the same way). The services behind it are ordinary
+threaded apps, which is where the timeout and scaling missions find their limits.
 """
 from __future__ import annotations
 
@@ -20,7 +24,44 @@ app = FastAPI(title="gateway")
 knobs, metrics = instrument(app, "gateway")
 API_KEY = os.getenv("SHOP_API_KEY", "lab-key")
 UP = {name: f"http://{name}:8000" for name in ("menu", "orders", "payments", "notifier", "customers")}
-http = httpx.Client(timeout=None)
+http = httpx.Client(timeout=None)          # health checks and the admin panel
+_async: httpx.AsyncClient | None = None
+
+
+def forwarder() -> httpx.AsyncClient:
+    global _async
+    if _async is None:
+        _async = httpx.AsyncClient(timeout=None, limits=httpx.Limits(max_connections=1000, max_keepalive_connections=200))
+    return _async
+
+
+class RoundRobin:
+    """A load balancer in a dozen lines: look up every copy of a service, then take turns.
+
+    Plain DNS is not enough: a client that keeps connections open (all of them do) keeps talking to the copy
+    it reached first, so scaling to three copies leaves two of them idle. Every 5 s this re-reads the list
+    Docker's DNS gives for the name, so copies that start or stop are picked up.
+    """
+
+    def __init__(self, ttl: float = 5.0):
+        self.ttl, self._seen, self._turn = ttl, {}, {}
+
+    def url(self, service: str) -> str:
+        import socket
+
+        addrs, at = self._seen.get(service, ([], 0.0))
+        if time.monotonic() - at > self.ttl:
+            try:
+                addrs = sorted({a[4][0] for a in socket.getaddrinfo(service, 8000, proto=socket.IPPROTO_TCP)})
+            except OSError:
+                addrs = addrs or [service]
+            self._seen[service] = (addrs, time.monotonic())
+        n = self._turn.get(service, 0)
+        self._turn[service] = n + 1
+        return f"http://{addrs[n % len(addrs)]}:8000"
+
+
+balancer = RoundRobin()
 
 
 def _edge(request: Request, api_key: str | None) -> None:
@@ -36,10 +77,10 @@ def _edge(request: Request, api_key: str | None) -> None:
             raise HTTPException(429, "too many requests; slow down")
 
 
-def _forward(method: str, url: str, **kw) -> JSONResponse:
+async def _forward(method: str, url: str, **kw) -> JSONResponse:
     timeout = knobs.get("upstream_timeout_s") or None
     try:
-        r = http.request(method, url, timeout=timeout, headers={**downstream_headers(), **kw.pop("headers", {})}, **kw)
+        r = await forwarder().request(method, url, timeout=timeout, headers={**downstream_headers(), **kw.pop("headers", {})}, **kw)
     except httpx.TimeoutException:
         raise HTTPException(504, "the service behind the gateway took too long")
     except httpx.TransportError:
@@ -52,23 +93,23 @@ def _forward(method: str, url: str, **kw) -> JSONResponse:
 
 
 @app.get("/menu")
-def menu(request: Request, q: str = "", x_api_key: str | None = Header(default=None)):
+async def menu(request: Request, q: str = "", x_api_key: str | None = Header(default=None)):
     _edge(request, x_api_key)
-    return _forward("GET", f"{UP['menu']}/menu", params={"q": q} if q else None)
+    return await _forward("GET", f"{balancer.url('menu')}/menu", params={"q": q} if q else None)
 
 
 @app.post("/orders")
-def place(request: Request, body: dict = Body(...), x_api_key: str | None = Header(default=None),
-          idempotency_key: str | None = Header(default=None)):
+async def place(request: Request, body: dict = Body(...), x_api_key: str | None = Header(default=None),
+                idempotency_key: str | None = Header(default=None)):
     _edge(request, x_api_key)
-    return _forward("POST", f"{UP['orders']}/orders", json=body,
+    return await _forward("POST", f"{balancer.url('orders')}/orders", json=body,
                     headers={"idempotency-key": idempotency_key} if idempotency_key else {})
 
 
 @app.get("/orders/{order_id}")
-def get_order(order_id: int, request: Request, x_api_key: str | None = Header(default=None)):
+async def get_order(order_id: int, request: Request, x_api_key: str | None = Header(default=None)):
     _edge(request, x_api_key)
-    return _forward("GET", f"{UP['orders']}/orders/{order_id}")
+    return await _forward("GET", f"{balancer.url('orders')}/orders/{order_id}")
 
 
 @app.get("/health")
@@ -85,7 +126,7 @@ def health():
 
 
 # ------------------------------------------------------------------------------- the lab's control panel
-@app.get("/admin/knobs")
+@app.get("/admin/all-knobs")
 def all_knobs():
     r = redis_client()
     out = {}

@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 from fastapi import Body, FastAPI
 
-from .common import instrument, log
+from .common import instrument, log, wait_for
 
 app = FastAPI(title="customers")
 knobs, metrics = instrument(app, "customers")
@@ -29,7 +29,7 @@ WINDOW = 60.0
 
 _lock = threading.Lock()
 _seen: deque[tuple[float, str, int, float]] = deque()   # (when, what, status, seconds); status 0 = no answer
-_pool = ThreadPoolExecutor(max_workers=64)
+_pool = ThreadPoolExecutor(max_workers=200)   # enough shoppers at once to overwhelm one orders container
 http = httpx.Client(timeout=CLIENT_TIMEOUT, headers={"x-api-key": API_KEY})
 
 
@@ -59,7 +59,15 @@ def _visit(sku: str | None = None) -> int:
     return status
 
 
+def _shop_open() -> None:
+    r = http.get(f"{GATEWAY}/health", timeout=3)
+    if not r.json().get("ok"):
+        raise RuntimeError(f"not ready: {r.json().get('services')}")
+
+
 def _drive() -> None:
+    wait_for(_shop_open, "the shop", seconds=600)   # menu loads 600,000 rows on its first start
+    log("shop.open")
     while True:
         rps = knobs.get("rps")
         if rps <= 0:

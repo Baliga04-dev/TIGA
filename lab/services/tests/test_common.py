@@ -91,3 +91,21 @@ def test_circuit_breaker_opens_fails_fast_and_recovers():
     assert cb.state == "open"
     now[0] = 25
     assert cb.call(lambda: "ok") == "ok" and cb.state == "closed"
+
+
+def test_half_open_lets_exactly_one_trial_call_through():
+    now = [0.0]
+    cb = CircuitBreaker(threshold=1, cooldown_s=10, clock=lambda: now[0])
+    with pytest.raises(ConnectionError):
+        cb.call(lambda: (_ for _ in ()).throw(ConnectionError("down")))
+    now[0] = 11
+    seen = []
+
+    def trial():
+        # while the trial is in flight, a second caller must be refused at once
+        with pytest.raises(CircuitOpen):
+            cb.call(lambda: "second caller")
+        seen.append("trial")
+        return "ok"
+
+    assert cb.call(trial) == "ok" and seen == ["trial"] and cb.state == "closed"

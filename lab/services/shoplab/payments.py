@@ -67,6 +67,9 @@ def ledger():
     with pool().connection() as conn:
         total = conn.execute("SELECT count(*), coalesce(sum(amount_paise), 0) FROM charges").fetchone()
         doubled = conn.execute("""SELECT order_ref, count(*), sum(amount_paise) FROM charges
+            WHERE created_at > now() - interval '2 minutes'
             GROUP BY order_ref HAVING count(*) > 1 ORDER BY count(*) DESC LIMIT 20""").fetchall()
-    return {"charges": total[0], "amount_paise": total[1],
+        ever = conn.execute("""SELECT count(*) FROM (SELECT order_ref FROM charges
+            GROUP BY order_ref HAVING count(*) > 1) d""").fetchone()[0]
+    return {"charges": total[0], "amount_paise": total[1], "doubled_ever": ever,
             "charged_more_than_once": [{"order_ref": d[0], "times": d[1], "amount_paise": d[2]} for d in doubled]}
