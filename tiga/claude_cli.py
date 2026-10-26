@@ -5,6 +5,8 @@ Billing safety: the API-key variables are removed from the child's environment a
 used, because either would switch the call to paid API billing. All of Claude's own tools are turned
 off (`--tools ""`): Tiga executes its own tools, so the model can only answer. The one exception is
 `tools="Read"` with `workdir`: Claude may then read files in that one folder (a screenshot Tiga just took).
+Two dedicated sessions have their own, fixed tool sets: `code` (the Dev bot: file tools in one worktree) and
+`research` (the R&D bot: WebSearch and WebFetch only, in an empty folder).
 """
 from __future__ import annotations
 
@@ -64,12 +66,30 @@ def _run_cli(system: str, user: str, *, model: str = "sonnet", timeout: int = 12
              tools: str = "", workdir: str | None = None) -> dict:
     if tools not in ("", "Read") or (tools and not workdir):
         raise ValueError("Claude may only be given Read, and only inside one folder")
-    env = {k: v for k, v in os.environ.items() if k not in _BILLING_VARS}
     args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", tools,
             "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system]
+    return _call(args, user, model=model, timeout=timeout, run=run, cwd=workdir if tools else _WORKDIR)
+
+
+def research(system: str, prompt: str, *, model: str = "sonnet", max_turns: int = 30, timeout: int = 900,
+             run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> dict:
+    """A web-research session for the R&D bot: WebSearch and WebFetch only (no files, no shell, no MCP servers),
+    in a fresh empty folder, with a turn and time limit. Returns the same shape as `complete_meta`."""
+    folder = tempfile.mkdtemp(prefix="tiga-research-")
+    args = ["claude", "-p", "--output-format", "json", "--model", model, "--tools", "WebSearch,WebFetch",
+            "--allowedTools", "WebSearch,WebFetch", "--max-turns", str(max_turns),
+            "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--append-system-prompt", system]
     try:
-        proc = run(args, input=user, capture_output=True, text=True, timeout=timeout, env=env,
-                   cwd=workdir if tools else _WORKDIR)
+        return _call(args, prompt, model=model, timeout=timeout, run=run, cwd=folder)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def _call(args: list[str], stdin: str, *, model: str, timeout: int,
+          run: Callable[..., subprocess.CompletedProcess], cwd: str) -> dict:
+    env = {k: v for k, v in os.environ.items() if k not in _BILLING_VARS}
+    try:
+        proc = run(args, input=stdin, capture_output=True, text=True, timeout=timeout, env=env, cwd=cwd)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(f"Claude timed out after {timeout}s") from exc
     except OSError as exc:

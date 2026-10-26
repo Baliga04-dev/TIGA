@@ -161,7 +161,8 @@ class DevBot:
             _busy = False
 
     def _pick(self, issue_id: int | None) -> dict | None:
-        approved = self.store.list_issues("approved")
+        # only code work: an `idea` from the R&D bot is something the owner does, not something to build
+        approved = [i for i in self.store.list_issues("approved") if i["kind"] in ("bug", "improvement")]
         if issue_id is None:
             return approved[0] if approved else None
         return next((i for i in approved if i["id"] == issue_id), None)

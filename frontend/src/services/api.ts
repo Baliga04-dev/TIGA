@@ -34,6 +34,7 @@ import type {
   LabMission,
   LabLogLine,
   DevStatus,
+  RndStatus,
   Note,
   Briefing,
   AiUsage,
@@ -298,7 +299,9 @@ export const api = {
   saveSkill: (name: string, text: string) =>
     request<{ ok: true }>(`/skills/${name}`, { method: 'PUT', body: JSON.stringify({ text }) }),
 
-  runRnd: () => post<{ ok: true; proposals?: number; skipped?: string }>('/rnd/run'),
+  runRnd: () => post<{ ok: true; proposals: number; researched: number; research_error: string }>('/rnd/run'),
+
+  rndStatus: () => request<RndStatus>('/rnd/status'),
 
   getFeatures: () => request<{ learn: boolean }>('/features'),
 

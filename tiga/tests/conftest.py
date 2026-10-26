@@ -57,6 +57,7 @@ def no_real_claude(monkeypatch):
 
     monkeypatch.setattr(claude_cli, "complete_meta", refuse)
     monkeypatch.setattr(claude_cli, "code", refuse)
+    monkeypatch.setattr(claude_cli, "research", refuse)
 
 
 @pytest.fixture(autouse=True)

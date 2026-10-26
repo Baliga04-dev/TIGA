@@ -49,6 +49,15 @@ def usage_today() -> dict:
 
 def claude_complete(system: str, user: str, **cli) -> str:
     """One Claude call, counted against a daily cap (so a loop or a busy night can't drain the plan)."""
+    return _counted(system, user, lambda: claude_cli.complete_meta(system, user, model=config.CLAUDE_MODEL, **cli))
+
+
+def claude_research(system: str, prompt: str) -> str:
+    """One web-research session (the R&D bot), counted and logged like any other Claude call."""
+    return _counted(system, prompt, lambda: claude_cli.research(system, prompt, model=config.CLAUDE_MODEL))
+
+
+def _counted(system: str, user: str, call: Callable[[], dict]) -> str:
     import services
 
     store, key = services.get_store(), _usage_key()
@@ -61,7 +70,7 @@ def claude_complete(system: str, user: str, **cli) -> str:
     record = {"feature": _feature.get(), "day": date.today().isoformat(), "model": config.CLAUDE_MODEL,
               "system": system, "prompt": user}
     try:
-        meta = claude_cli.complete_meta(system, user, model=config.CLAUDE_MODEL, **cli)
+        meta = call()
     except Exception as exc:
         store.add_ai_call(**record, reply="", ok=False, error=str(exc))
         raise

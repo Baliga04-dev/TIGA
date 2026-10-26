@@ -255,7 +255,7 @@ export interface ReportPreview {
 
 export interface Issue {
   id: number;
-  kind: 'bug' | 'improvement';
+  kind: 'bug' | 'improvement' | 'idea';
   title: string;
   body: string;
   status: string;
@@ -265,6 +265,14 @@ export interface Issue {
   updated_at: string;
   pr_url?: string;
   dev_note?: string;
+}
+
+export interface RndStatus {
+  ok: true;
+  last_run: string;
+  manual_left: number;
+  manual_limit: number;
+  latest: { kind: string; report_date: string; subject: string; body: string; created_at: string } | null;
 }
 
 export interface DevStatus {

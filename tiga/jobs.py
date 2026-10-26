@@ -66,6 +66,22 @@ async def run_daily(*, store: Store, mailer: Mailer, fetch_thread: Callable[[str
     return {"report": delivery, "replies_changed": changed, "followups": len(followups), "errors": errors}
 
 
+def rnd_context(today: date) -> dict:
+    """What the R&D bot is told about Tiga today: outreach, prospects, money and Claude use."""
+    import ai
+
+    store = services.get_store()
+    return {"card": services.get_mailer().scorecard(), "prospects": store.prospect_counts(),
+            "money": deals.money_summary(store.list_deals(), today=today), "ai_today": ai.usage_today()}
+
+
+def rnd_guide() -> str:
+    try:
+        return services.get_skills().read("rnd")
+    except Exception:
+        return ""
+
+
 async def run_configured_daily() -> dict:
     """run_daily wired to the real store, Gmail, tester and GitHub sync from config."""
     import datetime
@@ -89,12 +105,15 @@ async def run_configured_daily() -> dict:
         bot = devbot.DevBot(services.get_store())
         if bot.precheck() is None:
             outcome["dev"] = await bot.run()
-    if gmail_ready:  # idempotent per ISO week: the first daily run of a week sends the R&D report
-        try:
-            outcome["rnd"] = await asyncio.to_thread(
-                rnd.run_weekly, services.get_store(), services.get_mailer().scorecard(), services.send_email, to,
-                datetime.date.today(),
-            )
-        except Exception as exc:
-            outcome["errors"].append(f"R&D report failed: {exc}")
+    # once per ISO week; the report is saved in Tiga and mailed only when Gmail works
+    try:
+        today = datetime.date.today()
+        outcome["rnd"] = await asyncio.to_thread(
+            rnd.run_weekly, services.get_store(), services.get_mailer().scorecard(),
+            services.send_email if gmail_ready else (lambda *_: {"ok": False, "error": "Gmail is not configured"}),
+            to if gmail_ready else "", today, context=rnd_context(today), guide=rnd_guide(),
+            research=rnd.default_research(),
+        )
+    except Exception as exc:
+        outcome["errors"].append(f"R&D report failed: {exc}")
     return outcome

@@ -44,8 +44,10 @@ def test_without_gmail_the_report_is_still_made_and_shown_in_the_app(client, mon
     monkeypatch.setattr(config, "ADMIN_REPORT_EMAIL", "")
     out = client.post("/api/reports/daily/run").json()
     assert out["ok"] is True and out["emailed"] is False and "not configured" in out["email_error"]
-    items = client.get("/api/reports").json()["items"]
-    assert len(items) == 1 and "OUTREACH" in items[0]["body"] and "not configured" in items[0]["delivery_error"]
+    items = {r["kind"]: r for r in client.get("/api/reports").json()["items"]}
+    daily = items["daily"]
+    assert "OUTREACH" in daily["body"] and "not configured" in daily["delivery_error"]
+    assert "weekly" in items   # the R&D bot no longer waits for Gmail either
 
 
 def test_skills_can_be_listed_read_and_edited_from_the_ui(client, tmp_path, monkeypatch):
@@ -60,7 +62,9 @@ def test_skills_can_be_listed_read_and_edited_from_the_ui(client, tmp_path, monk
     assert any(e["action"] == "skill.edit" for e in client.get("/api/audit").json()["items"])
 
 
-def test_rnd_run_needs_a_configured_mailbox(client, monkeypatch):
+def test_rnd_runs_without_a_mailbox_and_keeps_the_report_in_tiga(client, monkeypatch):
     monkeypatch.setattr(config, "GMAIL_USER_EMAIL", "")
     monkeypatch.setattr(config, "ADMIN_REPORT_EMAIL", "")
-    assert client.post("/api/rnd/run").json()["ok"] is False
+    out = client.post("/api/rnd/run").json()
+    assert out["ok"] is True and "Claude is not available" in out["research_error"]
+    assert client.get("/api/reports").json()["items"][0]["kind"] == "research"

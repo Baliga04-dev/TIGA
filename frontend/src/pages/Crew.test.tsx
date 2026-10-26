@@ -73,11 +73,27 @@ describe('Crew', () => {
     mock.get('/issues', { ok: true, items: [] })
     mock.get('/audit', { ok: true, items: [] })
     mock.get('/skills', { ok: true, items: [] })
-    mock.post('/rnd/run', { ok: true, proposals: 3 })
+    mock.post('/rnd/run', { ok: true, proposals: 3, researched: 2, research_error: '' })
     const user = userEvent.setup()
     renderApp('/crew')
-    await user.click(await screen.findByRole('button', { name: /run r&d now/i }))
-    expect(await screen.findByText(/sent with 3 proposals/i)).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /run research now/i }))
+    expect(await screen.findByText(/Research filed 3 proposals \(2 from the web\)/)).toBeInTheDocument()
+  })
+
+  it('shows proposals with clickable sources, the last run and the latest report', async () => {
+    mock.get('/issues', { ok: true, items: [issue({ id: 9, kind: 'idea', source: 'rnd', status: 'open', title: 'Sell a GBP tune-up',
+      body: 'Why: shops are not found.\nSources:\n- https://www.example.org/gbp-guide' })] })
+    mock.get('/audit', { ok: true, items: [] })
+    mock.get('/skills', { ok: true, items: [] })
+    mock.get('/rnd/status', { ok: true, last_run: '2026-10-26T10:00:00+00:00', manual_left: 0, manual_limit: 2,
+      latest: { kind: 'research', report_date: '2026-10-26', subject: 'Tiga R&D research 2026-10-26', body: 'PROPOSALS', created_at: 'x' } })
+    renderApp('/crew')
+    const link = await screen.findByRole('link', { name: 'example.org/gbp-guide' })
+    expect(link).toHaveAttribute('href', 'https://www.example.org/gbp-guide')
+    expect(screen.getByText('idea')).toHaveClass('badge-amber')
+    expect(screen.getByText(/0 of 2 runs by hand left today/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /run research now/i })).toBeDisabled()
+    expect(screen.getByText(/Latest report: Tiga R&D research/)).toBeInTheDocument()
   })
 
   it('lets the Dev bot build an approved issue', async () => {

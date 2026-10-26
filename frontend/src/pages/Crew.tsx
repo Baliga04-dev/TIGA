@@ -3,9 +3,21 @@ import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { useAction } from '../hooks/useAction';
 import { api } from '../services/api';
 import { cn } from '../lib/utils';
-import type { AuditEntry, DevStatus, Issue } from '../types';
+import type { AuditEntry, DevStatus, Issue, RndStatus } from '../types';
 
 /** What the user may do next from each state; everything else is done by the bots. */
+/** Text with its web links clickable (the R&D bot lists its sources as plain URLs). */
+function Rich({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s<>"')]+)/g);
+  return (
+    <p className="mt-1 whitespace-pre-line break-words text-ink-2">
+      {parts.map((part, i) => (/^https?:\/\//.test(part)
+        ? <a key={i} className="text-pen underline" href={part} target="_blank" rel="noreferrer">{part.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60)}</a>
+        : <span key={i}>{part}</span>))}
+    </p>
+  );
+}
+
 const YOUR_MOVES: Record<string, { label: string; to: string }[]> = {
   open: [{ label: 'Triage', to: 'triaged' }, { label: 'Reject', to: 'rejected' }],
   triaged: [{ label: 'Approve for Dev', to: 'approved' }, { label: 'Reject', to: 'rejected' }],
@@ -24,6 +36,7 @@ export function Crew() {
   const [skillText, setSkillText] = useState('');
   const [savedText, setSavedText] = useState('');
   const [dev, setDev] = useState<DevStatus | null>(null);
+  const [research, setResearch] = useState<RndStatus | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -32,6 +45,7 @@ export function Crew() {
       setAudit(a.items.slice(-15).reverse());
       setError(null);
       api.devStatus().then(setDev).catch(() => setDev(null));
+      api.rndStatus().then(setResearch).catch(() => setResearch(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load the issue board');
     }
@@ -68,7 +82,9 @@ export function Crew() {
   const rnd = useAction(async () => {
     const out = await api.runRnd();
     await refresh();
-    setToast(out.skipped ? 'This week’s R&D report already went out.' : `R&D report sent with ${out.proposals ?? 0} proposals.`);
+    setToast(out.research_error
+      ? `Filed ${out.proposals} proposals from the numbers only: ${out.research_error}.`
+      : `Research filed ${out.proposals} proposals (${out.researched} from the web). They are on the board below.`);
   });
 
   const build = async (issue: Issue) => {
@@ -101,10 +117,28 @@ export function Crew() {
       />
       {error && <div className="mb-6"><Notice title="Something went wrong">{error}</Notice></div>}
 
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <button className="btn btn-secondary" onClick={() => rnd.run()} disabled={rnd.pending}>Run R&amp;D now</button>
-        <span className="text-xs text-ink-3">Studies the outreach numbers and the board, files proposals, and mails the weekly report.</span>
-      </div>
+      <Card title="Research" className="mb-8" action={
+        <button className="btn btn-secondary btn-sm" onClick={() => rnd.run()} disabled={rnd.pending || research?.manual_left === 0}>
+          {rnd.pending ? 'Researching… (a minute or two)' : 'Run research now'}
+        </button>}>
+        <p className="max-w-prose text-sm text-ink-2">
+          The R&amp;D bot searches the web on the topics in its skill (edit them under Bot skills), checks your numbers, and files up to
+          5 proposals with their sources: <b>improvements</b> for the Dev bot to build once you approve them, <b>ideas</b> for you to act on.
+          It runs on its own once a week and learns from what you approve or reject.
+        </p>
+        {research && (
+          <p className="mt-2 text-xs text-ink-3">
+            {research.last_run ? `Last run ${new Date(research.last_run).toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}. ` : 'Not run yet. '}
+            {research.manual_left} of {research.manual_limit} runs by hand left today.
+          </p>
+        )}
+        {research?.latest && (
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm font-medium">Latest report: {research.latest.subject}</summary>
+            <Rich text={research.latest.body} />
+          </details>
+        )}
+      </Card>
       {dev && (
         <p className="mb-8 max-w-prose text-sm text-ink-2">
           {dev.ready
@@ -124,11 +158,11 @@ export function Crew() {
                 <li key={issue.id} className="text-sm">
                   <p className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">#{issue.id} {issue.title}</span>
-                    <span className={cn('badge', issue.kind === 'bug' ? 'badge-red' : 'badge-blue')}>{issue.kind}</span>
+                    <span className={cn('badge', issue.kind === 'bug' ? 'badge-red' : issue.kind === 'idea' ? 'badge-amber' : 'badge-blue')}>{issue.kind}</span>
                     <span className="badge badge-gray">{issue.status}</span>
                     {issue.occurrences > 1 && <span className="text-xs text-ink-3">seen {issue.occurrences} times</span>}
                   </p>
-                  {issue.body && <p className="mt-1 text-ink-2">{issue.body}</p>}
+                  {issue.body && <Rich text={issue.body} />}
                   <p className="text-xs text-ink-3">filed by {issue.source}</p>
                   {issue.status === 'in_progress' && <p role="status" className="mt-1 text-ink-2">The Dev bot is working on this…</p>}
                   {issue.pr_url && (

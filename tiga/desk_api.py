@@ -107,16 +107,25 @@ def write_skill(name: str, body: SkillIn) -> dict:
 
 @router.post("/rnd/run")
 async def run_rnd_now() -> dict:
+    """Research now (at most twice a day by hand). The report is saved in Tiga and mailed only if Gmail works."""
     import asyncio
+    from pathlib import Path
+
     import config
 
     to = config.ADMIN_REPORT_EMAIL or config.GMAIL_USER_EMAIL
-    if not to:
-        return {"ok": False, "error": "Gmail is not configured: set GMAIL_USER_EMAIL in tiga/.env"}
+    gmail_ready = bool(to) and Path(config.GMAIL_CREDENTIALS_FILE).exists()
+    today = datetime.date.today()
     return await asyncio.to_thread(
-        rnd.run_weekly, services.get_store(), services.get_mailer().scorecard(), services.send_email, to,
-        datetime.date.today(),
-    )
+        lambda: rnd.run(services.get_store(), context=jobs.rnd_context(today), guide=jobs.rnd_guide(),
+                        research=rnd.default_research(),
+                        send=services.send_email if gmail_ready else (lambda *_: {"ok": False, "error": "Gmail is not configured"}),
+                        to=to if gmail_ready else "", today=today, manual=True))
+
+
+@router.get("/rnd/status")
+def rnd_status() -> dict:
+    return {"ok": True, **rnd.status(services.get_store(), datetime.date.today())}
 
 
 @router.get("/audit")
