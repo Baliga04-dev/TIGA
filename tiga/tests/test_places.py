@@ -48,3 +48,10 @@ async def test_server_errors_raise_a_clear_error(http):
     http.add("overpass", status=429, json={})
     with pytest.raises(places.PlacesError):
         await places.fetch_businesses("bakery")
+
+
+async def test_each_business_carries_its_map_position(http):
+    http.add("overpass", json={"elements": [element(1, name="Sri Bakery", shop="bakery"),
+                                            element(2, kind="way", name="Glow Salon", shop="beauty")]})
+    node, way = await places.fetch_businesses("bakery")
+    assert (node.lat, node.lon) == (12.97, 77.59) and (way.lat, way.lon) == (12.98, 77.6)

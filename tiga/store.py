@@ -74,7 +74,20 @@ CREATE TABLE IF NOT EXISTS prospects (
     address TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',
     signals TEXT NOT NULL DEFAULT '[]', problems TEXT NOT NULL DEFAULT '[]', score INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '', outreach_id INTEGER,
-    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    lat REAL, lon REAL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, business TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '',
+    area TEXT NOT NULL DEFAULT '', source TEXT NOT NULL, source_detail TEXT NOT NULL DEFAULT '',
+    owner_published INTEGER NOT NULL DEFAULT 0, prospect_id INTEGER, consent TEXT NOT NULL DEFAULT '{}',
+    notice_at TEXT NOT NULL DEFAULT '', dnc INTEGER NOT NULL DEFAULT 0, dnc_reason TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS touches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, channel TEXT NOT NULL,
+    direction TEXT NOT NULL, kind TEXT NOT NULL, outcome TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+    at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS pending_actions (
     id TEXT PRIMARY KEY, tool TEXT NOT NULL, args TEXT NOT NULL, summary TEXT NOT NULL,
@@ -159,6 +172,10 @@ class Store:
             for name in ("pr_url", "dev_note"):   # databases created before the Dev bot
                 if name not in columns:
                     self._db.execute(f"ALTER TABLE issues ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
+            columns = {row["name"] for row in self._db.execute("PRAGMA table_info(prospects)")}
+            for name in ("lat", "lon"):   # databases created before walk-in routes
+                if name not in columns:
+                    self._db.execute(f"ALTER TABLE prospects ADD COLUMN {name} REAL")
 
     def close(self) -> None:
         with self._lock:
@@ -294,10 +311,10 @@ class Store:
 
     # --- prospects (businesses the Analyst found) --------------------------
     _PROSPECT_FIELDS = {"source", "name", "category", "website", "email", "email_source", "phone", "address",
-                        "link", "title", "signals", "problems", "score", "status", "note", "outreach_id"}
+                        "link", "title", "signals", "problems", "score", "status", "note", "outreach_id", "lat", "lon"}
     _PROSPECT_JSON = {"signals", "problems"}
     # Details a fresh sighting may refresh; progress fields (status, email found, problems) are kept.
-    _PROSPECT_REFRESH = {"name", "category", "website", "phone", "address", "link", "title"}
+    _PROSPECT_REFRESH = {"name", "category", "website", "phone", "address", "link", "title", "lat", "lon"}
 
     def upsert_prospect(self, data: dict) -> tuple[dict, bool]:
         """Insert by `key`, or refresh the listing details of an existing one. Returns (row, created)."""
@@ -446,6 +463,105 @@ class Store:
         with self._lock:
             rows = self._db.execute("SELECT id, kind, number, created_at FROM documents WHERE deal_id = ? ORDER BY id",
                                     (deal_id,))
+            return [dict(r) for r in rows]
+
+    # --- marketing contacts and touches (rules live in marketing.py) -----------------
+    _CONTACT_FIELDS = {"name", "business", "category", "phone", "email", "area", "source", "source_detail",
+                       "owner_published", "prospect_id", "consent", "notice_at", "dnc", "dnc_reason", "note"}
+
+    def add_contact(self, fields: dict) -> dict:
+        unknown = set(fields) - self._CONTACT_FIELDS
+        if unknown:
+            raise ValueError(f"unknown contact fields: {sorted(unknown)}")
+        stored = {k: json.dumps(v) if k == "consent" else v for k, v in fields.items()}
+        columns = [*stored, "created_at", "updated_at"]
+        with self._lock, self._db:
+            cur = self._db.execute(f"INSERT INTO contacts ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})",
+                                   [*stored.values(), _now(), _now()])
+            self._write_audit("user", "contact.add", "contact", str(cur.lastrowid), fields.get("source", ""))
+        return self.get_contact(cur.lastrowid)
+
+    def update_contact(self, contact_id: int, **fields) -> dict:
+        unknown = set(fields) - self._CONTACT_FIELDS
+        if unknown:
+            raise ValueError(f"unknown contact fields: {sorted(unknown)}")
+        stored = {k: json.dumps(v) if k == "consent" else v for k, v in fields.items()}
+        with self._lock, self._db:
+            self._db.execute(f"UPDATE contacts SET {', '.join(f'{k} = ?' for k in [*stored, 'updated_at'])} WHERE id = ?",
+                             [*stored.values(), _now(), contact_id])
+        return self.get_contact(contact_id)
+
+    def get_contact(self, contact_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM contacts WHERE id = ?", (contact_id,)).fetchone()
+        if row is None:
+            raise KeyError(f"no contact {contact_id}")
+        return self._decode_contact(row)
+
+    def find_contact(self, *, phone: str = "", prospect_id: int | None = None) -> dict | None:
+        """The contact for this shop (by prospect) or this number, if there is one."""
+        with self._lock:
+            row = None
+            if prospect_id is not None:
+                row = self._db.execute("SELECT * FROM contacts WHERE prospect_id = ? ORDER BY id LIMIT 1", (prospect_id,)).fetchone()
+            if row is None and phone:
+                row = self._db.execute("SELECT * FROM contacts WHERE phone = ? ORDER BY id LIMIT 1", (phone,)).fetchone()
+        return self._decode_contact(row) if row else None
+
+    def list_contacts(self, source: str = "", limit: int = 1000) -> list[dict]:
+        sql, args = "SELECT * FROM contacts", []
+        if source:
+            sql, args = sql + " WHERE source = ?", [source]
+        with self._lock:
+            rows = self._db.execute(sql + " ORDER BY updated_at DESC, id DESC LIMIT ?", [*args, limit])
+            return [self._decode_contact(r) for r in rows]
+
+    def delete_contact(self, contact_id: int) -> None:
+        """Erase a person and their history. Suppressions stay, so a "no" outlives the record."""
+        with self._lock, self._db:
+            self._db.execute("DELETE FROM touches WHERE contact_id = ?", (contact_id,))
+            self._db.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+            self._write_audit("user", "contact.delete", "contact", str(contact_id))
+
+    @staticmethod
+    def _decode_contact(row) -> dict:
+        out = dict(row)
+        out["consent"] = json.loads(out["consent"] or "{}")
+        out["dnc"], out["owner_published"] = bool(out["dnc"]), bool(out["owner_published"])
+        return out
+
+    def add_touch(self, contact_id: int, *, channel: str, direction: str, kind: str, outcome: str = "",
+                  note: str = "", at: str) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "INSERT INTO touches (contact_id, channel, direction, kind, outcome, note, at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (contact_id, channel, direction, kind, outcome, note, at))
+            self._db.execute("UPDATE contacts SET updated_at = ? WHERE id = ?", (_now(), contact_id))
+            row = self._db.execute("SELECT * FROM touches WHERE id = ?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+    def list_touches(self, contact_id: int | None = None, *, since: str = "", until: str = "") -> list[dict]:
+        """Touches oldest first, each with its contact's source; filtered by contact and by time when given."""
+        sql = "SELECT t.*, c.source AS source FROM touches t LEFT JOIN contacts c ON c.id = t.contact_id WHERE 1 = 1"
+        args: list = []
+        if contact_id is not None:
+            sql, args = sql + " AND t.contact_id = ?", [*args, contact_id]
+        if since:
+            sql, args = sql + " AND t.at >= ?", [*args, since]
+        if until:
+            sql, args = sql + " AND t.at < ?", [*args, until]
+        with self._lock:
+            return [dict(r) for r in self._db.execute(sql + " ORDER BY t.at, t.id", args)]
+
+    def count_documents(self, kind: str, since: str, until: str) -> int:
+        with self._lock:
+            return self._db.execute("SELECT COUNT(*) FROM documents WHERE kind = ? AND created_at >= ? AND created_at < ?",
+                                    (kind, since, until)).fetchone()[0]
+
+    def audit_between(self, action: str, since: str, until: str) -> list[dict]:
+        with self._lock:
+            rows = self._db.execute("SELECT * FROM audit_log WHERE action = ? AND ts >= ? AND ts < ? ORDER BY id",
+                                    (action, since, until))
             return [dict(r) for r in rows]
 
     # --- reminders and notes -------------------------------------------------------

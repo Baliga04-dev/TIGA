@@ -83,7 +83,7 @@ class Analyst:
 
     def _record_business(self, b) -> int:
         base = {"key": b.key, "source": "osm", "name": b.name, "category": b.category, "website": b.website,
-                "phone": b.phone, "address": b.address}
+                "phone": b.phone, "address": b.address, "lat": getattr(b, "lat", None), "lon": getattr(b, "lon", None)}
         if b.is_chain:
             row, created = self.store.upsert_prospect({**base, "status": "disqualified", "note": "chain or brand"})
         elif b.website:

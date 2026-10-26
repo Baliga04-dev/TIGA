@@ -49,3 +49,13 @@ def test_kv_holds_small_cursors(store):
     assert store.get_value("cursor", "0") == "0"
     store.set_value("cursor", "3")
     assert store.get_value("cursor", "0") == "3"
+
+
+def test_prospects_keep_their_map_position_and_a_new_sighting_fills_it_in():
+    from store import Store
+
+    store = Store(":memory:")
+    row, _ = store.upsert_prospect({"key": "osm:node/9", "source": "osm", "name": "Old Bakery"})
+    assert row["lat"] is None
+    row, created = store.upsert_prospect({"key": "osm:node/9", "source": "osm", "name": "Old Bakery", "lat": 12.93, "lon": 77.58})
+    assert not created and (row["lat"], row["lon"]) == (12.93, 77.58)

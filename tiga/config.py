@@ -90,6 +90,7 @@ AI_DAILY_CALLS = int(os.getenv("TIGA_AI_DAILY_CALLS", "150"))
 UPI_ID = os.getenv("TIGA_UPI_ID", "").strip()
 BUSINESS_NAME = os.getenv("TIGA_BUSINESS_NAME", "").strip()
 PORTFOLIO_URL = os.getenv("TIGA_PORTFOLIO_URL", "").strip()
+WHATSAPP_NUMBER = os.getenv("TIGA_WHATSAPP", "").strip()  # the owner's WhatsApp, digits with country code
 
 # Tiga Bridge (Edge extension) shared secret; the extension must present it to connect. Empty = bridge off.
 BRIDGE_TOKEN = os.getenv("TIGA_BRIDGE_TOKEN", "").strip()

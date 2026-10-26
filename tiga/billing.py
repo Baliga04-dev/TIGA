@@ -143,7 +143,7 @@ def invoice_text(inv: dict) -> str:
     )
 
 
-def _qr_svg(data: str) -> str:
+def qr_svg(data: str) -> str:
     import qrcode
     import qrcode.image.svg
 
@@ -182,5 +182,5 @@ def render_html(kind: str, doc: dict) -> str:
             f"Date {e(doc['date'])} · due {e(doc['due'])}</p><table><tr><th>Description</th><th class='r'>Amount</th></tr>"
             f"<tr><td>{e(what)} (project total ₹{doc['project_total']:,})</td><td class='r total'>₹{doc['amount']:,}</td></tr>"
             f"</table><div class='box'><b>Pay by UPI</b> to {e(biz['upi'])}: scan the code, and mention {e(doc['number'])}."
-            f"<div class='qr'>{_qr_svg(doc['upi_link'])}</div></div>")
+            f"<div class='qr'>{qr_svg(doc['upi_link'])}</div></div>")
     return _PAGE.format(title=f"Invoice {e(doc['number'])}", body=body)

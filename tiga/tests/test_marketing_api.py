@@ -1,0 +1,96 @@
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+import marketing
+import services
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+@pytest.fixture(autouse=True)
+def shop_hours(monkeypatch):
+    """The API reads marketing.now(); pin it to a weekday noon in Bengaluru."""
+    monkeypatch.setattr(marketing, "now", lambda: datetime(2026, 10, 27, 12, 0, tzinfo=IST))
+
+
+def add(client, **kw):
+    body = {"name": "Kavya Rao", "phone": "99001 27458", "source": "warm", "source_detail": "college friend", **kw}
+    return client.post("/api/marketing/contacts", json=body).json()
+
+
+def test_contacts_list_carries_what_the_gate_says(client):
+    friend = add(client)["contact"]
+    shop = add(client, name="Ramesh", phone="98450 31762", source="map", business="Sri Ganesh Bakery")["contact"]
+    items = {c["id"]: c for c in client.get("/api/marketing/contacts").json()["items"]}
+    assert items[friend["id"]]["gates"]["whatsapp"]["ok"] and not items[shop["id"]]["gates"]["whatsapp"]["ok"]
+    assert "permission" in items[shop["id"]]["gates"]["whatsapp"]["reason"] and items[shop["id"]]["email"] == ""
+
+
+def test_bad_contacts_are_refused_readably(client):
+    out = add(client, name="", phone="")
+    assert out["ok"] is False and "name" in out["error"]
+    add(client)
+    assert "already" in add(client)["error"]
+
+
+def test_whatsapp_needs_the_gate_then_a_mark_sent_records_the_touch(client):
+    shop = add(client, name="Ramesh", phone="98450 31762", source="map")["contact"]
+    refused = client.post(f"/api/marketing/contacts/{shop['id']}/whatsapp", json={"text": "Hello"}).json()
+    assert refused["ok"] is False and "permission" in refused["error"]
+    client.post(f"/api/marketing/contacts/{shop['id']}/consent", json={"channel": "whatsapp", "how": "asked in person", "notice": True})
+    link = client.post(f"/api/marketing/contacts/{shop['id']}/whatsapp", json={"text": "Hello"}).json()
+    assert link["ok"] and link["url"].startswith("https://wa.me/919845031762")
+    sent = client.post(f"/api/marketing/contacts/{shop['id']}/touches", json={"channel": "whatsapp", "direction": "out", "kind": "message"}).json()
+    assert sent["ok"] and client.get(f"/api/marketing/contacts/{shop['id']}/touches").json()["items"][0]["kind"] == "message"
+    listed = client.get("/api/marketing/contacts").json()["items"][0]
+    assert listed["last_out_at"].startswith("2026-10-27") and listed["last_in_at"] == ""
+
+
+def test_the_warm_draft_and_do_not_contact(client):
+    friend = add(client)["contact"]
+    draft = client.get(f"/api/marketing/contacts/{friend['id']}/draft").json()
+    assert draft["ok"] and draft["text"].startswith("Hi Kavya") and "/demos/" in draft["text"]
+    out = client.post(f"/api/marketing/contacts/{friend['id']}/dnc", json={"reason": "asked me to stop"}).json()
+    assert out["contact"]["dnc"]
+    assert client.delete(f"/api/marketing/contacts/{friend['id']}").json()["ok"]
+    assert add(client)["contact"]["dnc"]
+
+
+def test_walk_ins_route_visit_and_inbound(client):
+    store = services.get_store()
+    lat, lon = marketing.LOCALITIES["Jayanagar"]
+    p, _ = store.upsert_prospect({"key": "osm:node/1", "source": "osm", "name": "Sri Ganesh Bakery", "category": "bakery",
+                                  "status": "no_contact", "lat": lat + 0.002, "lon": lon})
+    localities = client.get("/api/marketing/localities").json()["items"]
+    assert "Jayanagar" in localities
+    route = client.get("/api/marketing/route", params={"locality": "Jayanagar", "category": "bakery", "radius_km": 1}).json()
+    assert [s["name"] for s in route["stops"]] == ["Sri Ganesh Bakery"]
+    visit = client.post("/api/marketing/visits", json={"prospect_id": p["id"], "outcome": "interested", "name": "Suresh",
+                                                       "phone": "98860 44217", "consent": ["whatsapp"], "notice": True}).json()
+    assert visit["ok"] and visit["contact"]["consent"]["whatsapp"]
+    again = client.get("/api/marketing/route", params={"locality": "Jayanagar", "category": "all", "radius_km": 1}).json()
+    assert again["stops"] == []   # visited this week
+    found = client.post("/api/marketing/inbound", json={"ref": f"Ref T{p['id']}", "phone": "98860 44217"}).json()
+    assert found["ok"] and found["contact"]["id"] == visit["contact"]["id"]
+    assert client.post("/api/marketing/inbound", json={"ref": "hello"}).json()["ok"] is False
+
+
+def test_printables_are_static_pages(client):
+    store = services.get_store()
+    lat, lon = marketing.LOCALITIES["Jayanagar"]
+    p, _ = store.upsert_prospect({"key": "osm:node/2", "source": "osm", "name": "Udupi Tiffins", "category": "restaurant",
+                                  "status": "no_contact", "lat": lat, "lon": lon + 0.001})
+    sheet = client.get(f"/api/marketing/print/audit/{p['id']}")
+    assert sheet.status_code == 200 and "default-src 'none'" in sheet.headers["content-security-policy"]
+    assert f"Ref T{p['id']}" in sheet.text and "<script" not in sheet.text
+    walk = client.get("/api/marketing/print/route", params={"locality": "Jayanagar", "category": "all", "radius_km": 1})
+    assert walk.status_code == 200 and "Udupi Tiffins" in walk.text
+    assert client.get("/api/marketing/print/audit/99999").status_code == 404
+
+
+def test_scorecard(client):
+    friend = add(client)["contact"]
+    client.post(f"/api/marketing/contacts/{friend['id']}/touches", json={"channel": "whatsapp", "direction": "out", "kind": "message"})
+    card = client.get("/api/marketing/scorecard").json()
+    assert card["ok"] and card["weeks"][0]["warm_sent"] == 1 and card["enough_data"] is False

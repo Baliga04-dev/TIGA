@@ -42,6 +42,12 @@ import type {
   ChatLogEntry,
   Prospect,
   AnalystStatus,
+  Contact,
+  Touch,
+  WalkRoute,
+  MarketingWeek,
+  VisitOutcome,
+  Channel,
 } from '../types';
 
 const API_BASE = '/api';
@@ -316,6 +322,28 @@ export const api = {
     post<{ ok: true; draft: OutreachItem }>(`/prospects/${id}/contact`, { email }),
 
   skipProspect: (id: number) => post<{ ok: true }>(`/prospects/${id}/skip`),
+
+  // Marketing desk: Tiga prepares and remembers; WhatsApp links open only when the consent gate allows.
+  listContacts: (source = '') => request<{ ok: true; items: Contact[] }>(`/marketing/contacts${source ? `?source=${source}` : ''}`),
+  addContact: (data: Partial<Pick<Contact, 'name' | 'business' | 'category' | 'phone' | 'email' | 'area' | 'source' | 'source_detail' | 'note'>>) =>
+    post<{ ok: true; contact: Contact }>('/marketing/contacts', data),
+  deleteContact: (id: number) => request<{ ok: true }>(`/marketing/contacts/${id}`, { method: 'DELETE' }),
+  giveConsent: (id: number, channel: Channel, how: string, notice: boolean) =>
+    post<{ ok: true; contact: Contact }>(`/marketing/contacts/${id}/consent`, { channel, how, notice }),
+  doNotContact: (id: number, reason: string) => post<{ ok: true; contact: Contact }>(`/marketing/contacts/${id}/dnc`, { reason }),
+  warmDraft: (id: number) => request<{ ok: true; text: string }>(`/marketing/contacts/${id}/draft`),
+  whatsappLink: (id: number, text: string) => post<{ ok: true; url: string }>(`/marketing/contacts/${id}/whatsapp`, { text }),
+  recordTouch: (id: number, touch: Pick<Touch, 'channel' | 'direction' | 'kind'> & { note?: string }) =>
+    post<{ ok: true; touch: Touch }>(`/marketing/contacts/${id}/touches`, touch),
+  listTouches: (id: number) => request<{ ok: true; items: Touch[] }>(`/marketing/contacts/${id}/touches`),
+  localities: () => request<{ ok: true; items: string[] }>('/marketing/localities'),
+  walkRoute: (locality: string, category: string, radiusKm: number) =>
+    request<{ ok: true } & WalkRoute>(`/marketing/route?${new URLSearchParams({ locality, category, radius_km: String(radiusKm) })}`),
+  logVisit: (visit: { prospect_id: number; outcome: VisitOutcome; name: string; phone: string; consent: Channel[]; notice: boolean; note: string; dnc: boolean }) =>
+    post<{ ok: true; contact: Contact }>('/marketing/visits', visit),
+  inbound: (message: { ref: string; name: string; phone: string; note: string }) =>
+    post<{ ok: true; contact: Contact }>('/marketing/inbound', message),
+  marketingScorecard: () => request<{ ok: true; weeks: MarketingWeek[]; enough_data: boolean }>('/marketing/scorecard'),
 
   getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),
 

@@ -25,13 +25,14 @@ describe('Prospects', () => {
     expect(screen.getByLabelText('Prospect counts')).toHaveTextContent('600')
   })
 
-  it('splits prospects into needs-an-email and call-or-WhatsApp', async () => {
+  it('splits prospects into needs-an-email and visit-in-person, with no WhatsApp to map numbers', async () => {
     mock.get('/prospects', { ok: true, counts: {}, items: [p(), p({ id: 2, name: 'Phone Shop', website: '', phone: '080 1234 5678', problems: ['no_website'] })] })
     renderApp('/prospects')
     expect(await screen.findByText('not secure (no HTTPS)')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /needs an email \(1\)/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /call or whatsapp \(1\)/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /whatsapp phone shop/i })).toHaveAttribute('href', 'https://wa.me/918012345678')
+    expect(screen.getByRole('heading', { name: /visit in person \(1\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /plan a walk/i })).toHaveAttribute('href', '/marketing?tab=walk-ins')
+    expect(screen.queryByRole('link', { name: /whatsapp/i })).not.toBeInTheDocument()
   })
 
   it('drafts as soon as you paste the email you found', async () => {

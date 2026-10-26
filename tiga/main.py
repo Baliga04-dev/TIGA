@@ -23,6 +23,7 @@ import analyst_api
 import assistant_api
 import bridge as bridge_mod
 import deals_api
+import marketing_api
 import services
 import tts as tts_mod
 import ai
@@ -143,6 +144,7 @@ app.include_router(analyst_api.router)
 app.include_router(assistant_api.router)
 app.include_router(deals_api.router)
 app.include_router(deals_api.pricing_router)
+app.include_router(marketing_api.router)
 
 
 @app.websocket("/ws/bridge")

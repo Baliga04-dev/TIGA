@@ -20,6 +20,7 @@ _ISOLATED_ENV = {
     "TIGA_BRIDGE_TOKEN": "",
     "TIGA_BUSINESS_NAME": "",
     "TIGA_PORTFOLIO_URL": "",
+    "TIGA_WHATSAPP": "",
     "GMAIL_USER_EMAIL": "",
     "ADMIN_REPORT_EMAIL": "",
     "GITHUB_REPOSITORY": "",

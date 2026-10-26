@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Moon, PenLine, Phone } from 'lucide-react';
-import { PageHeader, Card, Notice, Toast, CopyButton } from '../components/ui';
+import { Footprints, Loader2, Moon, PenLine } from 'lucide-react';
+import { PageHeader, Card, Notice, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
 import type { AnalystStatus, Prospect } from '../types';
@@ -23,16 +23,6 @@ const COUNT_LABELS: [string, string][] = [
   ['no_contact', 'No contact listed'],
   ['disqualified', 'Not a fit'],
 ];
-
-/** wa.me wants the full international number: drop the trunk 0, add India's 91 to 10-digit numbers. */
-function whatsappLink(phone: string) {
-  const digits = phone.replace(/\D/g, '').replace(/^0+/, '');
-  return `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`;
-}
-
-function callScript(p: Prospect) {
-  return `Hi, I'm Adithya, a freelance web developer in Bengaluru. I came across ${p.name} and noticed you don't have a website yet. I build simple, affordable websites and can share a free plan. Would that be useful?`;
-}
 
 function Problems({ items }: { items: string[] }) {
   if (items.length === 0) return null;
@@ -159,8 +149,11 @@ export function Prospects() {
           )}
         </Card>
 
-        <Card title={`Call or WhatsApp (${phoneOnly.length})`}>
-          <p className="mb-2 text-sm text-ink-2">These list only a phone number. Tiga never messages them for you.</p>
+        <Card title={`Visit in person (${phoneOnly.length})`} action={<Link to="/marketing?tab=walk-ins" className="btn btn-secondary btn-sm"><Footprints className="size-4" aria-hidden="true" /> Plan a walk</Link>}>
+          <p className="mb-2 text-sm text-ink-2">
+            These list only a phone number. WhatsApp's rules need a number to be given to you before you message it, and
+            repeated cold calls can get your own number blocked, so these are best visited: they appear on your walk-in routes.
+          </p>
           {phoneOnly.length === 0 ? <p className="text-sm text-ink-3">Nothing waiting.</p> : (
             <ul className="divide-y divide-rule">
               {phoneOnly.map((p) => (
@@ -170,9 +163,6 @@ export function Prospects() {
                     {p.address && <span className="block text-xs text-ink-3">{p.address}</span>}
                   </span>
                   <span className="flex flex-wrap gap-2">
-                    <a className="btn btn-secondary btn-sm" href={`tel:${p.phone}`}><Phone className="size-4" aria-hidden="true" /> {p.phone}</a>
-                    <a className="btn btn-secondary btn-sm" href={whatsappLink(p.phone)} target="_blank" rel="noopener noreferrer">WhatsApp <span className="sr-only">{p.name}</span></a>
-                    <CopyButton text={callScript(p)} label="Copy script" />
                     <button className="btn btn-ghost btn-sm" onClick={() => api.skipProspect(p.id).then(() => done(`Skipped ${p.name}`), (e: Error) => setError(e.message))}>
                       Skip <span className="sr-only">{p.name}</span>
                     </button>

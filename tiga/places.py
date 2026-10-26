@@ -55,6 +55,8 @@ class Business:
     phone: str
     address: str
     is_chain: bool
+    lat: float | None = None   # where it is on the map (a way's centre), for walk-in routes
+    lon: float | None = None
 
 
 def _query(category: str) -> str:
@@ -102,5 +104,6 @@ async def fetch_businesses(category: str) -> list[Business]:
             email=_first(tags, "email", "contact:email").lower(),
             phone=_first(tags, "phone", "contact:phone", "contact:mobile", "mobile"),
             address=address, is_chain=bool(tags.get("brand") or tags.get("brand:wikidata")),
+            lat=el.get("lat", el.get("center", {}).get("lat")), lon=el.get("lon", el.get("center", {}).get("lon")),
         ))
     return found

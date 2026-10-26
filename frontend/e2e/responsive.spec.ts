@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const PATHS = ['/', '/email', '/chat', '/agents', '/settings']
+const PATHS = ['/', '/email', '/chat', '/marketing', '/agents', '/settings']
 
 test.describe('phone width', () => {
   for (const path of PATHS) {

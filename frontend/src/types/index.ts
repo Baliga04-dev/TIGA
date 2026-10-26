@@ -486,3 +486,84 @@ export interface ChatLogEntry {
   mode: string;
   actions: { tool: string; ok: boolean; status: string }[];
 }
+
+// --- marketing desk -----------------------------------------------------------------------------
+export type ContactSource = 'warm' | 'walk_in' | 'inbound' | 'referral' | 'map' | 'other';
+export type Channel = 'whatsapp' | 'call' | 'email';
+export type VisitOutcome = 'not_met' | 'talked' | 'interested' | 'not_interested' | 'come_back';
+
+export interface Gate {
+  ok: boolean;
+  reason: string;
+}
+
+export interface Contact {
+  id: number;
+  name: string;
+  business: string;
+  category: string;
+  phone: string;
+  email: string;
+  area: string;
+  source: ContactSource;
+  source_detail: string;
+  owner_published: boolean;
+  prospect_id: number | null;
+  consent: Partial<Record<Channel, { at: string; how: string }>>;
+  notice_at: string;
+  dnc: boolean;
+  dnc_reason: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+  gates: Record<Channel, Gate>;
+  last_out_at: string;
+  last_in_at: string;
+  visits: number;
+  last_outcome: VisitOutcome | '';
+}
+
+export interface Touch {
+  id: number;
+  contact_id: number;
+  channel: Channel | 'visit';
+  direction: 'in' | 'out';
+  kind: 'message' | 'call' | 'email' | 'visit';
+  outcome: VisitOutcome | '';
+  note: string;
+  at: string;
+}
+
+export interface RouteStop {
+  id: number;
+  name: string;
+  category: string;
+  address: string;
+  website: string;
+  phone: string;
+  problems: string[];
+  why: string[];
+  ref: string;
+  walk_m: number;
+}
+
+export interface WalkRoute {
+  locality: string;
+  stops: RouteStop[];
+  without_coordinates: number;
+  total_m: number;
+  minutes: number;
+}
+
+export interface MarketingWeek {
+  start: string;
+  warm_sent: number;
+  visits: number;
+  conversations: number;
+  interested: number;
+  messages_in: number;
+  consents: number;
+  proposals: number;
+  won: number;
+  revenue: number;
+}
