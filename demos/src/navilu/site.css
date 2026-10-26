@@ -1,0 +1,22 @@
+:root {
+  --ground: 244 245 241;
+  --ink: 29 26 31;
+  --soft: 86 80 89;
+  --line: 214 212 208;
+  --field: 15 74 76;
+  --on-field: 238 244 241;
+  --accent: 176 132 51;
+  --on-accent: 29 26 31;
+  --tint: 228 235 231;
+  --bad: 163 36 59;
+  --font-display: "Gloock", ui-serif, Georgia, serif;
+  --font-body: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+}
+/* the woven border that frames every section: a gold zari band with a row of small mango (paisley) bumps */
+.zari {
+  height: 18px;
+  background:
+    radial-gradient(circle at 50% 120%, rgb(var(--field)) 0 4px, transparent 4.5px) 0 0 / 18px 18px repeat-x,
+    linear-gradient(rgb(var(--accent)) 0 3px, transparent 3px 15px, rgb(var(--accent)) 15px) 0 0 / 100% 100%,
+    repeating-linear-gradient(90deg, rgb(var(--accent) / 0.85) 0 9px, rgb(var(--accent) / 0.55) 9px 18px);
+}

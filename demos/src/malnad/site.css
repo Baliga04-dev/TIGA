@@ -1,0 +1,17 @@
+:root {
+  --ground: 239 242 234;
+  --ink: 19 38 27;
+  --soft: 71 87 76;
+  --line: 201 210 194;
+  --field: 29 74 51;
+  --on-field: 238 243 230;
+  --accent: 217 161 43;
+  --on-accent: 19 38 27;
+  --tint: 226 234 217;
+  --bad: 166 52 36;
+  --font-display: "Bricolage Grotesque Variable", "Noto Sans Kannada", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Bricolage Grotesque Variable", "Noto Sans Kannada", ui-sans-serif, system-ui, sans-serif;
+}
+.veg-mark { display: inline-grid; place-items: center; width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 3px; flex: none; }
+.veg-mark::after { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; }
+.veg-mark.nonveg::after { border-radius: 0; width: 0; height: 0; background: none; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid currentColor; }

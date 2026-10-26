@@ -1,0 +1,27 @@
+{
+  "categories": [
+    { "id": "tiffin", "name": "Morning tiffin", "note": "Until 11am" },
+    { "id": "meals", "name": "Rice and curries", "note": "Lunch and dinner" },
+    { "id": "coast", "name": "From the coast", "note": "Lunch and dinner" },
+    { "id": "sweet", "name": "Sweets and drinks", "note": "All day" }
+  ],
+  "dishes": [
+    { "id": "neer-dosa", "category": "tiffin", "name": "Neer dosa", "local": "ನೀರ್ ದೋಸೆ", "desc": "Three paper-thin rice crêpes with coconut chutney and a bowl of jaggery-coconut.", "price": 90, "veg": true, "spice": 0, "pic": "neer-dosa" },
+    { "id": "akki-rotti", "category": "tiffin", "name": "Akki rotti", "local": "ಅಕ್ಕಿ ರೊಟ್ಟಿ", "desc": "Rice-flour flatbread patted out by hand with dill, onion and green chilli. Butter and chutney.", "price": 110, "veg": true, "spice": 1, "pic": "akki-rotti" },
+    { "id": "benne-dosa", "category": "tiffin", "name": "Benne masala dosa", "local": "ಬೆಣ್ಣೆ ದೋಸೆ", "desc": "Crisp dosa with a slick of white butter and potato palya.", "price": 120, "veg": true, "spice": 0, "pic": "dosa-1" },
+    { "id": "kotte-kadubu", "category": "tiffin", "name": "Kotte kadubu", "local": "ಕೊಟ್ಟೆ ಕಡುಬು", "desc": "Idli steamed in jackfruit-leaf cups, with sambar and chutney.", "price": 100, "veg": true, "spice": 0 },
+    { "id": "avalakki", "category": "tiffin", "name": "Avalakki oggarane", "local": "ಅವಲಕ್ಕಿ", "desc": "Beaten rice tempered with peanuts, curry leaf, turmeric and lime.", "price": 80, "veg": true, "spice": 1 },
+    { "id": "malnad-oota", "category": "meals", "name": "Malnad oota on a leaf", "local": "ಬಾಳೆ ಎಲೆ ಊಟ", "desc": "Rice, two palyas, saaru, huli, kosambari, happala and payasa. Rice refilled once.", "price": 260, "veg": true, "spice": 1, "pic": "leaf-meal" },
+    { "id": "kanile", "category": "meals", "name": "Kanile curry and rice", "local": "ಕಣಿಲೆ", "desc": "Tender bamboo shoot in a sour coconut gravy. June to September only.", "price": 210, "veg": true, "spice": 2 },
+    { "id": "pandi", "category": "meals", "name": "Pandi curry with akki rotti", "local": "ಪಂದಿ ಕರಿ", "desc": "Kodagu-style pork, cooked dark with kachampuli vinegar.", "price": 340, "veg": false, "spice": 2 },
+    { "id": "koli-saaru", "category": "meals", "name": "Nati koli saaru and rice", "local": "ನಾಟಿ ಕೋಳಿ ಸಾರು", "desc": "Country chicken in a thin, peppery broth the way Malnad homes make it.", "price": 310, "veg": false, "spice": 3 },
+    { "id": "kori-rotti", "category": "coast", "name": "Kori rotti", "local": "ಕೋರಿ ರೊಟ್ಟಿ", "desc": "Mangalorean chicken curry poured over crisp rice wafers at the table.", "price": 320, "veg": false, "spice": 2 },
+    { "id": "kane", "category": "coast", "name": "Kane rava fry", "local": "ಕಾಣೆ", "desc": "Ladyfish in red masala, rolled in semolina and pan-fried.", "price": 360, "veg": false, "spice": 2 },
+    { "id": "prawn-ghee", "category": "coast", "name": "Prawn ghee roast", "local": "ಸಿಗಡಿ", "desc": "Prawns roasted in ghee with byadgi chilli and tamarind.", "price": 420, "veg": false, "spice": 3 },
+    { "id": "mushroom-sukka", "category": "coast", "name": "Mushroom sukka", "local": "ಅಣಬೆ ಸುಕ್ಕ", "desc": "Dry coconut roast with the same masala as the prawns.", "price": 230, "veg": true, "spice": 1 },
+    { "id": "holige", "category": "sweet", "name": "Kayi holige", "local": "ಕಾಯಿ ಹೋಳಿಗೆ", "desc": "Coconut-jaggery flatbread with a spoon of ghee.", "price": 70, "veg": true, "spice": 0 },
+    { "id": "halbai", "category": "sweet", "name": "Halbai", "local": "ಹಾಲುಬಾಯಿ", "desc": "Rice and jaggery fudge set in a tray and cut into diamonds.", "price": 90, "veg": true, "spice": 0 },
+    { "id": "punarpuli", "category": "sweet", "name": "Punarpuli juice", "local": "ಪುನರ್ಪುಳಿ", "desc": "Chilled kokum with a pinch of roasted cumin.", "price": 60, "veg": true, "spice": 0 },
+    { "id": "coffee", "category": "sweet", "name": "Filter coffee", "local": "ಕಾಫಿ", "desc": "Chikkamagaluru beans with a fifth chicory, served in a davara.", "price": 50, "veg": true, "spice": 0 }
+  ]
+}

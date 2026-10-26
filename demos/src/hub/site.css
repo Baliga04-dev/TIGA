@@ -1,0 +1,15 @@
+:root {
+  --ground: 11 14 18;
+  --ink: 223 231 224;
+  --soft: 170 180 173;
+  --line: 44 52 58;
+  --field: 20 25 31;
+  --on-field: 223 231 224;
+  --accent: 224 35 28;
+  --on-accent: 255 255 255;
+  --tint: 26 32 38;
+  --bad: 255 120 100;
+  --focus: 201 162 74;
+  --font-display: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+}

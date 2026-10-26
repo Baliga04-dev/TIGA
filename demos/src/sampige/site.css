@@ -1,0 +1,17 @@
+:root {
+  --ground: 238 240 238;
+  --ink: 27 37 48;
+  --soft: 74 86 99;
+  --line: 207 213 213;
+  --field: 23 38 54;
+  --on-field: 238 240 238;
+  --accent: 227 166 74;
+  --on-accent: 27 37 48;
+  --tint: 226 231 230;
+  --bad: 179 38 30;
+  --focus: 27 37 48;
+  --font-display: "Young Serif", ui-serif, Georgia, serif;
+  --font-body: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+}
+.on-field :focus-visible { outline-color: rgb(var(--accent)); }
+.on-field .text-bad { color: rgb(255 184 172); }

@@ -1,0 +1,38 @@
+{
+  "name": "tiga-demos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "images": "node scripts/images.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/baloo-2": "5.3.0",
+    "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/hanken-grotesk": "5.3.0",
+    "@fontsource-variable/lexend": "^5.3.0",
+    "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource/gloock": "5.3.0",
+    "@fontsource/noto-sans-kannada": "^5.3.0",
+    "@fontsource/young-serif": "5.3.0",
+    "@phosphor-icons/react": "2.1.10",
+    "framer-motion": "11.18.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.7.0",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.49",
+    "sharp": "0.35.5",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.6.3",
+    "vite": "5.4.21"
+  }
+}

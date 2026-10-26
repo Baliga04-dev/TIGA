@@ -1,0 +1,14 @@
+{
+  "rooms": [
+    { "id": "courtyard", "name": "Courtyard Queen", "size": 18, "beds": "Queen bed", "sleeps": 2, "weekday": 3400, "weekend": 3900, "pic": "room-courtyard",
+      "view": "Opens onto the inner courtyard and its sampige tree. Quietest rooms in the house.", "count": 8, "fullIn": [] },
+    { "id": "garden", "name": "Garden King", "size": 24, "beds": "King bed", "sleeps": 3, "weekday": 4600, "weekend": 5200, "pic": "room-garden",
+      "view": "First floor, with a small balcony over the garden and a desk by the window.", "count": 6, "fullIn": [9, 10] },
+    { "id": "twin", "name": "Corner Room", "size": 22, "beds": "Queen bed", "sleeps": 2, "weekday": 3800, "weekend": 4300, "pic": "room-twin",
+      "view": "Ground floor and step-free, with windows on two sides and the door nearest the desk.", "count": 2, "fullIn": [5, 6] },
+    { "id": "family", "name": "Family Suite", "size": 34, "beds": "King bed and a sofa bed", "sleeps": 4, "weekday": 6900, "weekend": 7600, "pic": "room-family",
+      "view": "Two rooms with a door between them, a bathtub, and space for a cot.", "count": 2, "fullIn": [8, 15] }
+  ],
+  "extraBed": 900,
+  "gst": 0.05
+}
