@@ -8,8 +8,10 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]]; then
   # shellcheck disable=SC1091
+  set +u   # nvm reads unset variables; with -u the shell would exit inside it, silently
   . "${NVM_DIR:-$HOME/.nvm}/nvm.sh" >/dev/null
   nvm use --lts >/dev/null 2>&1 || true
+  set -u
 fi
 
 if [[ "${1:-}" == "--install" ]]; then

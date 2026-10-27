@@ -210,3 +210,11 @@ def test_the_scorecard_counts_the_week_and_says_when_there_is_too_little_data(st
     assert len(card["weeks"]) == 4 and week["start"] == "2026-10-26"
     assert (week["warm_sent"], week["visits"], week["conversations"], week["consents"]) == (1, 2, 1, 1)
     assert not card["enough_data"]
+
+
+def test_the_audit_sheet_names_the_kind_of_shop_properly(store):
+    gadgets = prospect(store, n=8, category="electronics")
+    page = marketing.audit_sheet_html(gadgets, owner="Adithya", whatsapp="917795052550",
+                                      demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
+    assert "search for an electronics shop" in page and "a electronics" not in page
+    assert "Websites I built for Bengaluru shops" in page     # no demo of this kind yet: the index, said honestly

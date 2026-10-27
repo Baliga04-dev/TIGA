@@ -54,7 +54,7 @@ LOCALITIES: dict[str, tuple[float, float]] = {
 
 # What the site check found, in a shop owner's words, and what fixing it looks like.
 PROBLEMS: dict[str, tuple[str, str]] = {
-    "no_website": ("There's no website on your map listing, so people nearby who search for a {category} find the "
+    "no_website": ("There's no website on your map listing, so people nearby who search for {category} find the "
                    "shops that have one.",
                    "A one-page site with your hours, photos, prices and a WhatsApp button, linked from your Google listing."),
     "site_down": ("Your website didn't open when I checked it.",
@@ -68,6 +68,20 @@ PROBLEMS: dict[str, tuple[str, str]] = {
     "slow": ("Your website is slow to open on mobile data.",
              "Light pages that open in a couple of seconds on a basic phone."),
 }
+# How a shop owner would name their kind of business, with its article ("an electronics shop").
+SHOP_NOUNS = {"restaurant": "restaurant", "cafe": "café", "bakery": "bakery", "salon": "salon", "clinic": "clinic",
+              "grocery": "grocery shop", "pharmacy": "pharmacy", "gym": "gym", "clothes": "clothes shop",
+              "jewellery": "jewellery shop", "furniture": "furniture shop", "electronics": "electronics shop",
+              "optician": "optician", "florist": "florist", "school": "school", "coaching": "coaching centre",
+              "hotel": "hotel", "real_estate": "estate agent", "travel": "travel agent", "photography": "photo studio",
+              "car_services": "garage", "pet": "pet shop", "lawyer": "law or accounts office"}
+
+
+def shop_noun(category: str) -> str:
+    noun = SHOP_NOUNS.get(category or "", "shop")
+    return ("an " if noun[0] in "aeiou" else "a ") + noun
+
+
 DEMOS = {"restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
          "jewellery": "navilu-boutique", "florist": "navilu-boutique", "school": "little-banyan",
          "coaching": "little-banyan", "hotel": "sampige-residency", "travel": "sampige-residency"}
@@ -331,8 +345,7 @@ def why_words(prospect: dict) -> list[str]:
     keys = list(prospect.get("problems") or [])
     if not prospect.get("website") and "no_website" not in keys:
         keys.insert(0, "no_website")
-    category = (prospect.get("category") or "shop").replace("_", " ")
-    return [PROBLEMS[k][0].format(category=category) for k in keys if k in PROBLEMS]
+    return [PROBLEMS[k][0].format(category=shop_noun(prospect.get("category", ""))) for k in keys if k in PROBLEMS]
 
 
 def route(store: Store, locality: str, category: str, radius_km: float, now: datetime) -> dict:
@@ -390,7 +403,7 @@ def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: st
     if not prospect.get("website") and "no_website" not in keys:
         keys.insert(0, "no_website")
     keys = [k for k in keys if k in PROBLEMS][:3]
-    category = (prospect.get("category") or "shop").replace("_", " ")
+    category = shop_noun(prospect.get("category", ""))
     noticed = "".join(f"<li>{e(PROBLEMS[k][0].format(category=category))}</li>" for k in keys) or \
         "<li>Your listing could carry your hours, prices and photos, and take orders on WhatsApp.</li>"
     fixes = "".join(f"<li>{e(PROBLEMS[k][1])}</li>" for k in keys) or \
@@ -404,7 +417,7 @@ def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: st
             f"<p class='muted small'>A free look at your shop online, {today:%-d %B %Y}, by {e(me)}, web developer, Bengaluru.</p>"
             f"<h2>What I noticed</h2><ul>{noticed}</ul><h2>What would fix it</h2><ul>{fixes}</ul>"
             f"<div class='grid'><div class='box'><h2 style='margin-top:0'>See one working</h2>"
-            f"<p class='small'>A website I built for a {e(category)} like yours:<br>{e(demo)}</p>"
+            f"<p class='small'>{'A website I built for ' + e(category) + ' like yours' if prospect.get('category') in DEMOS else 'Websites I built for Bengaluru shops'}:<br>{e(demo)}</p>"
             f"<div class='qr'>{billing.qr_svg(demo)}</div></div>"
             f"<div class='box'><h2 style='margin-top:0'>Talk to me on WhatsApp</h2>"
             f"<p class='small'>Scan to message me. Your message carries this code:</p><p class='ref'>Ref {ref}</p>"
