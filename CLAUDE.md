@@ -53,7 +53,7 @@ Playwright needs Chromium's system libraries; see README.md ("Browser tests").
 
 ## Gotchas
 
-- Never add a path that sends mail without going through `Mailer.approve` -> `send_next`.
+- Never add a path that sends mail without going through `Mailer.approve` -> `send_next` (or its two halves, `next_due` -> `record_send`, which `relay.py` uses to send through Claude's Gmail connector; see `.claude/skills/tiga-mail`).
 
 - `config.py` calls `load_dotenv()` at import. `tests/conftest.py` sets safe env vars before importing anything; keep new test modules importing through it. Override later with `monkeypatch.setattr(config, ...)`.
 - Relative file settings (`GMAIL_CREDENTIALS_FILE`, `GMAIL_TOKEN_FILE`) resolve next to `config.py`, not the cwd.
