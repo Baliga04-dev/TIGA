@@ -715,3 +715,145 @@ def scorecard(store: Store, today: date) -> dict:
             "revenue": sum(d["amount"] for d in paid if start <= (d["paid_at"] or "") < end),
         })
     return {"weeks": weeks, "enough_data": sum(w["conversations"] for w in weeks) >= 5}
+
+
+# ------------------------------------------------------------------------------- weekly "what worked"
+CHANNEL_LABELS = {"warm": "People you know", "walk_in": "Walk-ins", "inbound": "Shops that messaged first",
+                  "referral": "Referrals", "cold_email": "Cold email"}
+RETIRE_AFTER = 4
+PURGE_AFTER_DAYS = 180
+
+
+def _channels(store: Store, since: str, until: str) -> dict[str, dict]:
+    touches = store.list_touches(since=since, until=until)
+    out_msgs = [t for t in touches if t["direction"] == "out" and t["channel"] in CHANNELS]
+    visits = [t for t in touches if t["kind"] == "visit"]
+    consents = sum(1 for c in store.list_contacts() if c["source"] == "walk_in"
+                   for v in c["consent"].values() if since <= v["at"] < until)
+    referrals = sum(1 for c in store.list_contacts("referral") if since <= c["created_at"] < until)
+    sent = [o for o in store.list_outreach() if since <= (o.get("sent_at") or "") < until]
+    interested = [o for o in store.list_outreach() if o["status"] == "interested" and since <= (o.get("replied_at") or "") < until]
+    asked = sum(1 for a in store.audit_between("ask.done", since, until) if a["detail"] == "referral")
+    return {
+        "warm": {"attempts": sum(1 for t in out_msgs if t["source"] == "warm"),
+                 "results": sum(1 for t in touches if t["direction"] == "in" and t["source"] == "warm") + referrals},
+        "walk_in": {"attempts": len(visits), "results": sum(1 for t in visits if t["outcome"] == "interested") + consents},
+        "inbound": {"attempts": None, "results": sum(1 for t in touches if t["direction"] == "in" and t["source"] == "inbound")},
+        "referral": {"attempts": asked, "results": referrals},
+        "cold_email": {"attempts": len(sent), "results": len(interested)},
+    }
+
+
+def weekly_report(store: Store, today: date, *, purged: int = 0) -> dict:
+    """Last week against four weeks, by channel; what to retire; three to five next steps; exactly one experiment."""
+    end = datetime.combine(today + timedelta(days=1), time(0), IST)
+    week, month = _channels(store, _iso(end - timedelta(days=7)), _iso(end)), _channels(store, _iso(end - timedelta(days=28)), _iso(end))
+    channels = []
+    for cid, label in CHANNEL_LABELS.items():
+        m, w = month[cid], week[cid]
+        retire = m["attempts"] is not None and m["attempts"] >= RETIRE_AFTER and m["results"] == 0
+        channels.append({"id": cid, "label": label, "attempts": m["attempts"], "results": m["results"],
+                         "week_attempts": w["attempts"], "week_results": w["results"], "retire": retire})
+    card = scorecard(store, today)
+    conversations = sum(w["conversations"] for w in card["weeks"])
+    interested = sum(w["interested"] for w in card["weeks"])
+    visits = month["walk_in"]["attempts"]
+    warm_ever = sum(1 for t in store.list_touches() if t["source"] == "warm" and t["direction"] == "out")
+    interviews = len(store.list_owner_interviews())
+    if visits < 10:
+        experiment = "Do 10 walk-ins on one street this week, at a quiet hour, with printed audit sheets."
+    elif warm_ever < 30:
+        experiment = "Message 10 more people you know, one at a time, with the demo link."
+    elif conversations >= 5 and interested == 0:
+        experiment = ("Change the opener: start with the one problem on their audit sheet (for restaurants, the "
+                      "commission maths) before showing any demo.")
+    elif interviews < INTERVIEW_GOAL:
+        experiment = "Ask 3 owners the price-ladder questions this week, then set prices from the fair range."
+    else:
+        experiment = "Try one new kind of shop for a week: plan every walk for that kind only, and compare."
+    now = end - timedelta(hours=12)
+    steps = []
+    owed = len(followups(store, now)["items"])
+    asks = len(asks_owed(store, now))
+    waiting = len(store.list_deals("proposal_sent"))
+    unmessaged = sum(1 for c in store.list_contacts("warm") if not c["dnc"]
+                     and not any(t["direction"] == "out" for t in store.list_touches(c["id"])))
+    if owed:
+        steps.append(f"Send the {owed} follow-up{'s' if owed != 1 else ''} owed after visits.")
+    if asks:
+        steps.append(f"Send the {asks} review or referral ask{'s' if asks != 1 else ''} owed to clients.")
+    if waiting:
+        steps.append(f"Chase {waiting} proposal{'s' if waiting != 1 else ''} waiting for an answer.")
+    if unmessaged:
+        steps.append(f"Message the {unmessaged} people you know who haven't heard from you yet.")
+    if interviews < INTERVIEW_GOAL:
+        steps.append(f"Interviews: {interviews} of {INTERVIEW_GOAL}. Ask one owner the price ladder this week.")
+    for filler in ("Plan next week's walk on the Marketing page and print the sheets.",
+                   "Log every visit the same day, including the ones where nobody was in."):
+        if len(steps) < 3:
+            steps.append(filler)
+    steps = steps[:5]
+    retired = [c["label"] for c in channels if c["retire"]]
+    enough = conversations >= 5
+
+    def count(n):
+        return "n/a" if n is None else str(n)
+
+    lines = [f"Tiga marketing: what worked, week to {today:%-d %b %Y}", ""]
+    if not enough:
+        lines += ["Not enough data yet: fewer than 5 conversations with owners in four weeks. Read these as counts, "
+                  "not rates.", ""]
+    lines.append("CHANNELS: tries and results, last 7 days / last 4 weeks")
+    for c in channels:
+        lines.append(f"- {c['label']}: tries {count(c['week_attempts'])} / {count(c['attempts'])}, results "
+                     f"{c['week_results']} / {c['results']}" + ("  -> retire for now: 4 or more tries, nothing back" if c["retire"] else ""))
+    lines += ["", "THIS WEEK'S ONE EXPERIMENT", experiment, "", "NEXT STEPS", *[f"- {s}" for s in steps]]
+    if retired:
+        lines += ["", f"Retire for now: {', '.join(retired)}. Put that time into the experiment."]
+    if purged:
+        lines += ["", f"Privacy: deleted {purged} contact{'s' if purged != 1 else ''} who never agreed to anything and "
+                      f"haven't been in touch for {PURGE_AFTER_DAYS} days. Every 'no' stays on the do-not-contact list."]
+    return {"channels": channels, "experiment": experiment, "next_steps": steps, "retire": retired,
+            "enough_data": enough, "body": "\n".join(lines)}
+
+
+def purge_unengaged(store: Store, now: datetime) -> int:
+    """Delete map and walk-in contacts who never agreed to anything and haven't been touched in 180 days."""
+    cutoff = _iso(now - timedelta(days=PURGE_AFTER_DAYS))
+    gone = 0
+    for c in store.list_contacts():
+        if c["source"] not in ("map", "walk_in") or c["dnc"] or c["consent"]:
+            continue
+        touches = store.list_touches(c["id"])
+        last = max((t["at"] for t in touches), default=c["created_at"])
+        if last < cutoff and not any(t["direction"] == "in" for t in touches):
+            store.delete_contact(c["id"])
+            gone += 1
+    if gone:
+        store.audit("system", "contacts.purge", "contacts", str(gone), f"unengaged for {PURGE_AFTER_DAYS} days")
+    return gone
+
+
+def run_weekly(store: Store, *, send, to: str, today: date) -> dict:
+    """Once per ISO week with the daily run: purge, then the report. Saved in Tiga; mailed only when Gmail works."""
+    year, week, _ = today.isocalendar()
+    key = f"{year}-W{week:02d}"
+    if not store.claim_job("marketing_weekly", key):
+        return {"ok": True, "skipped": f"already ran for {key}"}
+    purged = purge_unengaged(store, datetime.combine(today, time(12), IST))
+    report = weekly_report(store, today, purged=purged)
+    subject = f"Tiga marketing: what worked, {key}"
+    report_id = store.save_report("marketing", key, subject, report["body"], to)
+    if to:
+        try:
+            result = send(to, subject, report["body"])
+        except Exception as exc:
+            result = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+        if result.get("ok"):
+            store.mark_report_sent(report_id)
+        else:
+            store.mark_report_unsent(report_id, result.get("error", "send failed"))
+    else:
+        store.mark_report_unsent(report_id, "Gmail is not configured; the report is saved in Tiga")
+    return {"ok": True, "report_id": report_id, "purged": purged, "experiment": report["experiment"]}
+

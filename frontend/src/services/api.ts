@@ -51,6 +51,7 @@ import type {
   CommissionMaths,
   Ask,
   ProofResponse,
+  WhatWorked,
   OwnerInterview,
   InterviewSummary,
   VisitOutcome,
@@ -364,6 +365,7 @@ export const api = {
   getProof: (dealId: number) => request<{ ok: true } & ProofResponse>(`/marketing/proof/${dealId}`),
   saveProof: (dealId: number, proof: ProofResponse['proof']) =>
     request<{ ok: true } & ProofResponse>(`/marketing/proof/${dealId}`, { method: 'PUT', body: JSON.stringify(proof) }),
+  whatWorked: () => request<{ ok: true } & WhatWorked>('/marketing/what-worked'),
   marketingScorecard: () => request<{ ok: true; weeks: MarketingWeek[]; enough_data: boolean }>('/marketing/scorecard'),
 
   getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),

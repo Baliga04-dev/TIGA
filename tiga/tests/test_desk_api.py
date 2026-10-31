@@ -48,6 +48,7 @@ def test_without_gmail_the_report_is_still_made_and_shown_in_the_app(client, mon
     daily = items["daily"]
     assert "OUTREACH" in daily["body"] and "not configured" in daily["delivery_error"]
     assert "weekly" in items   # the R&D bot no longer waits for Gmail either
+    assert "ONE EXPERIMENT" in items["marketing"]["body"]   # nor does the weekly marketing report
 
 
 def test_skills_can_be_listed_read_and_edited_from_the_ui(client, tmp_path, monkeypatch):

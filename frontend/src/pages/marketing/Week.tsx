@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { Notice } from '../../components/ui';
 import { api } from '../../services/api';
-import type { FollowUp, MarketingWeek } from '../../types';
+import type { FollowUp, MarketingWeek, WhatWorked } from '../../types';
 import { WriteMessage } from './WriteMessage';
 import { AsksOwed } from './Asks';
 import { errorText, shortDate } from './shared';
@@ -139,6 +139,7 @@ export function WeekPanel({ onToast }: { onToast: (m: string) => void }) {
         )}
       </div>
       <aside className="space-y-4 text-sm">
+        <WhatWorkedCard />
         <div className="rounded-lg border border-rule p-4">
           <h3 className="font-semibold">The plan</h3>
           <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-ink-2">
@@ -159,5 +160,23 @@ export function WeekPanel({ onToast }: { onToast: (m: string) => void }) {
       </aside>
     </div>
     </>
+  );
+}
+
+/** This week's report as it stands: one experiment, the next steps, and any channel to rest. */
+function WhatWorkedCard() {
+  const [data, setData] = useState<WhatWorked | null>(null);
+  useEffect(() => { api.whatWorked().then(setData).catch(() => setData(null)); }, []);
+  if (!data) return null;
+  return (
+    <div className="rounded-lg border border-pen/40 bg-wash p-4">
+      <h3 className="font-semibold">This week's one experiment</h3>
+      <p className="mt-1">{data.experiment}</p>
+      <h4 className="mt-3 font-semibold">Next steps</h4>
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-ink-2">{data.next_steps.map((s) => <li key={s}>{s}</li>)}</ul>
+      {data.retire.length > 0 && (
+        <p className="mt-3 text-ink-2"><span className="font-semibold text-ink">Rest for now:</span> {data.retire.join(', ')} (4 or more tries, nothing back).</p>
+      )}
+    </div>
   );
 }

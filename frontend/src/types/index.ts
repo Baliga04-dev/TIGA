@@ -637,3 +637,11 @@ export interface ProofResponse {
   items: Record<ProofItem, string>;
   drafts: ProofDrafts;
 }
+
+export interface WhatWorked {
+  channels: { id: string; label: string; attempts: number | null; results: number; week_attempts: number | null; week_results: number; retire: boolean }[];
+  experiment: string;
+  next_steps: string[];
+  retire: string[];
+  enough_data: boolean;
+}

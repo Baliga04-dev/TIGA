@@ -27,6 +27,7 @@ beforeEach(() => {
   mock.get('/marketing/localities', { ok: true, items: ['Jayanagar', 'Malleshwaram'] })
   mock.get('/marketing/followups', { ok: true, items: [], sent_this_week: 0, weekly_cap: 10 })
   mock.get('/marketing/asks', { ok: true, review_link: true, items: [] })
+  mock.get('/marketing/what-worked', { ok: true, channels: [], experiment: 'Do 10 walk-ins on one street this week.', next_steps: ['Log every visit'], retire: ['Cold email'], enough_data: false })
 })
 
 describe('Marketing', () => {
@@ -55,6 +56,8 @@ describe('Marketing', () => {
     const table = await screen.findByRole('table')
     expect(within(table).getByRole('row', { name: /messages to people you know/i })).toHaveTextContent('3')
     expect(screen.getByText(/fewer than 5 conversations/i)).toBeInTheDocument()
+    expect(await screen.findByText('Do 10 walk-ins on one street this week.')).toBeInTheDocument()
+    expect(screen.getByText(/rest for now/i).parentElement).toHaveTextContent('Cold email')
   })
 
   it('moves between tabs with the arrow keys', async () => {

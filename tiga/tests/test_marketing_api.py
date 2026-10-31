@@ -156,3 +156,9 @@ def test_asks_owed_and_marking_one_done(client, monkeypatch):
     assert client.post(f"/api/marketing/asks/{d['id']}/review/done").json()["ok"]
     assert not any(a["kind"] == "review" for a in client.get("/api/marketing/asks").json()["items"])
     assert client.post(f"/api/marketing/asks/{d['id']}/party/done").json()["ok"] is False
+
+
+def test_what_worked_now(client):
+    out = client.get("/api/marketing/what-worked").json()
+    assert out["ok"] and out["experiment"] and 3 <= len(out["next_steps"]) <= 5
+    assert [c["id"] for c in out["channels"]] == ["warm", "walk_in", "inbound", "referral", "cold_email"]

@@ -193,6 +193,13 @@ def followups() -> dict:
     return {"ok": True, **out, "items": [{**f, "contact": _with_gates(f["contact"])} for f in out["items"]]}
 
 
+@router.get("/what-worked")
+def what_worked() -> dict:
+    """This week's report as it stands now (the saved one goes out with the daily run, once a week)."""
+    report = marketing.weekly_report(services.get_store(), marketing.now().astimezone(marketing.IST).date())
+    return {"ok": True, **{k: v for k, v in report.items() if k != "body"}}
+
+
 @router.get("/scorecard")
 def scorecard() -> dict:
     today = marketing.now().astimezone(marketing.IST).date()

@@ -116,4 +116,13 @@ async def run_configured_daily() -> dict:
         )
     except Exception as exc:
         outcome["errors"].append(f"R&D report failed: {exc}")
+    try:   # the marketing "what worked" report, once per ISO week; saved in Tiga, mailed only when Gmail works
+        import marketing
+
+        outcome["marketing"] = await asyncio.to_thread(
+            marketing.run_weekly, services.get_store(),
+            send=services.send_email if gmail_ready else (lambda *_: {"ok": False, "error": "Gmail is not configured"}),
+            to=to if gmail_ready else "", today=datetime.date.today())
+    except Exception as exc:
+        outcome["errors"].append(f"Marketing report failed: {exc}")
     return outcome

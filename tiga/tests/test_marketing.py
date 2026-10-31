@@ -358,3 +358,58 @@ def test_a_client_can_be_messaged_in_shop_hours_without_a_separate_permission(st
     assert c["source"] == "client" and marketing.can_contact(store, c["id"], "whatsapp", NOON)["ok"]
     assert not marketing.can_contact(store, c["id"], "whatsapp", EVENING)["ok"]
     assert marketing.client_contact(store, store.get_deal(d["id"]))["id"] == c["id"]
+
+
+# --- the weekly "what worked" report and the purge ------------------------------------------------------
+class Mailbox:
+    def __init__(self):
+        self.sent = []
+
+    def __call__(self, to, subject, body):
+        self.sent.append((to, subject, body))
+        return {"ok": True}
+
+
+def test_the_weekly_report_retires_a_channel_that_got_nothing_and_names_one_experiment(store):
+    for n in range(5):   # five walk-ins, nobody home
+        visit_with(store, 100 + n, [], outcome="not_met", when=NOON - timedelta(days=n))
+    friend = contact(store, name="Kavya", phone="99001 27458", source="warm")
+    marketing.record_touch(store, friend["id"], channel="whatsapp", direction="out", kind="message", now=NOON)
+    marketing.record_touch(store, friend["id"], channel="whatsapp", direction="in", kind="message", now=NOON + timedelta(hours=1))
+    report = marketing.weekly_report(store, NOON.date() + timedelta(days=6))
+    walk = next(c for c in report["channels"] if c["id"] == "walk_in")
+    assert walk["attempts"] == 5 and walk["results"] == 0 and walk["retire"]
+    warm = next(c for c in report["channels"] if c["id"] == "warm")
+    assert (warm["attempts"], warm["results"], warm["retire"]) == (1, 1, False)
+    assert report["experiment"] and isinstance(report["experiment"], str)
+    assert 3 <= len(report["next_steps"]) <= 5
+    assert "Not enough data yet" in report["body"] and "Walk-ins" in report["body"]
+
+
+def test_the_weekly_report_runs_once_a_week_and_is_saved_without_gmail(store):
+    first = marketing.run_weekly(store, send=Mailbox(), to="", today=NOON.date())
+    again = marketing.run_weekly(store, send=Mailbox(), to="", today=NOON.date() + timedelta(days=2))
+    assert first["ok"] and again.get("skipped")
+    saved = store.list_reports("marketing")
+    assert len(saved) == 1 and saved[0]["subject"].startswith("Tiga marketing: what worked")
+    box = Mailbox()
+    marketing.run_weekly(store, send=box, to="me@work.in", today=NOON.date() + timedelta(days=7))
+    assert box.sent and box.sent[0][0] == "me@work.in"
+
+
+def test_the_purge_deletes_only_old_unengaged_contacts_and_keeps_every_no(store):
+    old = NOON - timedelta(days=200)
+    stale = marketing.log_visit(store, prospect(store, n=1)["id"], outcome="not_met", name="", phone="98860 40001",
+                                consent=[], notice=False, note="", dnc=False, now=old)
+    agreed = marketing.log_visit(store, prospect(store, n=2)["id"], outcome="talked", name="", phone="98860 40002",
+                                 consent=["whatsapp"], notice=True, note="", dnc=False, now=old)
+    said_no = marketing.log_visit(store, prospect(store, n=3)["id"], outcome="not_interested", name="", phone="98860 40003",
+                                  consent=[], notice=False, note="", dnc=True, now=old)
+    friend = contact(store, name="Kavya", phone="99001 27458", source="warm")
+    recent = marketing.log_visit(store, prospect(store, n=4)["id"], outcome="not_met", name="", phone="98860 40004",
+                                 consent=[], notice=False, note="", dnc=False, now=NOON - timedelta(days=20))
+    gone = marketing.purge_unengaged(store, NOON)
+    remaining = {c["id"] for c in store.list_contacts()}
+    assert gone == 1 and stale["id"] not in remaining
+    assert {agreed["id"], said_no["id"], friend["id"], recent["id"]} <= remaining
+    assert store.is_suppressed("tel:+919886040003")
