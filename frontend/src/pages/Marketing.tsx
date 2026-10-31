@@ -56,7 +56,7 @@ export function Marketing() {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
-        {tab === 'week' && <WeekPanel />}
+        {tab === 'week' && <WeekPanel onToast={setToast} />}
         {tab === 'network' && <NetworkPanel onToast={setToast} />}
         {tab === 'walk-ins' && <WalkInsPanel onToast={setToast} />}
         {tab === 'contacts' && <ContactsPanel onToast={setToast} />}

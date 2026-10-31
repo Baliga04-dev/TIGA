@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { Notice } from '../../components/ui';
 import { api } from '../../services/api';
-import type { MarketingWeek } from '../../types';
+import type { FollowUp, MarketingWeek } from '../../types';
+import { WriteMessage } from './WriteMessage';
 import { errorText, shortDate } from './shared';
 
 const ROWS: [keyof MarketingWeek, string][] = [
@@ -19,7 +21,62 @@ const ROWS: [keyof MarketingWeek, string][] = [
 /** The checkpoint from the research: rethink the offer or the shops if 40 to 50 conversations bring no sale. */
 const CHECKPOINT = 40;
 
-export function WeekPanel() {
+function ago(iso: string) {
+  const hours = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 3_600_000));
+  return hours < 24 ? `${hours} h ago` : `${Math.round(hours / 24)} days ago`;
+}
+
+/** Shop owners who said yes to WhatsApp at a visit and are owed the demo within 48 hours. */
+function FollowUps({ onToast }: { onToast: (m: string) => void }) {
+  const [data, setData] = useState<{ items: FollowUp[]; sent_this_week: number; weekly_cap: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [writing, setWriting] = useState<FollowUp | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setData(await api.followups());
+      setError(null);
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  if (error) return <Notice title="Follow-ups didn't load">{error}</Notice>;
+  if (!data) return <div aria-busy="true" aria-label="Loading follow-ups" className="h-16 animate-pulse rounded bg-wash" />;
+  const full = data.sent_this_week >= data.weekly_cap;
+  return (
+    <section aria-labelledby="followups-title" className="mb-10">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id="followups-title" className="font-semibold">Follow-ups owed ({data.items.length})</h3>
+        <p className={`text-sm ${full ? 'text-flag' : 'text-ink-2'}`}>
+          {data.sent_this_week} of {data.weekly_cap} demo follow-ups sent this week{full ? ': the week is full, the rest can wait' : ''}
+        </p>
+      </div>
+      {data.items.length === 0 ? (
+        <p className="text-sm text-ink-2">Nobody waiting. After a visit where the owner says yes to WhatsApp, their demo message appears here.</p>
+      ) : (
+        <ul className="divide-y divide-rule border-y border-rule">
+          {data.items.map((f) => (
+            <li key={f.contact.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div className="min-w-0">
+                <p className="font-medium">{f.contact.business || f.contact.name} <span className="text-sm font-normal text-ink-2">{f.contact.name.endsWith('(owner)') ? '' : f.contact.name}</span></p>
+                <p className="text-sm text-ink-2">Visited {ago(f.visit_at)} {f.overdue && <span className="badge badge-amber ml-1">Over 48 hours</span>}</p>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setWriting(f)}>
+                <MessageCircle className="size-4" aria-hidden="true" /> Send the demo <span className="sr-only">to {f.contact.business || f.contact.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {writing && (
+        <WriteMessage person={writing.contact} text={writing.text} onClose={() => setWriting(null)}
+          onSent={() => { onToast(`Follow-up to ${writing.contact.business || writing.contact.name} marked as sent.`); setWriting(null); load(); }} />
+      )}
+    </section>
+  );
+}
+
+export function WeekPanel({ onToast }: { onToast: (m: string) => void }) {
   const [weeks, setWeeks] = useState<MarketingWeek[] | null>(null);
   const [enough, setEnough] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +103,8 @@ export function WeekPanel() {
   const conversations = weeks.reduce((n, w) => n + w.conversations, 0);
   const won = weeks.reduce((n, w) => n + w.won, 0);
   return (
+    <>
+    <FollowUps onToast={onToast} />
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="overflow-x-auto" role="region" aria-label="Weekly scorecard" tabIndex={0}>
         <table className="w-full min-w-[34rem] text-sm">
@@ -97,5 +156,6 @@ export function WeekPanel() {
         </div>
       </aside>
     </div>
+    </>
   );
 }

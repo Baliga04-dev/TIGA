@@ -23,9 +23,30 @@ beforeEach(() => {
   mockMountCalls()
   mock.get('/marketing/scorecard', { ok: true, enough_data: false, weeks: [week('2026-10-26', { warm_sent: 3, visits: 2, conversations: 1 }), week('2026-10-19'), week('2026-10-12'), week('2026-10-05')] })
   mock.get('/marketing/localities', { ok: true, items: ['Jayanagar', 'Malleshwaram'] })
+  mock.get('/marketing/followups', { ok: true, items: [], sent_this_week: 0, weekly_cap: 10 })
 })
 
 describe('Marketing', () => {
+  it('lists follow-ups owed after visits and sends the drafted demo through WhatsApp', async () => {
+    const owner = contact({ id: 5, name: 'Suresh Rao', business: 'Sri Ganesh Bakery', source: 'walk_in', consent: { whatsapp: { at: 'x', how: 'asked in person' } } })
+    mock.get('/marketing/followups', { ok: true, sent_this_week: 3, weekly_cap: 10, items: [
+      { contact: owner, visit_at: new Date(Date.now() - 50 * 3_600_000).toISOString(), overdue: true, text: 'Hi Suresh, here is the bakery demo' },
+    ] })
+    const asked = mock.record('/marketing/contacts/5/whatsapp', { ok: true, url: 'https://wa.me/919886044217?text=Hi' })
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null)
+    const user = userEvent.setup()
+    renderApp('/marketing')
+    expect(await screen.findByRole('heading', { name: 'Follow-ups owed (1)' })).toBeInTheDocument()
+    expect(screen.getByText('Over 48 hours')).toBeInTheDocument()
+    expect(screen.getByText(/3 of 10 demo follow-ups sent this week/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /send the demo to sri ganesh bakery/i }))
+    const dialog = await screen.findByRole('dialog', { name: 'Message Suresh Rao' })
+    expect(within(dialog).getByLabelText('Message')).toHaveValue('Hi Suresh, here is the bakery demo')
+    await user.click(within(dialog).getByRole('button', { name: /open whatsapp/i }))
+    await waitFor(() => expect(asked[0]).toEqual({ text: 'Hi Suresh, here is the bakery demo' }))
+    opened.mockRestore()
+  })
+
   it('opens on the week with counts, and says when there is too little data', async () => {
     renderApp('/marketing')
     const table = await screen.findByRole('table')

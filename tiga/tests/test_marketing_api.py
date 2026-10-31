@@ -94,3 +94,16 @@ def test_scorecard(client):
     client.post(f"/api/marketing/contacts/{friend['id']}/touches", json={"channel": "whatsapp", "direction": "out", "kind": "message"})
     card = client.get("/api/marketing/scorecard").json()
     assert card["ok"] and card["weeks"][0]["warm_sent"] == 1 and card["enough_data"] is False
+
+
+def test_follow_ups_owed_after_a_visit(client):
+    store = services.get_store()
+    lat, lon = marketing.LOCALITIES["Jayanagar"]
+    p, _ = store.upsert_prospect({"key": "osm:node/3", "source": "osm", "name": "Sri Ganesh Bakery", "category": "bakery",
+                                  "status": "no_contact", "lat": lat, "lon": lon})
+    client.post("/api/marketing/visits", json={"prospect_id": p["id"], "outcome": "interested", "name": "Suresh",
+                                               "phone": "98860 44217", "consent": ["whatsapp"], "notice": True})
+    out = client.get("/api/marketing/followups").json()
+    assert out["ok"] and out["weekly_cap"] == 10
+    item = out["items"][0]
+    assert item["contact"]["gates"]["whatsapp"]["ok"] and "Sri Ganesh Bakery" in item["text"] and not item["overdue"]

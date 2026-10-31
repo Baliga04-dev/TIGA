@@ -90,3 +90,71 @@ Contacts.
 - Route returns only nearby, unvisited, not-do-not-contact prospects, ordered by walking distance.
 - Audit sheet escapes every value and carries the QR, the reference code and the notice.
 - Backend and frontend suites, `tsc` and lint pass; axe clean on the new page in both themes.
+
+---
+
+# Round 2: follow-ups, the trust-first quote, proof and the weekly report
+
+Added 2026-10-31. Same rules as round 1: Tiga drafts, counts and reminds; the owner sends.
+
+## In scope
+
+**Visit follow-ups (closing phase 1).** A shop owner who agreed to WhatsApp at a visit is owed one message within
+48 hours with the demo for their kind of shop. Tiga lists the follow-ups owed (visits in the last 7 days with
+WhatsApp consent and no message since), marks the ones past 48 hours, and drafts each message. Sending goes through
+the same gate and `wa.me` link as everything else. At most about 10 demo follow-ups a week; the list says when the
+week's 10 are used.
+
+**Trust-first quote (phase 2).**
+- Every proposal states, in the same words as the audit sheet: one all-in price; the year-two renewal amount and
+  the date it falls due; the domain registered in the client's name with every login on a handover sheet; the
+  balance due only after the site is live on their domain; no auto-debit, no lock-in, no commission. The renewal
+  amount is a setting (default ₹1,200 a year: the domain; a static site's hosting stays free).
+- A printable handover sheet per deal (when delivered): domain, registrar, renewal date and cost, hosting, how to
+  change content, Google Business Profile, the WhatsApp number orders go to, and who to call. Never passwords:
+  blank lines the owner fills by hand.
+- A commission calculator for restaurants: orders a month on delivery apps, average order, commission rate and the
+  share that could move to direct orders, giving the monthly commission and how many months a flat-price site
+  takes to pay for itself. A printable one-pager to leave behind.
+- Owner interviews: a guide (how customers find them, what they've paid for listings or ads, what burned them) and
+  a price ladder for four offers (basic site, WhatsApp ordering page, monthly care, photo editing): too cheap to
+  trust, a bargain, getting expensive, too expensive. Answers are stored per interview; the summary shows, per
+  offer, the range between the median "bargain" and the median "getting expensive", and how many interviews each
+  kind of shop has (goal 15 to 20, about 3 per kind).
+
+**Proof engine (phase 3).**
+- A deal's client becomes a `client` contact (the relationship is the permission; shop hours apply).
+- When a deal is marked delivered, Tiga records what the client lets the owner show (their name, logo,
+  screenshots, a quote, numbers), each yes or no. Nothing is drafted for a "no".
+- From the owner's notes (the problem, what was built, results with real numbers), Tiga drafts a case study, a
+  LinkedIn post and a Google Business Profile update (at most 1,500 characters, no phone number), only from
+  allowed items and only when there is at least one real number or quote.
+- Asks owed: a Google review request when the deal is paid (to every client, never only happy ones; no incentive),
+  and a check-in with a referral request 14 days after. Each is a draft with "Open WhatsApp".
+
+**Weekly "what worked" report (phase 4).** Every Monday (once per ISO week, with the daily run; Gmail optional):
+last week against the four-week counts by channel (people you know, walk-ins, shops that messaged first, referrals,
+cold email replies), the asks owed, three to five next steps, exactly one experiment, and any channel with four or
+more attempts and nothing back marked to retire. Counts, not percentages; "not enough data yet" below 5
+conversations. Saved on the Reports page.
+
+**Privacy (part of phase 5).** A plain privacy notice page on the portfolio (`/privacy.html`) saying what is kept,
+why, for how long and how to have it deleted; audit sheets point to it. Contacts that came from the map or a
+walk-in, never agreed to anything and haven't been touched in 180 days are deleted by the weekly run
+(do-not-contact suppressions stay).
+
+## Out of scope
+
+Before/after screenshots taken automatically, API publishing to Instagram, Facebook, LinkedIn or Google Business
+Profile, Kannada copy (waits for interview vocabulary), and anything paid.
+
+## Acceptance
+
+- Follow-ups owed: right people, 48-hour marking, weekly cap shown; the gate still decides sending.
+- Proposals and their emails carry every trust term and the renewal amount and date.
+- Calculator arithmetic is tested; interview summary medians are tested.
+- No proof draft without permission and a real number or quote; GBP text is at most 1,500 characters with no phone
+  number.
+- Asks owed appear at payment and 14 days after, once each.
+- The weekly report runs once per ISO week, names one experiment, retires zero-yield channels after 4 attempts.
+- The purge deletes only unengaged, non-consented map or walk-in contacts older than 180 days and keeps suppressions.

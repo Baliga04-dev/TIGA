@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Loader2, MessageCircle, UserPlus } from 'lucide-react';
-import { Field, Modal, Notice } from '../../components/ui';
+import { Field, Notice } from '../../components/ui';
 import { api } from '../../services/api';
 import type { Contact } from '../../types';
 import { errorText, shortDate } from './shared';
+import { WriteMessage } from './WriteMessage';
 
 /** People the owner knows: one personal message each, sent by hand, asking them to pass his number on. */
 export function NetworkPanel({ onToast }: { onToast: (m: string) => void }) {
@@ -73,7 +74,7 @@ export function NetworkPanel({ onToast }: { onToast: (m: string) => void }) {
           </>
         )}
       </div>
-      {writing && <WriteMessage person={writing} onClose={() => setWriting(null)} onSent={() => { onToast(`Marked as sent to ${writing.name}.`); setWriting(null); load(); }} />}
+      {writing && <WriteMessage person={writing} load={() => api.warmDraft(writing.id).then((d) => d.text)} onClose={() => setWriting(null)} onSent={() => { onToast(`Marked as sent to ${writing.name}.`); setWriting(null); load(); }} />}
     </div>
   );
 }
@@ -106,43 +107,5 @@ function AddPerson({ onAdded }: { onAdded: (c: Contact) => void }) {
       {error && <p role="alert" className="text-sm text-flag">{error}</p>}
       <button className="btn btn-primary btn-sm" disabled={busy}>{busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <UserPlus className="size-4" aria-hidden="true" />} Add</button>
     </form>
-  );
-}
-
-function WriteMessage({ person, onClose, onSent }: { person: Contact; onClose: () => void; onSent: () => void }) {
-  const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [opened, setOpened] = useState(false);
-  useEffect(() => {
-    api.warmDraft(person.id).then((d) => setText(d.text)).catch((e) => setError(errorText(e)));
-  }, [person.id]);
-  const open = async () => {
-    try {
-      const { url } = await api.whatsappLink(person.id, text);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setOpened(true);
-      setError(null);
-    } catch (e) {
-      setError(errorText(e));
-    }
-  };
-  const markSent = async () => {
-    try {
-      await api.recordTouch(person.id, { channel: 'whatsapp', direction: 'out', kind: 'message' });
-      onSent();
-    } catch (e) {
-      setError(errorText(e));
-    }
-  };
-  return (
-    <Modal title={`Message ${person.name}`} onClose={onClose}>
-      <p className="mb-3 text-sm text-ink-2">Make it sound like you. WhatsApp opens with this text; you press send there.</p>
-      <Field label="Message">{(id) => <textarea id={id} className="input min-h-[11rem]" value={text} onChange={(e) => setText(e.target.value)} />}</Field>
-      {error && <p role="alert" className="mt-3 text-sm text-flag">{error}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button className="btn btn-primary" onClick={open} disabled={!text.trim()}><MessageCircle className="size-4" aria-hidden="true" /> Open WhatsApp</button>
-        <button className="btn btn-secondary" onClick={markSent} disabled={!opened}>I sent it</button>
-      </div>
-    </Modal>
   );
 }

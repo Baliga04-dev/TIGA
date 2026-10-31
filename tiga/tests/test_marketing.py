@@ -218,3 +218,35 @@ def test_the_audit_sheet_names_the_kind_of_shop_properly(store):
                                       demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
     assert "search for an electronics shop" in page and "a electronics" not in page
     assert "Websites I built for Bengaluru shops" in page     # no demo of this kind yet: the index, said honestly
+
+
+# --- follow-ups after a visit ----------------------------------------------------------------------
+def visit_with(store, n, consent, *, when=NOON, outcome="interested", name="Suresh Rao", phone=None):
+    p = prospect(store, n=n, category="bakery")
+    return marketing.log_visit(store, p["id"], outcome=outcome, name=name, phone=phone or f"98860 4{n:04d}",
+                               consent=consent, notice=True, note="", dnc=False, now=when)
+
+
+def test_follow_ups_are_owed_to_owners_who_agreed_to_whatsapp(store):
+    yes = visit_with(store, 1, ["whatsapp"])
+    visit_with(store, 2, [])                                            # agreed to nothing: never listed
+    visit_with(store, 3, ["whatsapp"], when=NOON - timedelta(days=9))   # too long ago to count as a follow-up
+    out = marketing.followups(store, NOON + timedelta(hours=3))
+    assert [f["contact"]["id"] for f in out["items"]] == [yes["id"]]
+    first = out["items"][0]
+    assert not first["overdue"] and first["text"].startswith("Hi Suresh") and "/demos/malnad-table/" in first["text"]
+    assert marketing.followups(store, NOON + timedelta(hours=49))["items"][0]["overdue"]
+
+
+def test_a_follow_up_sent_after_the_visit_clears_it_and_counts_toward_the_week(store):
+    c = visit_with(store, 1, ["whatsapp"])
+    later = NOON + timedelta(hours=2)
+    marketing.record_touch(store, c["id"], channel="whatsapp", direction="out", kind="message", now=later)
+    out = marketing.followups(store, later + timedelta(minutes=5))
+    assert out["items"] == [] and out["sent_this_week"] == 1 and out["weekly_cap"] == 10
+
+
+def test_a_follow_up_without_a_known_name_says_hello_without_one(store):
+    c = visit_with(store, 1, ["whatsapp"], name="")
+    text = marketing.followups(store, NOON + timedelta(hours=1))["items"][0]["text"]
+    assert text.startswith("Hi, this is") and "(owner)" not in text and c["business"] in text

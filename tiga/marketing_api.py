@@ -186,6 +186,12 @@ def inbound(body: InboundIn) -> dict:
         return _refuse(exc)
 
 
+@router.get("/followups")
+def followups() -> dict:
+    out = marketing.followups(services.get_store(), marketing.now())
+    return {"ok": True, **out, "items": [{**f, "contact": _with_gates(f["contact"])} for f in out["items"]]}
+
+
 @router.get("/scorecard")
 def scorecard() -> dict:
     today = marketing.now().astimezone(marketing.IST).date()

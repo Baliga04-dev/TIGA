@@ -567,3 +567,10 @@ export interface MarketingWeek {
   won: number;
   revenue: number;
 }
+
+export interface FollowUp {
+  contact: Contact;
+  visit_at: string;
+  overdue: boolean;
+  text: string;
+}

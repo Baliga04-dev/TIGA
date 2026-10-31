@@ -46,6 +46,7 @@ import type {
   Touch,
   WalkRoute,
   MarketingWeek,
+  FollowUp,
   VisitOutcome,
   Channel,
 } from '../types';
@@ -343,6 +344,7 @@ export const api = {
     post<{ ok: true; contact: Contact }>('/marketing/visits', visit),
   inbound: (message: { ref: string; name: string; phone: string; note: string }) =>
     post<{ ok: true; contact: Contact }>('/marketing/inbound', message),
+  followups: () => request<{ ok: true; items: FollowUp[]; sent_this_week: number; weekly_cap: number }>('/marketing/followups'),
   marketingScorecard: () => request<{ ok: true; weeks: MarketingWeek[]; enough_data: boolean }>('/marketing/scorecard'),
 
   getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),

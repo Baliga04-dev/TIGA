@@ -333,6 +333,52 @@ def warm_message(contact: dict, *, owner: str, demos_url: str) -> str:
             + (f"\n{sign}" if sign else ""))
 
 
+FOLLOWUP_DAYS, FOLLOWUP_HOURS, FOLLOWUPS_PER_WEEK = 7, 48, 10
+
+
+def demo_for(category: str, demos: str) -> str:
+    return demos + (DEMOS[category] + "/" if category in DEMOS else "")
+
+
+def followup_message(contact: dict, *, owner: str, demos_url: str) -> str:
+    """The one message owed after a visit where the owner agreed to WhatsApp: the demo for their kind of shop."""
+    name = "" if contact["name"].endswith("(owner)") else contact["name"].split()[0]
+    me = (owner or "").split()[0] if owner else "the web developer who visited"
+    business = contact.get("business") or "your shop"
+    kind = SHOP_NOUNS.get(contact.get("category", ""), "")
+    shown = f"the {kind} website I showed you" if contact.get("category") in DEMOS else "a few websites I've made"
+    return (f"{'Hi ' + name if name else 'Hi'}, this is {me}. Thanks for talking with me at {business}. Here's {shown}: "
+            f"{demo_for(contact.get('category', ''), demos_url)}\n\nIf you'd like one for {business}, reply here and I'll "
+            "send a one-page plan with the full price. If not, no problem: say so and I won't message again.")
+
+
+def followups(store: Store, now: datetime, *, owner: str | None = None, demos: str | None = None) -> dict:
+    """Owners who agreed to WhatsApp at a visit in the last week and haven't had the follow-up yet."""
+    owner = owner_name() if owner is None else owner
+    demos = demos_url() if demos is None else demos
+    since = _iso(now - timedelta(days=FOLLOWUP_DAYS))
+    by_contact: dict[int, list[dict]] = {}
+    for t in store.list_touches(since=since, until=_iso(now + timedelta(seconds=1))):
+        by_contact.setdefault(t["contact_id"], []).append(t)
+    monday = datetime.combine(now.astimezone(IST).date() - timedelta(days=now.astimezone(IST).weekday()), time(0), IST)
+    items, sent_week = [], 0
+    for contact_id, touches in by_contact.items():
+        visits = [t for t in touches if t["kind"] == "visit"]
+        if not visits:
+            continue
+        sent = [t for t in touches if t["direction"] == "out" and t["channel"] in CHANNELS]
+        sent_week += sum(1 for t in sent if t["at"] >= _iso(monday))
+        contact = store.get_contact(contact_id)
+        last_visit = visits[-1]["at"]
+        if contact["dnc"] or "whatsapp" not in contact["consent"] or any(t["at"] > last_visit for t in sent):
+            continue
+        age = now - datetime.fromisoformat(last_visit)
+        items.append({"contact": contact, "visit_at": last_visit, "overdue": age > timedelta(hours=FOLLOWUP_HOURS),
+                      "text": followup_message(contact, owner=owner, demos_url=demos)})
+    items.sort(key=lambda f: f["visit_at"])
+    return {"items": items, "sent_this_week": sent_week, "weekly_cap": FOLLOWUPS_PER_WEEK}
+
+
 # ------------------------------------------------------------------------------------------ routes
 def _metres(a: tuple[float, float], b: tuple[float, float]) -> float:
     lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
