@@ -118,6 +118,23 @@ def test_failed_send_keeps_the_draft_approved_and_records_the_error(store):
     assert row["status"] == "approved" and "quota" in row["last_error"]
 
 
+def test_next_due_picks_without_sending_and_record_send_marks_it_sent(mailer, sender):
+    d = draft(mailer)
+    assert mailer.next_due(now=T0) is None
+    mailer.approve(d["id"])
+    due = mailer.next_due(now=T0)
+    assert due["id"] == d["id"] and "reply STOP" in due["body"] and sender.sent == []
+    assert mailer.get(d["id"])["status"] == "approved"
+    sent = mailer.record_send(d["id"], {"ok": True, "message_id": "m9", "thread_id": "t9"}, now=T0)
+    assert sent["status"] == "sent" and sent["thread_id"] == "t9"
+
+
+def test_record_send_refuses_mail_that_was_not_approved(mailer):
+    d = draft(mailer)
+    with pytest.raises(MailerError, match="approved"):
+        mailer.record_send(d["id"], {"ok": True}, now=T0)
+
+
 def test_strict_regions_are_flagged_for_review(mailer):
     assert "review" in draft(mailer, email="hans@firma.de")["warnings"]
     assert "review" in draft(mailer, email="a@shop.co.uk", region="uk-sole-trader")["warnings"]

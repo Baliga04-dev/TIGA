@@ -75,6 +75,18 @@ class Mailer:
     def send_next(self, *, now: datetime | None = None) -> dict | None:
         """Send at most one approved mail if every limit allows it; otherwise do nothing."""
         now = now or datetime.now(timezone.utc)
+        due = self.next_due(now=now)
+        if not due:
+            return None
+        return self.record_send(due["id"], self.sender(due["to"], due["subject"], due["body"]), now=now)
+
+    def next_due(self, *, now: datetime | None = None) -> dict | None:
+        """The one approved mail every limit allows right now, footer added, or None. Sends nothing.
+
+        `send_next` uses it with the Gmail sender; `relay.py` hands it to Claude's Gmail
+        connector and reports back through `record_send`, so both paths share these checks.
+        """
+        now = now or datetime.now(timezone.utc)
         if now.weekday() >= 5 or not BUSINESS_HOURS[0] <= now.hour < BUSINESS_HOURS[1]:
             return None
         if self.sent_today(now) >= self.daily_cap(now):
@@ -88,15 +100,21 @@ class Mailer:
                 continue
             if not self.postal_address:
                 raise MailerError("Set a postal address (SETTINGS) before sending: CAN-SPAM requires one")
-            result = self.sender(row["email"], row["subject"], self._with_footer(row["body"]))
-            if not result.get("ok"):
-                self.store.update_outreach(row["id"], last_error=str(result.get("error", "send failed")))
-                return None
-            return self.store.update_outreach(
-                row["id"], actor="mailer", status="sent", sent_at=now.isoformat(timespec="seconds"),
-                message_id=result.get("message_id") or "", thread_id=result.get("thread_id") or "", last_error="",
-            )
+            return {"id": row["id"], "to": row["email"], "subject": row["subject"], "body": self._with_footer(row["body"])}
         return None
+
+    def record_send(self, outreach_id: int, result: dict, *, now: datetime | None = None) -> dict | None:
+        """Store the outcome of sending a mail `next_due` picked: sent, or approved with the error."""
+        now = now or datetime.now(timezone.utc)
+        if self.get(outreach_id)["status"] != "approved":
+            raise MailerError("only an approved mail picked by next_due can be recorded as sent")
+        if not result.get("ok"):
+            self.store.update_outreach(outreach_id, last_error=str(result.get("error", "send failed")))
+            return None
+        return self.store.update_outreach(
+            outreach_id, actor="mailer", status="sent", sent_at=now.isoformat(timespec="seconds"),
+            message_id=result.get("message_id") or "", thread_id=result.get("thread_id") or "", last_error="",
+        )
 
     # --- replies and follow-ups ----------------------------------------------
     def check_replies(self, fetch_thread: Callable[[str], list[dict]], *, now: datetime | None = None,
