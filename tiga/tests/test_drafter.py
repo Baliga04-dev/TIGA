@@ -78,3 +78,20 @@ def test_findings_beat_news_signals_and_go_to_the_llm_too():
     assert "no_https" in seen["user"]
     body = drafter.write_draft({"company": "A", "problems": ["no_https"], "signals": ["funding"]}, sender_name="Jo", offer="x")["body"]
     assert "not secure" in body.lower()
+
+
+def test_a_shop_with_a_matching_demo_gets_exactly_one_link_before_the_sign_off():
+    demo = "https://baliga04-dev.github.io/demos/malnad-table/"
+    lead = {"company": "Udupi Tiffins", "problems": ["no_website"], "category": "restaurant"}
+    out = drafter.write_draft(lead, sender_name="Adithya", offer="websites", demo_url=demo)
+    body = out["body"]
+    assert body.count("http") == 1 and demo in body and body.index(demo) < body.index("Best,")
+    llm = drafter.write_draft(lead, sender_name="Adithya", offer="websites", demo_url=demo,
+                              complete=lambda s, u: '{"subject": "A website for Udupi Tiffins", "body": "' + ("word " * 70) + 'Best, Adithya"}')
+    assert llm["body"].count(demo) == 1
+
+
+def test_no_demo_means_no_link():
+    out = drafter.write_draft({"company": "X Clinic", "problems": ["no_website"], "category": "clinic"},
+                              sender_name="Adithya", offer="websites")
+    assert "http" not in out["body"]

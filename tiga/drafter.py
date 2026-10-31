@@ -87,8 +87,19 @@ def _valid(subject: str, body: str) -> bool:
     )
 
 
+def _with_demo(draft: dict, demo_url: str) -> dict:
+    """One line pointing to a working demo for this kind of shop, just before the sign-off: proof, not a pitch."""
+    if not demo_url:
+        return draft
+    line = f"Here's a website I built for a shop like yours: {demo_url}"
+    body = draft["body"]
+    at = body.rfind("Best,")
+    body = body[:at].rstrip() + f"\n\n{line}\n\n" + body[at:] if at >= 0 else body.rstrip() + f"\n\n{line}"
+    return {**draft, "body": body}
+
+
 def write_draft(lead: dict, *, sender_name: str, offer: str,
-                complete: Callable[[str, str], str] | None = None) -> dict:
+                complete: Callable[[str, str], str] | None = None, demo_url: str = "") -> dict:
     if complete:
         user = (
             f"Sender: {sender_name}\nOffer: {offer}\nCompany: {lead.get('company') or 'unknown'}\n"
@@ -100,7 +111,7 @@ def write_draft(lead: dict, *, sender_name: str, offer: str,
             data = json.loads(complete(SYSTEM, user))
             subject, body = str(data.get("subject", "")), str(data.get("body", "")).strip()
             if _valid(subject, body):
-                return {"subject": subject.strip(), "body": body}
+                return _with_demo({"subject": subject.strip(), "body": body}, demo_url)
         except (ValueError, TypeError, RuntimeError, OSError):
             pass  # fall through to the template
-    return _template(lead, sender_name, offer)
+    return _with_demo(_template(lead, sender_name, offer), demo_url)

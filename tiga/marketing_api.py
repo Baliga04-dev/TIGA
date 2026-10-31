@@ -158,12 +158,23 @@ def localities() -> dict:
     return {"ok": True, "items": sorted(marketing.LOCALITIES)}
 
 
+def _start(lat: float | None, lon: float | None) -> tuple[float, float] | None:
+    return (lat, lon) if lat is not None and lon is not None else None
+
+
 @router.get("/route")
-def route(locality: str, category: str = "all", radius_km: float = 1.0) -> dict:
+def route(locality: str = "", category: str = "all", radius_km: float = 1.0, lat: float | None = None,
+          lon: float | None = None) -> dict:
     try:
-        return {"ok": True, **marketing.route(services.get_store(), locality, category, radius_km, marketing.now())}
+        return {"ok": True, **marketing.route(services.get_store(), locality or None, category, radius_km, marketing.now(),
+                                              start=_start(lat, lon))}
     except MarketingError as exc:
         return _refuse(exc)
+
+
+@router.get("/best-localities")
+def best_localities(category: str = "all", radius_km: float = 1.0) -> dict:
+    return {"ok": True, "items": marketing.best_localities(services.get_store(), category, radius_km, marketing.now())}
 
 
 @router.post("/visits")
@@ -315,10 +326,27 @@ def print_audit(prospect_id: int) -> HTMLResponse:
 
 
 @router.get("/print/route", response_class=HTMLResponse)
-def print_route(locality: str, category: str = "all", radius_km: float = 1.0) -> HTMLResponse:
+def print_route(locality: str = "", category: str = "all", radius_km: float = 1.0, lat: float | None = None,
+                lon: float | None = None) -> HTMLResponse:
     try:
-        out = marketing.route(services.get_store(), locality, category, radius_km, marketing.now())
+        out = marketing.route(services.get_store(), locality or None, category, radius_km, marketing.now(), start=_start(lat, lon))
     except MarketingError as exc:
         return HTMLResponse(str(exc), status_code=400, headers={"Content-Security-Policy": _CSP})
-    page = marketing.route_sheet_html(locality, out["stops"], today=marketing.now().astimezone(marketing.IST).date())
+    page = marketing.route_sheet_html(out["locality"], out["stops"], today=marketing.now().astimezone(marketing.IST).date())
+    return HTMLResponse(page, headers={"Content-Security-Policy": _CSP})
+
+
+@router.get("/print/route-audits", response_class=HTMLResponse)
+def print_route_audits(locality: str = "", category: str = "all", radius_km: float = 1.0, lat: float | None = None,
+                       lon: float | None = None) -> HTMLResponse:
+    """Every stop's audit sheet in one document, to print once before the walk."""
+    store = services.get_store()
+    try:
+        out = marketing.route(store, locality or None, category, radius_km, marketing.now(), start=_start(lat, lon))
+        page = marketing.audit_sheets_html([store.get_prospect(s["id"]) for s in out["stops"]], owner=marketing.owner_name(),
+                                           whatsapp=marketing.owner_whatsapp(), demos_url=marketing.demos_url(),
+                                           today=marketing.now().astimezone(marketing.IST).date(),
+                                           privacy_url=marketing.privacy_url())
+    except MarketingError as exc:
+        return HTMLResponse(str(exc), status_code=400, headers={"Content-Security-Policy": _CSP})
     return HTMLResponse(page, headers={"Content-Security-Policy": _CSP})

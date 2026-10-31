@@ -78,6 +78,8 @@ class Analyst:
             except Exception as exc:  # news is a bonus; never lose the night over it
                 errors.append(f"news failed: {exc}")
 
+        if self.store.claim_job("analyst_chains", night):   # names the map doesn't tag as brands
+            self.mark_chains()
         checked = await self._check_sites(local.year)
         return {"phase": "collect", "category": category, "new": fetched, "checked": checked, "errors": errors}
 
@@ -99,6 +101,15 @@ class Analyst:
             row, created = self.store.upsert_prospect({**base, "status": "no_contact",
                                                         "note": "no website, email or phone on the map"})
         return int(created)
+
+    def mark_chains(self) -> int:
+        """Chains and franchises are never a freelancer's client: mark any still on the to-do lists as not a fit."""
+        marked = 0
+        for p in self.store.list_prospects("new", "ready", "needs_contact", "no_contact", limit=100_000):
+            if places.looks_like_chain(p["name"]):
+                self.store.update_prospect(p["id"], status="disqualified", note="chain or brand")
+                marked += 1
+        return marked
 
     async def _check_sites(self, year: int) -> int:
         batch = self.store.list_prospects("new", limit=self.checks_per_tick)

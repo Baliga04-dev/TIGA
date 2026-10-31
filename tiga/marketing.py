@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 
 import billing
 import config
+import places
 from store import Store
 
 SOURCES = {"warm", "walk_in", "inbound", "referral", "map", "other", "client"}
@@ -394,12 +395,12 @@ def why_words(prospect: dict) -> list[str]:
     return [PROBLEMS[k][0].format(category=shop_noun(prospect.get("category", ""))) for k in keys if k in PROBLEMS]
 
 
-def route(store: Store, locality: str, category: str, radius_km: float, now: datetime) -> dict:
-    if locality not in LOCALITIES:
-        raise MarketingError(f"Pick a neighbourhood from the list (not {locality!r}).")
-    centre = LOCALITIES[locality]
-    radius = min(max(float(radius_km), 0.2), 5.0) * 1000
-    candidates = [p for p in store.list_prospects(*ROUTE_STATUSES, limit=20000)
+BENGALURU = (12.70, 77.30, 13.35, 77.95)   # south, west, north, east: a route must start inside the city
+
+
+def _pool(store: Store, category: str, now: datetime) -> tuple[list[dict], int]:
+    """Shops worth a visit: on a to-do list, placed on the map, not a chain, not do-not-contact, not visited lately."""
+    candidates = [p for p in store.list_prospects(*ROUTE_STATUSES, limit=50_000)
                   if category in ("", "all") or p["category"] == category]
     by_prospect = {c["prospect_id"]: c for c in store.list_contacts() if c["prospect_id"] is not None}
     recent = _iso(now - timedelta(days=REVISIT_DAYS))
@@ -410,12 +411,34 @@ def route(store: Store, locality: str, category: str, radius_km: float, now: dat
             without += 1
             continue
         contact = by_prospect.get(p["id"])
-        if contact and (contact["dnc"] or contact["id"] in visited):
+        if places.looks_like_chain(p["name"]) or (contact and (contact["dnc"] or contact["id"] in visited)):
             continue
-        if _metres(centre, (p["lat"], p["lon"])) <= radius:
-            pool.append(p)
+        pool.append(p)
+    return pool, without
+
+
+def _radius(radius_km: float) -> float:
+    return min(max(float(radius_km), 0.2), 5.0) * 1000
+
+
+def route(store: Store, locality: str | None, category: str, radius_km: float, now: datetime, *,
+          start: tuple[float, float] | None = None) -> dict:
+    """Stops in walking order from a neighbourhood centre, or from `start` (where the owner is standing)."""
+    if start is not None:
+        lat, lon = float(start[0]), float(start[1])
+        south, west, north, east = BENGALURU
+        if not (south <= lat <= north and west <= lon <= east):
+            raise MarketingError("That location is outside Bengaluru. Pick a neighbourhood instead.")
+        centre, label = (lat, lon), "Where you are"
+    elif locality in LOCALITIES:
+        centre, label = LOCALITIES[locality], locality
+    else:
+        raise MarketingError(f"Pick a neighbourhood from the list (not {locality!r}).")
+    radius = _radius(radius_km)
+    everything, without = _pool(store, category, now)
+    pool = [p for p in everything if _metres(centre, (p["lat"], p["lon"])) <= radius]
     stops, here, total = [], centre, 0.0
-    while pool and len(stops) < MAX_STOPS:   # nearest next shop, starting from the neighbourhood centre
+    while pool and len(stops) < MAX_STOPS:   # nearest next shop, starting from the centre
         nxt = min(pool, key=lambda p: _metres(here, (p["lat"], p["lon"])))
         pool.remove(nxt)
         step = _metres(here, (nxt["lat"], nxt["lon"]))
@@ -424,8 +447,17 @@ def route(store: Store, locality: str, category: str, radius_km: float, now: dat
         stops.append({"id": nxt["id"], "name": nxt["name"], "category": nxt["category"], "address": nxt["address"],
                       "website": nxt["website"], "phone": nxt["phone"], "problems": nxt["problems"],
                       "why": why_words(nxt), "ref": f"T{nxt['id']}", "walk_m": round(step), "lat": nxt["lat"], "lon": nxt["lon"]})
-    return {"locality": locality, "stops": stops, "without_coordinates": without, "total_m": round(total),
+    return {"locality": label, "stops": stops, "without_coordinates": without, "total_m": round(total),
             "minutes": round(total / WALK_M_PER_MIN)}
+
+
+def best_localities(store: Store, category: str, radius_km: float, now: datetime) -> list[dict]:
+    """Neighbourhoods ranked by how many shops are left to visit within the distance: walk where they are dense."""
+    pool, _ = _pool(store, category, now)
+    radius = _radius(radius_km)
+    counts = [{"locality": name, "shops": sum(1 for p in pool if _metres(centre, (p["lat"], p["lon"])) <= radius)}
+              for name, centre in LOCALITIES.items()]
+    return sorted((c for c in counts if c["shops"]), key=lambda c: (-c["shops"], c["locality"]))
 
 
 # ------------------------------------------------------------------------------------------ printables
@@ -442,6 +474,22 @@ th,td{{text-align:left;padding:.45rem .35rem;border-bottom:1px solid #b9c2bc;ver
 
 
 def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, today: date, privacy_url: str = "") -> str:
+    body = _audit_body(prospect, owner=owner, whatsapp=whatsapp, demos_url=demos_url, today=today, privacy_url=privacy_url)
+    return _SHEET.format(title=f"{html.escape(str(prospect.get('name') or ''), quote=False)}: a look at your shop online", body=body)
+
+
+def audit_sheets_html(prospects: list[dict], *, owner: str, whatsapp: str, demos_url: str, today: date,
+                      privacy_url: str = "") -> str:
+    """Every stop's audit sheet in one printable document, one per page."""
+    if not prospects:
+        raise MarketingError("No shops on this route to print.")
+    bodies = [_audit_body(p, owner=owner, whatsapp=whatsapp, demos_url=demos_url, today=today, privacy_url=privacy_url)
+              for p in prospects]
+    return _SHEET.format(title=f"Audit sheets, {len(prospects)} shops",
+                         body="<div style='break-after:page'></div>".join(bodies))
+
+
+def _audit_body(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, today: date, privacy_url: str = "") -> str:
     e = lambda v: html.escape(str(v or ""), quote=False)  # every shop detail comes from the map or a website
     if not whatsapp:
         raise MarketingError("Set TIGA_WHATSAPP in tiga/.env (or the number in portfolio/site.config.js) for the QR.")
@@ -472,7 +520,7 @@ def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: st
             f"<p class='muted small'>If you message me, I keep your name and number only to talk about your website. "
             f"Say \"delete my number\" any time and I will delete it."
             + (f" More: {e(privacy_url)}" if privacy_url else "") + "</p>")
-    return _SHEET.format(title=f"{e(prospect.get('name'))}: a look at your shop online", body=body)
+    return body
 
 
 def route_sheet_html(locality: str, stops: list[dict], *, today: date) -> str:

@@ -413,3 +413,36 @@ def test_the_purge_deletes_only_old_unengaged_contacts_and_keeps_every_no(store)
     assert gone == 1 and stale["id"] not in remaining
     assert {agreed["id"], said_no["id"], friend["id"], recent["id"]} <= remaining
     assert store.is_suppressed("tel:+919886040003")
+
+
+# --- walk-ins at scale ------------------------------------------------------------------------------
+def test_neighbourhoods_are_ranked_by_how_many_shops_are_left_to_visit(store):
+    jay, mal = marketing.LOCALITIES["Jayanagar"], marketing.LOCALITIES["Malleshwaram"]
+    for n in range(3):
+        prospect(store, n=200 + n, lat=jay[0] + 0.001 * n, lon=jay[1])
+    prospect(store, n=210, lat=mal[0], lon=mal[1])
+    prospect(store, n=211, lat=mal[0], lon=mal[1] + 0.001, name="Vodafone Store")   # chains never count
+    ranked = marketing.best_localities(store, "all", 1.0, NOON)
+    assert ranked[0] == {"locality": "Jayanagar", "shops": 3}
+    assert {"locality": "Malleshwaram", "shops": 1} in ranked and all(r["shops"] > 0 for r in ranked)
+
+
+def test_a_route_can_start_from_where_the_owner_is(store):
+    jay = marketing.LOCALITIES["Jayanagar"]
+    here = (jay[0] + 0.004, jay[1])
+    near_me = prospect(store, n=300, lat=here[0] + 0.0005, lon=here[1])
+    near_centre = prospect(store, n=301, lat=jay[0] + 0.0005, lon=jay[1])
+    out = marketing.route(store, None, "all", 1.0, NOON, start=here)
+    assert out["locality"] == "Where you are" and [s["id"] for s in out["stops"]] == [near_me["id"], near_centre["id"]]
+    with pytest.raises(marketing.MarketingError):
+        marketing.route(store, None, "all", 1.0, NOON, start=(28.61, 77.21))   # Delhi is outside Bengaluru
+
+
+def test_one_printable_holds_an_audit_sheet_per_stop_each_on_its_own_page(store):
+    jay = marketing.LOCALITIES["Jayanagar"]
+    a = prospect(store, n=400, lat=jay[0] + 0.001, lon=jay[1], name="First & Co")
+    b = prospect(store, n=401, lat=jay[0] + 0.002, lon=jay[1], name="Second Stores")
+    page = marketing.audit_sheets_html([a, b], owner="Adithya", whatsapp="917795052550",
+                                       demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
+    assert page.count("<!doctype html>") == 1 and page.count("break-after:page") == 1
+    assert "First &amp; Co" in page and "Second Stores" in page and f"Ref T{a['id']}" in page and f"Ref T{b['id']}" in page

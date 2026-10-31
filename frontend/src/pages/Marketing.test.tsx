@@ -27,6 +27,7 @@ beforeEach(() => {
   mock.get('/marketing/localities', { ok: true, items: ['Jayanagar', 'Malleshwaram'] })
   mock.get('/marketing/followups', { ok: true, items: [], sent_this_week: 0, weekly_cap: 10 })
   mock.get('/marketing/asks', { ok: true, review_link: true, items: [] })
+  mock.get('/marketing/best-localities', { ok: true, items: [{ locality: 'Malleshwaram', shops: 42 }, { locality: 'Jayanagar', shops: 17 }] })
   mock.get('/marketing/what-worked', { ok: true, channels: [], experiment: 'Do 10 walk-ins on one street this week.', next_steps: ['Log every visit'], retire: ['Cold email'], enough_data: false })
 })
 
@@ -193,5 +194,25 @@ describe('Marketing', () => {
     expect(screen.getByText(/add your google review link/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /done google review request for sri bakery/i }))
     await waitFor(() => expect(done).toHaveLength(1))
+  })
+
+  it('ranks neighbourhoods by shops left, and plans from where the owner is standing', async () => {
+    const asked: string[] = []
+    server.use(http.get('*/api/marketing/route', ({ request }) => {
+      const q = new URL(request.url).searchParams
+      asked.push(q.toString())
+      return HttpResponse.json({ ok: true, locality: q.get('lat') ? 'Where you are' : q.get('locality'), stops: [stop()], without_coordinates: 0, total_m: 220, minutes: 3 })
+    }))
+    const geo = { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { latitude: 12.931, longitude: 77.584 } } as GeolocationPosition) }
+    Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true })
+    const user = userEvent.setup()
+    renderApp('/marketing?tab=walk-ins')
+    const ranking = await screen.findByRole('region', { name: 'Where the shops are' })
+    await user.click(within(ranking).getByRole('button', { name: /malleshwaram/i }))
+    await waitFor(() => expect(asked[0]).toContain('locality=Malleshwaram'))
+    await user.click(screen.getByRole('button', { name: /from where i am/i }))
+    await waitFor(() => expect(asked[1]).toContain('lat=12.931'))
+    expect(await screen.findByText(/in Where you are/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /print every audit sheet \(1\)/i }).getAttribute('href')).toContain('lon=77.584')
   })
 })

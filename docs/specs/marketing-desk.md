@@ -158,3 +158,27 @@ Profile, Kannada copy (waits for interview vocabulary), and anything paid.
 - Asks owed appear at payment and 14 days after, once each.
 - The weekly report runs once per ISO week, names one experiment, retires zero-yield channels after 4 attempts.
 - The purge deletes only unengaged, non-consented map or walk-in contacts older than 180 days and keeps suppressions.
+
+---
+
+# Round 3: scale what works
+
+Added 2026-10-31. Scale reach and preparation, not message volume (the TRAI and WhatsApp limits stay).
+
+- **No chains.** Shops whose names match well-known chains and franchises (telecom stores, supermarkets,
+  pharmacy chains, fast food, clothing and jewellery brands, salon and gym chains, hotel brands) are marked
+  "not a fit" when the Analyst records them, existing ones are marked too, and walk-in routes skip them. Ambiguous
+  words (Trends, Max, More, Spar) match only as the whole name.
+- **Where to walk.** The Walk-ins tab ranks neighbourhoods by how many eligible shops are within the chosen
+  distance, so the owner walks where the density is.
+- **From where I am.** A route can start from the browser's location instead of a neighbourhood centre.
+- **Print the whole walk.** One printable document with an audit sheet per stop, each on its own page.
+- **Proof in cold email.** A first cold email to a shop whose kind has a demo carries one line linking it, added
+  after the AI's draft passes its checks.
+- **A salon demo.** A fifth demo site (booking a slot by service, stylist and time), and salons' audit sheets and
+  follow-ups point to it.
+
+Acceptance: chain names are tested, including the whole-name-only words; the ranking matches the routes; the
+location route orders stops from the given point; the combined printable has one page per stop; drafts for kinds
+with a demo carry exactly one demo link and others none; the salon demo passes the same checks as the others
+(axe at 1440 and 390 px, no horizontal scroll).

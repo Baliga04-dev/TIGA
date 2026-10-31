@@ -55,3 +55,21 @@ async def test_each_business_carries_its_map_position(http):
                                             element(2, kind="way", name="Glow Salon", shop="beauty")]})
     node, way = await places.fetch_businesses("bakery")
     assert (node.lat, node.lon) == (12.97, 77.59) and (way.lat, way.lon) == (12.98, 77.6)
+
+
+@pytest.mark.parametrize("name", ["Vodafone Store", "Nandini Milk Parlour", "Apollo Pharmacy", "Domino's Pizza",
+                                  "Reliance Trends", "Trends", "MedPlus", "Café Coffee Day", "Naturals Salon",
+                                  "Tanishq", "Croma", "Cult.fit Koramangala", "OYO Rooms 12345", "More Supermarket"])
+def test_chain_names_are_recognised(name):
+    assert places.looks_like_chain(name)
+
+
+@pytest.mark.parametrize("name", ["Hair Trends Unisex Salon", "Max Hardware", "Sri Ganesh Bakery", "More Than Cakes",
+                                  "Natural Beauty Parlour", "Spar Tools and Hardware", "Udupi Tiffins"])
+def test_independent_shops_are_not_mistaken_for_chains(name):
+    assert not places.looks_like_chain(name)
+
+
+async def test_a_chain_without_brand_tags_is_still_marked(http):
+    http.add("overpass", json={"elements": [element(1, name="Vodafone Store", shop="mobile_phone")]})
+    assert (await places.fetch_businesses("electronics"))[0].is_chain

@@ -163,3 +163,18 @@ def test_what_worked_now(client):
     out = client.get("/api/marketing/what-worked").json()
     assert out["ok"] and out["experiment"] and 3 <= len(out["next_steps"]) <= 5
     assert [c["id"] for c in out["channels"]] == ["warm", "walk_in", "inbound", "referral", "cold_email"]
+
+
+def test_walk_ins_at_scale_over_http(client):
+    store = services.get_store()
+    lat, lon = marketing.LOCALITIES["Jayanagar"]
+    for n in range(3):
+        store.upsert_prospect({"key": f"osm:node/9{n}", "source": "osm", "name": f"Shop {n}", "category": "bakery",
+                               "status": "no_contact", "lat": lat + 0.001 * (n + 1), "lon": lon})
+    best = client.get("/api/marketing/best-localities", params={"category": "all", "radius_km": 1}).json()
+    assert best["ok"] and best["items"][0] == {"locality": "Jayanagar", "shops": 3}
+    here = client.get("/api/marketing/route", params={"lat": lat + 0.003, "lon": lon, "radius_km": 1}).json()
+    assert here["locality"] == "Where you are" and here["stops"][0]["name"] == "Shop 2"
+    assert client.get("/api/marketing/route", params={"lat": 19.07, "lon": 72.87}).json()["ok"] is False
+    sheets = client.get("/api/marketing/print/route-audits", params={"locality": "Jayanagar", "radius_km": 1})
+    assert sheets.status_code == 200 and sheets.text.count("Ref T") == 3 and "<script" not in sheets.text

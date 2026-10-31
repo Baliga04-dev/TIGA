@@ -348,8 +348,12 @@ export const api = {
     post<{ ok: true; touch: Touch }>(`/marketing/contacts/${id}/touches`, touch),
   listTouches: (id: number) => request<{ ok: true; items: Touch[] }>(`/marketing/contacts/${id}/touches`),
   localities: () => request<{ ok: true; items: string[] }>('/marketing/localities'),
-  walkRoute: (locality: string, category: string, radiusKm: number) =>
-    request<{ ok: true } & WalkRoute>(`/marketing/route?${new URLSearchParams({ locality, category, radius_km: String(radiusKm) })}`),
+  walkRoute: (locality: string, category: string, radiusKm: number, start?: { lat: number; lon: number }) =>
+    request<{ ok: true } & WalkRoute>(`/marketing/route?${new URLSearchParams({
+      ...(start ? { lat: String(start.lat), lon: String(start.lon) } : { locality }), category, radius_km: String(radiusKm),
+    })}`),
+  bestLocalities: (category: string, radiusKm: number) =>
+    request<{ ok: true; items: { locality: string; shops: number }[] }>(`/marketing/best-localities?${new URLSearchParams({ category, radius_km: String(radiusKm) })}`),
   logVisit: (visit: { prospect_id: number; outcome: VisitOutcome; name: string; phone: string; consent: Channel[]; notice: boolean; note: string; dnc: boolean }) =>
     post<{ ok: true; contact: Contact }>('/marketing/visits', visit),
   inbound: (message: { ref: string; name: string; phone: string; note: string }) =>

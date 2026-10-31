@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Footprints, Inbox, Loader2, Printer, Route } from 'lucide-react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Footprints, Inbox, Loader2, LocateFixed, Printer, Route } from 'lucide-react';
 import { Field, Modal, Notice } from '../../components/ui';
 import { api } from '../../services/api';
 import type { Channel, RouteStop, VisitOutcome, WalkRoute } from '../../types';
@@ -17,24 +17,42 @@ export function WalkInsPanel({ onToast }: { onToast: (m: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visiting, setVisiting] = useState<RouteStop | null>(null);
+  const [start, setStart] = useState<{ lat: number; lon: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [best, setBest] = useState<{ locality: string; shops: number }[] | null>(null);
 
   useEffect(() => {
     api.localities().then((r) => { setLocalities(r.items); setLocality((l) => l || r.items[0] || ''); }).catch((e) => setError(errorText(e)));
   }, []);
 
-  const plan = async (e?: FormEvent) => {
-    e?.preventDefault();
+  useEffect(() => {
+    api.bestLocalities(category, radius).then((r) => setBest(r.items)).catch(() => setBest(null));
+  }, [category, radius]);
+
+  const go = useCallback(async (where: { locality?: string; start?: { lat: number; lon: number } | null }) => {
     setBusy(true);
     try {
-      setRoute(await api.walkRoute(locality, category, radius));
+      setRoute(await api.walkRoute(where.locality ?? '', category, radius, where.start ?? undefined));
       setError(null);
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
     }
+  }, [category, radius]);
+  const plan = (e?: FormEvent) => { e?.preventDefault(); setStart(null); go({ locality }); };
+  const fromHere = () => {
+    if (!navigator.geolocation) { setError("This browser can't share its location. Pick a neighbourhood instead."); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { const here = { lat: pos.coords.latitude, lon: pos.coords.longitude }; setStart(here); setLocating(false); go({ start: here }); },
+      () => { setLocating(false); setError("Couldn't get your location. Allow it in the browser, or pick a neighbourhood."); },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
   };
-  const query = new URLSearchParams({ locality, category, radius_km: String(radius) });
+  const query = new URLSearchParams({
+    ...(start ? { lat: String(start.lat), lon: String(start.lon) } : { locality }), category, radius_km: String(radius),
+  });
 
   return (
     <div className="grid gap-8 lg:grid-cols-[20rem_minmax(0,1fr)]">
@@ -59,7 +77,27 @@ export function WalkInsPanel({ onToast }: { onToast: (m: string) => void }) {
           <button className="btn btn-primary btn-sm" disabled={busy || !locality}>
             {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Route className="size-4" aria-hidden="true" />} Plan the route
           </button>
+          <button type="button" className="btn btn-secondary btn-sm ml-2" onClick={fromHere} disabled={busy || locating}>
+            {locating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <LocateFixed className="size-4" aria-hidden="true" />} From where I am
+          </button>
         </form>
+        {best && best.length > 0 && (
+          <section aria-labelledby="best-title" className="rounded-lg border border-rule p-4">
+            <h3 id="best-title" className="font-semibold">Where the shops are</h3>
+            <p className="mt-1 text-xs text-ink-2">Shops left to visit within {radius} km of each centre, most first.</p>
+            <ol className="mt-2 space-y-1 text-sm">
+              {best.slice(0, 8).map((b) => (
+                <li key={b.locality}>
+                  <button type="button" className="flex w-full items-baseline justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-wash"
+                    onClick={() => { setLocality(b.locality); setStart(null); go({ locality: b.locality }); }}>
+                    <span className="underline-offset-4 hover:underline">{b.locality}</span>
+                    <span className="font-mono text-ink-2">{b.shops}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
         <InboundForm onFound={(m) => onToast(m)} />
       </div>
 
@@ -83,6 +121,11 @@ export function WalkInsPanel({ onToast }: { onToast: (m: string) => void }) {
               {route.stops.length > 0 && (
                 <a className="btn btn-secondary btn-sm" href={`/api/marketing/print/route?${query}`} target="_blank" rel="noopener noreferrer">
                   <Printer className="size-4" aria-hidden="true" /> Print the route sheet
+                </a>
+              )}
+              {route.stops.length > 0 && (
+                <a className="btn btn-secondary btn-sm" href={`/api/marketing/print/route-audits?${query}`} target="_blank" rel="noopener noreferrer">
+                  <Printer className="size-4" aria-hidden="true" /> Print every audit sheet ({route.stops.length})
                 </a>
               )}
             </div>

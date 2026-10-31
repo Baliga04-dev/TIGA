@@ -158,3 +158,13 @@ async def test_a_failing_map_query_is_reported_and_the_tick_continues(w):
     a.categories = ["boom"]
     out = await a.tick(EVENING)
     assert out["errors"] and out["phase"] == "collect"
+
+
+async def test_chains_already_on_the_list_are_marked_not_a_fit_once_a_night():
+    w = World()
+    w.store.upsert_prospect({"key": "osm:node/77", "source": "osm", "name": "Vodafone Store", "status": "needs_contact"})
+    w.store.upsert_prospect({"key": "osm:node/78", "source": "osm", "name": "Sri Ganesh Bakery", "status": "needs_contact"})
+    w.businesses["bakery"] = []
+    await w.analyst().tick(EVENING)
+    statuses = {p["name"]: p["status"] for p in w.store.list_prospects()}
+    assert statuses == {"Vodafone Store": "disqualified", "Sri Ganesh Bakery": "needs_contact"}

@@ -5,6 +5,8 @@ usage policy: few, modest queries). Raises PlacesError when the map server refus
 """
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 
 import httpx
@@ -39,6 +41,40 @@ CATEGORIES: dict[str, list[str]] = {
     "pet": ['"shop"="pet"', '"amenity"="veterinary"'],
     "lawyer": ['"office"="lawyer"', '"office"="accountant"'],
 }
+
+
+# Chains and franchises: they have head offices and websites, so they are never a freelancer's client. Matched as
+# whole words anywhere in the name; WHOLE_NAME_ONLY entries are ordinary words, so they match only the entire name.
+CHAINS = [
+    "vodafone", "airtel", "jio", "bsnl", "nandini", "heritage fresh", "reliance", "more supermarket", "more megastore",
+    "dmart", "d mart", "big bazaar", "star bazaar", "ratnadeep", "nilgiris", "namdhari", "namdharis", "foodworld",
+    "food world", "twenty four seven", "24seven", "easyday", "apollo", "medplus", "wellness forever", "frank ross",
+    "trust chemists", "domino", "dominos", "pizza hut", "kfc", "mcdonald", "mcdonalds", "burger king", "subway",
+    "starbucks", "cafe coffee day", "ccd", "chai point", "chaayos", "third wave coffee", "blue tokai", "a2b",
+    "adyar ananda bhavan", "haldiram", "haldirams", "baskin robbins", "keventers", "theobroma", "truffles",
+    "meghana foods", "empire restaurant", "max fashion", "pantaloons", "westside", "zudio", "lifestyle",
+    "shoppers stop", "biba", "fabindia", "allen solly", "peter england", "raymond", "levi", "levis", "puma", "adidas",
+    "nike", "bata", "metro shoes", "decathlon", "manyavar", "mufti", "us polo", "louis philippe", "van heusen",
+    "jockey", "tanishq", "kalyan jewellers", "malabar gold", "joyalukkas", "caratlane", "bluestone", "bhima",
+    "croma", "poorvika", "sangeetha mobiles", "vijay sales", "samsung", "mi store", "oneplus", "sony center",
+    "naturals", "green trends", "lakme salon", "toni and guy", "ylg", "jawed habib", "bodycraft", "enrich salon",
+    "cult fit", "cultfit", "golds gym", "gold s gym", "anytime fitness", "snap fitness", "talwalkars", "lenskart",
+    "titan eye", "specsmakers", "oyo", "fabhotel", "treebo", "taj", "itc", "marriott", "hilton", "radisson", "ibis",
+    "lemon tree", "ginger hotel", "holiday inn", "hyatt", "novotel", "sheraton", "zostel", "maruti", "hyundai",
+    "tata motors", "mahindra", "toyota", "kia", "mytvs", "gomechanic", "bosch car service", "heads up for tails",
+    "thomas cook", "makemytrip", "eurokids", "kidzee", "manipal", "fortis", "narayana", "cloudnine", "motherhood",
+]
+WHOLE_NAME_ONLY = {"trends", "max", "more", "spar", "cult", "titan"}
+
+
+def _words(name: str) -> str:
+    plain = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()   # Café -> cafe
+    return " " + re.sub(r"[^a-z0-9]+", " ", plain.replace("'", "").replace("’", "")).strip() + " "
+
+
+def looks_like_chain(name: str) -> bool:
+    words = _words(name)
+    return words.strip() in WHOLE_NAME_ONLY or any(f" {c} " in words for c in CHAINS)
 
 
 class PlacesError(RuntimeError):
@@ -103,7 +139,7 @@ async def fetch_businesses(category: str) -> list[Business]:
             key=f"osm:{el['type']}/{el['id']}", name=name, category=category, website=_website(tags),
             email=_first(tags, "email", "contact:email").lower(),
             phone=_first(tags, "phone", "contact:phone", "contact:mobile", "mobile"),
-            address=address, is_chain=bool(tags.get("brand") or tags.get("brand:wikidata")),
+            address=address, is_chain=bool(tags.get("brand") or tags.get("brand:wikidata")) or looks_like_chain(name),
             lat=el.get("lat", el.get("center", {}).get("lat")), lon=el.get("lon", el.get("center", {}).get("lon")),
         ))
     return found
