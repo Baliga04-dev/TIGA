@@ -69,12 +69,13 @@ def test_a_refused_invoice_does_not_burn_an_invoice_number(client, monkeypatch):
     assert out["document"]["number"].endswith("-0001")
 
 
-def test_getting_paid_drafts_a_thank_you_with_testimonial_and_referral_asks(client, monkeypatch):
+def test_getting_paid_drafts_a_thank_you_asking_for_a_testimonial_but_not_yet_a_referral(client, monkeypatch):
     monkeypatch.setattr(config, "PORTFOLIO_URL", "https://baliga04-dev.github.io")
     d = deal_at(client, "delivered")
     out = client.post(f"/api/deals/{d['id']}/move", json={"stage": "paid"}).json()
     body = out["draft"]["body"]
-    assert "testimonial" in body and "introduction" in body and "baliga04-dev.github.io" in body
+    assert "two or three lines" in body and "only quote them if you say yes" in body and "baliga04-dev.github.io" in body
+    assert "introduction" not in body   # the referral ask waits 14 days (Marketing, asks owed)
 
 
 def test_rate_card_round_trip(client):

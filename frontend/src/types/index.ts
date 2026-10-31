@@ -488,7 +488,7 @@ export interface ChatLogEntry {
 }
 
 // --- marketing desk -----------------------------------------------------------------------------
-export type ContactSource = 'warm' | 'walk_in' | 'inbound' | 'referral' | 'map' | 'other';
+export type ContactSource = 'warm' | 'walk_in' | 'inbound' | 'referral' | 'map' | 'other' | 'client';
 export type Channel = 'whatsapp' | 'call' | 'email';
 export type VisitOutcome = 'not_met' | 'talked' | 'interested' | 'not_interested' | 'come_back';
 
@@ -610,4 +610,30 @@ export interface InterviewSummary {
   goal: number;
   by_category: Record<string, number>;
   offers: Record<string, Partial<Record<LadderPoint, number | null>> & { answers: number; range: [number, number] | null }>;
+}
+
+export interface Ask {
+  deal_id: number;
+  company: string;
+  kind: 'review' | 'referral';
+  due: string;
+  text: string;
+  contact: Contact | null;
+}
+
+export type ProofItem = 'name' | 'logo' | 'screenshots' | 'quote' | 'numbers';
+
+export interface ProofDrafts {
+  ok: boolean;
+  reason?: string;
+  case_study?: string;
+  linkedin?: string;
+  gbp?: string;
+  status?: string[];
+}
+
+export interface ProofResponse {
+  proof: { permissions: Partial<Record<ProofItem, boolean>>; facts: Partial<Record<'problem' | 'built' | 'results' | 'quote', string>> };
+  items: Record<ProofItem, string>;
+  drafts: ProofDrafts;
 }

@@ -7,6 +7,7 @@ export const SOURCE_LABEL: Record<ContactSource, string> = {
   referral: 'Referral',
   map: 'Map listing',
   other: 'Other',
+  client: 'Client',
 };
 
 export const CHANNEL_LABEL: Record<Channel, string> = { whatsapp: 'WhatsApp', call: 'Calls', email: 'Email' };

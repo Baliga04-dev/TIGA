@@ -301,3 +301,60 @@ def test_the_interview_summary_gives_each_offer_a_price_range_and_counts_kinds_o
     basic = summary["offers"]["basic_site"]
     assert basic["answers"] == 3 and basic["range"] == [5000, 10000]
     assert summary["offers"]["photos"]["answers"] == 0 and summary["offers"]["photos"]["range"] is None
+
+
+# --- proof: permissions, drafts and the asks owed after a project ---------------------------------
+def a_deal(store, **kw):
+    d = store.create_deal({"email": "ravi@sribakery.in", "contact": "Ravi Kumar", "company": "Sri Bakery",
+                           "phone": "98450 31762", "service": "Business website", "amount": 15000, **kw})
+    return d
+
+
+def test_no_proof_draft_without_permission_or_a_real_number(store):
+    d = a_deal(store)
+    marketing.save_proof(store, d["id"], permissions={"name": False, "quote": False, "numbers": False},
+                         facts={"problem": "No website", "built": "A menu site", "results": "Customers liked it", "quote": ""})
+    out = marketing.proof_drafts(store, d["id"], owner="Adithya")
+    assert not out["ok"] and "number or a quote" in out["reason"]
+
+
+def test_proof_drafts_use_only_what_was_allowed_and_fit_google(store):
+    d = a_deal(store)
+    marketing.save_proof(store, d["id"], permissions={"name": False, "numbers": True, "quote": True},
+                         facts={"problem": "Orders only came through apps at 25% commission",
+                                "built": "A menu page with WhatsApp ordering. Call 98450 31762 to order",
+                                "results": "42 direct orders in the first month",
+                                "quote": "Regulars order straight from us now. " * 80})
+    out = marketing.proof_drafts(store, d["id"], owner="Adithya")
+    assert out["ok"] and "Sri Bakery" not in out["case_study"] and "42 direct orders" in out["case_study"]
+    assert len(out["gbp"]) <= 1500 and "98450" not in out["gbp"] and "31762" not in out["gbp"]
+    assert len(out["status"]) == 3 and out["linkedin"]
+
+
+def test_the_name_appears_only_with_permission(store):
+    d = a_deal(store)
+    marketing.save_proof(store, d["id"], permissions={"name": True, "numbers": True}, facts={"results": "3x more calls"})
+    assert "Sri Bakery" in marketing.proof_drafts(store, d["id"], owner="Adithya")["case_study"]
+
+
+def test_asks_owed_after_payment_a_review_now_and_a_referral_after_two_weeks(store):
+    d = a_deal(store)
+    for stage in ("proposal_sent", "won", "in_progress", "delivered", "paid"):
+        store.move_deal(d["id"], stage, actor="user")
+    paid_day = datetime.fromisoformat(store.get_deal(d["id"])["paid_at"]).astimezone(IST)
+    now = paid_day + timedelta(hours=1)
+    asks = marketing.asks_owed(store, now, review_link="https://g.page/r/abc/review")
+    assert [a["kind"] for a in asks] == ["review"]
+    assert "https://g.page/r/abc/review" in asks[0]["text"] and asks[0]["contact"]["source"] == "client"
+    later = marketing.asks_owed(store, paid_day + timedelta(days=15), review_link="")
+    assert sorted(a["kind"] for a in later) == ["referral", "review"]
+    marketing.ask_done(store, d["id"], "review", now)
+    assert [a["kind"] for a in marketing.asks_owed(store, paid_day + timedelta(days=15), review_link="")] == ["referral"]
+
+
+def test_a_client_can_be_messaged_in_shop_hours_without_a_separate_permission(store):
+    d = a_deal(store)
+    c = marketing.client_contact(store, store.get_deal(d["id"]))
+    assert c["source"] == "client" and marketing.can_contact(store, c["id"], "whatsapp", NOON)["ok"]
+    assert not marketing.can_contact(store, c["id"], "whatsapp", EVENING)["ok"]
+    assert marketing.client_contact(store, store.get_deal(d["id"]))["id"] == c["id"]

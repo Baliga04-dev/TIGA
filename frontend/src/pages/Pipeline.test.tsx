@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../test/server'
 import { mock } from '../test/mock'
 import { mockMountCalls, renderApp } from '../test/render'
 
@@ -87,5 +89,27 @@ describe('Pipeline', () => {
     await waitFor(() => expect(made).toHaveLength(1))
     expect(opened).toHaveBeenCalledWith('/api/documents/9', '_blank', 'noopener,noreferrer')
     opened.mockRestore()
+  })
+
+  it('records what a finished client lets you show and drafts only from it', async () => {
+    mock.get('/deals', { ok: true, items: [deal({ stage: 'paid', amount: 15000 })], money })
+    const items = { name: 'Their business name', logo: 'Their logo', screenshots: 'Screenshots of the site', quote: 'A quote from them', numbers: 'Results with numbers' }
+    mock.get('/marketing/proof/:id', { ok: true, items, proof: { permissions: {}, facts: {} }, drafts: { ok: false, reason: 'Drafts need a real number or a quote.' } })
+    const saved: unknown[] = []
+    server.use(http.put('*/api/marketing/proof/1', async ({ request }) => {
+      saved.push(await request.json())
+      return HttpResponse.json({ ok: true, items, proof: { permissions: { numbers: true }, facts: { results: '42 direct orders' } },
+        drafts: { ok: true, case_study: 'A Bengaluru shop: website. 42 direct orders', linkedin: 'I built a website', gbp: 'New work', status: ['Before', 'Built', 'After'] } })
+    }))
+    const user = userEvent.setup()
+    renderApp('/pipeline')
+    await user.click(await screen.findByRole('button', { name: /proof from sri bakery/i }))
+    const dialog = await screen.findByRole('dialog', { name: 'Proof from Sri Bakery' })
+    expect(await within(dialog).findByText(/drafts need a real number or a quote/i)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Results with numbers' }))
+    await user.type(within(dialog).getByLabelText('What changed, with numbers'), '42 direct orders')
+    await user.click(within(dialog).getByRole('button', { name: 'Save and draft' }))
+    expect(await within(dialog).findByText('A Bengaluru shop: website. 42 direct orders')).toBeInTheDocument()
+    expect(saved[0]).toMatchObject({ permissions: { numbers: true }, facts: { results: '42 direct orders' } })
   })
 })

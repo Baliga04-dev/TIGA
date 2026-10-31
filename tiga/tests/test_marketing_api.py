@@ -126,3 +126,33 @@ def test_owner_interviews_over_http(client):
     assert listing["summary"]["count"] == 1 and listing["summary"]["offers"]["basic_site"]["range"] == [5000, 9000]
     assert [g["id"] for g in listing["guide"]][0] == "find_you" and len(listing["offers"]) == 4
     assert client.post("/api/marketing/interviews", json={"business": "X"}).json()["ok"] is False
+
+
+def paid_deal(client, phone="98450 31762"):
+    d = client.post("/api/deals", json={"email": "ravi@sribakery.in", "contact": "Ravi Kumar", "company": "Sri Bakery",
+                                        "phone": phone, "service": "Business website", "amount": 15000}).json()["deal"]
+    for stage in ("proposal_sent", "won", "in_progress", "delivered", "paid"):
+        client.post(f"/api/deals/{d['id']}/move", json={"stage": stage})
+    return d
+
+
+def test_proof_permissions_and_drafts_over_http(client):
+    d = paid_deal(client)
+    empty = client.get(f"/api/marketing/proof/{d['id']}").json()
+    assert empty["ok"] and empty["drafts"]["ok"] is False and "quote" in empty["items"]
+    out = client.put(f"/api/marketing/proof/{d['id']}", json={"permissions": {"numbers": True, "name": True},
+                                                              "facts": {"results": "42 direct orders in a month"}}).json()
+    assert out["drafts"]["ok"] and "Sri Bakery" in out["drafts"]["case_study"] and out["proof"]["permissions"]["numbers"]
+    assert client.get("/api/marketing/proof/999").json()["ok"] is False
+
+
+def test_asks_owed_and_marking_one_done(client, monkeypatch):
+    d = paid_deal(client)   # paid at the real time, so the asks clock must be real too
+    monkeypatch.setattr(marketing, "now", lambda: datetime.now(timezone.utc) + timedelta(hours=1))
+    asks = client.get("/api/marketing/asks").json()
+    assert asks["ok"] and asks["review_link"] is False
+    review = next(a for a in asks["items"] if a["kind"] == "review")
+    assert review["contact"]["source"] == "client" and "Google review" in review["text"]
+    assert client.post(f"/api/marketing/asks/{d['id']}/review/done").json()["ok"]
+    assert not any(a["kind"] == "review" for a in client.get("/api/marketing/asks").json()["items"])
+    assert client.post(f"/api/marketing/asks/{d['id']}/party/done").json()["ok"] is False

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FileText, IndianRupee, Plus, Receipt } from 'lucide-react';
 import { ProposalDialog } from './pipeline/ProposalDialog';
+import { ProofDialog } from './pipeline/ProofDialog';
 import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
@@ -34,6 +35,7 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
   const [amount, setAmount] = useState(String(deal.amount || ''));
   const [busy, setBusy] = useState(false);
   const [proposing, setProposing] = useState(false);
+  const [proofing, setProofing] = useState(false);
   const [docs, setDocs] = useState<DealDocument[]>([]);
   const name = deal.company || deal.contact || deal.email;
   useEffect(() => {
@@ -105,6 +107,11 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
             <FileText className="size-3" aria-hidden="true" /> Handover sheet <span className="sr-only">for {name}</span>
           </button>
         )}
+        {['delivered', 'paid'].includes(deal.stage) && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setProofing(true)}>
+            Proof <span className="sr-only">from {name}</span>
+          </button>
+        )}
         {!['in_progress', 'delivered'].includes(deal.stage) && (
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => act(() => api.moveDeal(deal.id, 'lost'), `${name} marked lost`)}>
             Lost <span className="sr-only">{name}</span>
@@ -120,6 +127,7 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
           ))}
         </p>
       )}
+      {proofing && <ProofDialog deal={deal} onClose={() => setProofing(false)} />}
       {proposing && (
         <ProposalDialog deal={deal} onClose={() => setProposing(false)}
           onDone={(message) => { setProposing(false); onDone(message); }} />
@@ -155,6 +163,7 @@ export function Pipeline() {
   });
   const done = (m: string) => { setToast(m); refresh(); };
   const closed = deals.filter((d) => d.stage === 'paid' || d.stage === 'lost');
+  const [proofDeal, setProofDeal] = useState<Deal | null>(null);
 
   return (
     <>
@@ -217,6 +226,11 @@ export function Pipeline() {
                   <span className="flex items-center gap-2">
                     {d.stage === 'paid' && <span className="text-ledger">{rupees(d.amount)}</span>}
                     <span className={cn('badge', d.stage === 'paid' ? 'badge-green' : 'badge-gray')}>{d.stage}</span>
+                    {d.stage === 'paid' && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => setProofDeal(d)}>
+                        Proof <span className="sr-only">from {d.company || d.email}</span>
+                      </button>
+                    )}
                     {d.stage === 'lost' && (
                       <button className="btn btn-ghost btn-sm" onClick={() => api.moveDeal(d.id, 'interested').then(() => done('Reopened'), (e: Error) => setError(e.message))}>
                         Reopen <span className="sr-only">{d.company || d.email}</span>
@@ -230,6 +244,7 @@ export function Pipeline() {
         </Card>
       </div>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {proofDeal && <ProofDialog deal={proofDeal} onClose={() => setProofDeal(null)} />}
     </>
   );
 }

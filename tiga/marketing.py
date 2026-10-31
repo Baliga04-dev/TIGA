@@ -28,7 +28,8 @@ import billing
 import config
 from store import Store
 
-SOURCES = {"warm", "walk_in", "inbound", "referral", "map", "other"}
+SOURCES = {"warm", "walk_in", "inbound", "referral", "map", "other", "client"}
+KNOWN = {"warm", "client"}   # people who know the owner: no separate permission needed
 CHANNELS = {"whatsapp", "call", "email"}
 OUTCOMES = {"not_met", "talked", "interested", "not_interested", "come_back"}
 CONVERSATIONS = {"talked", "interested", "not_interested", "come_back"}
@@ -205,16 +206,17 @@ def can_contact(store: Store, contact_id: int, channel: str, now: datetime) -> d
     if contact["dnc"] or _suppressed(store, contact):
         return {"ok": False, "reason": f"{name} asked not to be contacted."}
     warm = contact["source"] == "warm"
+    known = contact["source"] in KNOWN
     if channel in ("whatsapp", "call"):
         if not contact["phone"]:
             return {"ok": False, "reason": f"There's no number for {name}."}
-        if not warm and channel not in contact["consent"]:
+        if not known and channel not in contact["consent"]:
             return {"ok": False, "reason": f"No permission to {_verb(channel)} {name} yet. Ask when you visit, or wait "
                                            "for them to message you first (the QR on the audit sheet)."}
     else:
         if not contact["email"]:
             return {"ok": False, "reason": f"There's no email address for {name}."}
-        if not (warm or contact["owner_published"] or "email" in contact["consent"]):
+        if not (known or contact["owner_published"] or "email" in contact["consent"]):
             return {"ok": False, "reason": f"{name} didn't publish that address or agree to email. Ask first."}
     start, end = HOURS["warm" if warm else "business"]
     local = now.astimezone(IST)
@@ -482,6 +484,117 @@ def route_sheet_html(locality: str, stops: list[dict], *, today: date) -> str:
             "<p class='muted small'>Log each visit in Tiga afterwards: what they said, and whether they agreed to a "
             "WhatsApp. A \"no\" is final.</p>")
     return _SHEET.format(title=f"Walk-in route, {e(locality)}", body=body)
+
+
+# ------------------------------------------------------------------------------------ proof engine
+PROOF_ITEMS = {"name": "Their business name", "logo": "Their logo", "screenshots": "Screenshots of the site",
+               "quote": "A quote from them", "numbers": "Results with numbers"}
+REFERRAL_AFTER_DAYS = 14
+_PHONE_IN_TEXT = re.compile(r"(?:\+?91[\s-]?)?(?:0?[6-9]\d{4}[\s-]?\d{5}|0?80[\s-]?\d{4}[\s-]?\d{4})")
+
+
+def client_contact(store: Store, deal: dict) -> dict | None:
+    """The deal's client as a contact (source `client`), so asks go through the same gate. None without a usable number."""
+    try:
+        phone = normalise_phone(deal.get("phone", ""))
+    except MarketingError:
+        return None
+    if not phone:
+        return None
+    found = store.find_contact(phone=phone)
+    if found:
+        return found
+    return add_contact(store, {"name": deal.get("contact") or deal.get("company") or "Client", "business": deal.get("company", ""),
+                               "phone": phone, "email": deal.get("email", ""), "source": "client",
+                               "source_detail": f"client, deal #{deal['id']}"})
+
+
+def save_proof(store: Store, deal_id: int, *, permissions: dict, facts: dict) -> dict:
+    store.get_deal(deal_id)   # KeyError for an unknown deal
+    perms = {k: bool(permissions.get(k)) for k in PROOF_ITEMS}
+    clean = {k: _clean(facts.get(k), 2000) for k in ("problem", "built", "results", "quote")}
+    return store.save_proof(deal_id, permissions=perms, facts=clean)
+
+
+def _no_phones(text: str) -> str:
+    return re.sub(r"\s{2,}", " ", _PHONE_IN_TEXT.sub("", text)).strip()
+
+
+def _cut(text: str, limit: int) -> str:
+    text = _no_phones(text)
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
+
+
+def proof_drafts(store: Store, deal_id: int, *, owner: str) -> dict:
+    """Case study, LinkedIn post, Google Business Profile update and three Status frames, from allowed items only."""
+    deal, proof = store.get_deal(deal_id), store.get_proof(deal_id)
+    perms, facts = proof["permissions"], proof["facts"]
+    results = facts.get("results", "") if perms.get("numbers") and re.search(r"\d", facts.get("results", "")) else ""
+    quote = facts.get("quote", "") if perms.get("quote") else ""
+    if not (results or quote):
+        return {"ok": False, "reason": "Drafts need a real number or a quote the client agreed to show. Add one, and "
+                                       "tick what they said yes to."}
+    who = deal["company"] if perms.get("name") and deal["company"] else "a Bengaluru shop"
+    by = (deal["contact"] or "the owner") if perms.get("name") else "the owner"
+    service = deal["service"] or "a website"
+    problem, built = facts.get("problem", ""), facts.get("built", "")
+    short_quote = _cut(quote, 280)
+    case = "\n\n".join(part for part in [
+        f"{who[0].upper() + who[1:]}: {service.lower()}",
+        f"The problem\n{problem}" if problem else "", f"What I built\n{built}" if built else "",
+        f"What changed\n{results}" if results else "", f"\"{short_quote}\"\n- {by}" if short_quote else ""] if part)
+    linkedin = " ".join(part for part in [
+        f"I built {service.lower()} for {who}.", f"Before: {problem}." if problem else "", f"Now: {results}." if results else "",
+        f"\n\n\"{short_quote}\" ({by})" if short_quote else ""] if part).strip()
+    gbp = _cut(" ".join(p for p in [f"New work: {service.lower()} for {who}.", problem, built, results,
+                                     f"\"{short_quote}\"" if short_quote else ""] if p), 1500)
+    status = [_cut(f"Before: {problem or 'no website'}", 140), _cut(f"Built: {built or service}", 140),
+              _cut(f"After: {results}" if results else f"\"{short_quote}\"", 140)]
+    return {"ok": True, "case_study": _no_phones(case), "linkedin": _cut(linkedin, 1300), "gbp": gbp, "status": status,
+            "allowed": [PROOF_ITEMS[k] for k, v in perms.items() if v]}
+
+
+def _ask_key(deal_id: int, kind: str) -> str:
+    return f"marketing.ask.{deal_id}.{kind}"
+
+
+def asks_owed(store: Store, now: datetime, *, review_link: str | None = None, owner: str | None = None) -> list[dict]:
+    """A Google review request when a deal is paid (every client, no incentive), a check-in and referral 14 days later."""
+    link = config.REVIEW_LINK if review_link is None else review_link
+    me = (owner_name() if owner is None else owner).split()[0] if (owner_name() if owner is None else owner) else ""
+    out = []
+    for deal in store.list_deals("paid"):
+        if not deal["paid_at"]:
+            continue
+        paid = datetime.fromisoformat(deal["paid_at"])
+        first = (deal["contact"] or "").split()[0] if deal["contact"] else ""
+        hello = f"Hi {first}" if first else "Hi"
+        site = f"{deal['company']}'s website" if deal["company"] else "your website"
+        due = {"review": paid, "referral": paid + timedelta(days=REFERRAL_AFTER_DAYS)}
+        texts = {
+            "review": (f"{hello}, thank you again for choosing me for {site}. If you have a minute, a Google review would "
+                       f"help other shop owners find me{': ' + link if link else ''}. Honest is best, whatever you think."
+                       + (f"\n{me}" if me else "")),
+            "referral": (f"{hello}, it's been two weeks since {site} went live. How is it working for you? Anything you'd "
+                         "like changed? And if you know another shop owner who could use one, I'd be grateful for an "
+                         "introduction." + (f"\n{me}" if me else "")),
+        }
+        for kind in ("review", "referral"):
+            if now < due[kind] or store.get_value(_ask_key(deal["id"], kind), ""):
+                continue
+            out.append({"deal_id": deal["id"], "company": deal["company"] or deal["contact"] or deal["email"], "kind": kind,
+                        "due": _iso(due[kind]), "text": texts[kind], "contact": client_contact(store, deal)})
+    return out
+
+
+def ask_done(store: Store, deal_id: int, kind: str, now: datetime) -> None:
+    if kind not in ("review", "referral"):
+        raise MarketingError("Asks are 'review' or 'referral'.")
+    store.get_deal(deal_id)
+    store.set_value(_ask_key(deal_id, kind), _iso(now))
+    store.audit("user", "ask.done", "deal", str(deal_id), kind)
 
 
 # ------------------------------------------------------------------------------ restaurant commission

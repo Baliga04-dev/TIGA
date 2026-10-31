@@ -100,9 +100,8 @@ def _thanks(deal: dict) -> str:
     portfolio = f" You can see other work at {config.PORTFOLIO_URL}." if config.PORTFOLIO_URL else ""
     name = _business()["name"]
     return (f"Hi,\n\nThank you for working with me on {deal['company'] or 'your project'}, and for the payment.{portfolio}\n\n"
-            "Two small favours, only if you're happy with the work:\n"
-            "1. Could you reply with two or three lines I can quote as a testimonial?\n"
-            "2. If you know another business that needs a website, app or photos, I'd be grateful for an introduction.\n\n"
+            "One small favour, only if you're happy with the work: could you reply with two or three lines about it? "
+            "I'll only quote them if you say yes.\n\n"
             f"Thanks again,\n{name}")
 
 

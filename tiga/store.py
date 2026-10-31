@@ -94,6 +94,10 @@ CREATE TABLE IF NOT EXISTS owner_interviews (
     category TEXT NOT NULL DEFAULT '', answers TEXT NOT NULL DEFAULT '{}', prices TEXT NOT NULL DEFAULT '{}',
     at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS proofs (
+    deal_id INTEGER PRIMARY KEY, permissions TEXT NOT NULL DEFAULT '{}', facts TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS pending_actions (
     id TEXT PRIMARY KEY, tool TEXT NOT NULL, args TEXT NOT NULL, summary TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, expires_at TEXT NOT NULL
@@ -577,6 +581,21 @@ class Store:
         out = dict(row)
         out["answers"], out["prices"] = json.loads(out["answers"]), json.loads(out["prices"])
         return out
+
+    def save_proof(self, deal_id: int, *, permissions: dict, facts: dict) -> dict:
+        with self._lock, self._db:
+            self._db.execute("INSERT INTO proofs (deal_id, permissions, facts, updated_at) VALUES (?, ?, ?, ?) "
+                             "ON CONFLICT(deal_id) DO UPDATE SET permissions = excluded.permissions, facts = excluded.facts, "
+                             "updated_at = excluded.updated_at", (deal_id, json.dumps(permissions), json.dumps(facts), _now()))
+            self._write_audit("user", "proof.save", "deal", str(deal_id), ",".join(k for k, v in permissions.items() if v))
+        return self.get_proof(deal_id)
+
+    def get_proof(self, deal_id: int) -> dict:
+        with self._lock:
+            row = self._db.execute("SELECT * FROM proofs WHERE deal_id = ?", (deal_id,)).fetchone()
+        if row is None:
+            return {"deal_id": deal_id, "permissions": {}, "facts": {}, "updated_at": ""}
+        return {**dict(row), "permissions": json.loads(row["permissions"]), "facts": json.loads(row["facts"])}
 
     def count_documents(self, kind: str, since: str, until: str) -> int:
         with self._lock:

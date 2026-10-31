@@ -26,6 +26,7 @@ beforeEach(() => {
   mock.get('/marketing/scorecard', { ok: true, enough_data: false, weeks: [week('2026-10-26', { warm_sent: 3, visits: 2, conversations: 1 }), week('2026-10-19'), week('2026-10-12'), week('2026-10-05')] })
   mock.get('/marketing/localities', { ok: true, items: ['Jayanagar', 'Malleshwaram'] })
   mock.get('/marketing/followups', { ok: true, items: [], sent_this_week: 0, weekly_cap: 10 })
+  mock.get('/marketing/asks', { ok: true, review_link: true, items: [] })
 })
 
 describe('Marketing', () => {
@@ -175,5 +176,19 @@ describe('Marketing', () => {
     await waitFor(() => expect(saved[0]).toEqual({ business: 'Sri Ganesh Bakery', category: 'bakery',
       answers: { find_you: 'Word of mouth' }, prices: { basic_site: { bargain: 5000, expensive: 9000 }, photos: {} } }))
     expect(await screen.findByText('₹5,000 to ₹9,000')).toBeInTheDocument()
+  })
+
+  it('lists the asks owed to paid clients and marks one done', async () => {
+    const client = contact({ id: 9, name: 'Ravi Kumar', business: 'Sri Bakery', source: 'client' })
+    mock.get('/marketing/asks', { ok: true, review_link: false, items: [
+      { deal_id: 3, company: 'Sri Bakery', kind: 'review', due: '2026-10-31T06:00:00+00:00', text: 'Hi Ravi, a Google review would help', contact: client },
+    ] })
+    const done = mock.record('/marketing/asks/3/review/done', { ok: true })
+    const user = userEvent.setup()
+    renderApp('/marketing')
+    expect(await screen.findByRole('heading', { name: 'Asks owed to clients (1)' })).toBeInTheDocument()
+    expect(screen.getByText(/add your google review link/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /done google review request for sri bakery/i }))
+    await waitFor(() => expect(done).toHaveLength(1))
   })
 })

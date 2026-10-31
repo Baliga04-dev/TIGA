@@ -248,6 +248,50 @@ def print_commission(orders: int, average: int, commission: float = 25, share: f
     return HTMLResponse(page, headers={"Content-Security-Policy": _CSP})
 
 
+class ProofIn(_In):
+    permissions: dict[str, bool] = Field(default_factory=dict)
+    facts: dict[str, str] = Field(default_factory=dict)
+
+
+def _proof(deal_id: int) -> dict:
+    store = services.get_store()
+    return {"ok": True, "proof": store.get_proof(deal_id), "items": marketing.PROOF_ITEMS,
+            "drafts": marketing.proof_drafts(store, deal_id, owner=marketing.owner_name())}
+
+
+@router.get("/proof/{deal_id}")
+def get_proof(deal_id: int) -> dict:
+    try:
+        return _proof(deal_id)
+    except KeyError as exc:
+        return _refuse(exc)
+
+
+@router.put("/proof/{deal_id}")
+def put_proof(deal_id: int, body: ProofIn) -> dict:
+    try:
+        marketing.save_proof(services.get_store(), deal_id, permissions=body.permissions, facts=body.facts)
+        return _proof(deal_id)
+    except KeyError as exc:
+        return _refuse(exc)
+
+
+@router.get("/asks")
+def asks() -> dict:
+    items = marketing.asks_owed(services.get_store(), marketing.now())
+    return {"ok": True, "review_link": bool(marketing.config.REVIEW_LINK),
+            "items": [{**a, "contact": _with_gates(a["contact"]) if a["contact"] else None} for a in items]}
+
+
+@router.post("/asks/{deal_id}/{kind}/done")
+def ask_done(deal_id: int, kind: str) -> dict:
+    try:
+        marketing.ask_done(services.get_store(), deal_id, kind, marketing.now())
+        return {"ok": True}
+    except (MarketingError, KeyError) as exc:
+        return _refuse(exc)
+
+
 @router.get("/print/audit/{prospect_id}", response_class=HTMLResponse)
 def print_audit(prospect_id: int) -> HTMLResponse:
     try:

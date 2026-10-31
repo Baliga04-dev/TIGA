@@ -49,6 +49,8 @@ import type {
   FollowUp,
   RenewalTerms,
   CommissionMaths,
+  Ask,
+  ProofResponse,
   OwnerInterview,
   InterviewSummary,
   VisitOutcome,
@@ -357,6 +359,11 @@ export const api = {
   interviews: () => request<{ ok: true; items: OwnerInterview[]; summary: InterviewSummary; guide: { id: string; question: string }[]; offers: { id: string; label: string }[] }>('/marketing/interviews'),
   addInterview: (data: { business: string; category: string; answers: Record<string, string>; prices: OwnerInterview['prices'] }) =>
     post<{ ok: true; interview: OwnerInterview }>('/marketing/interviews', data),
+  asks: () => request<{ ok: true; review_link: boolean; items: Ask[] }>('/marketing/asks'),
+  askDone: (dealId: number, kind: Ask['kind']) => post<{ ok: true }>(`/marketing/asks/${dealId}/${kind}/done`),
+  getProof: (dealId: number) => request<{ ok: true } & ProofResponse>(`/marketing/proof/${dealId}`),
+  saveProof: (dealId: number, proof: ProofResponse['proof']) =>
+    request<{ ok: true } & ProofResponse>(`/marketing/proof/${dealId}`, { method: 'PUT', body: JSON.stringify(proof) }),
   marketingScorecard: () => request<{ ok: true; weeks: MarketingWeek[]; enough_data: boolean }>('/marketing/scorecard'),
 
   getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),

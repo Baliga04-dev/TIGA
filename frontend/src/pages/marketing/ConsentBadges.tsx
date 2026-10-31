@@ -6,6 +6,7 @@ export function ConsentBadges({ contact }: { contact: Contact }) {
   if (contact.dnc) return <span className="badge badge-red">Do not contact</span>;
   const given = (Object.keys(contact.consent) as Channel[]).filter((c) => contact.consent[c]);
   if (contact.source === 'warm') return <span className="badge badge-green">Knows you</span>;
+  if (contact.source === 'client') return <span className="badge badge-green">Client</span>;
   if (given.length === 0) return <span className="badge badge-gray">No permission yet</span>;
   return (
     <span className="flex flex-wrap gap-1">

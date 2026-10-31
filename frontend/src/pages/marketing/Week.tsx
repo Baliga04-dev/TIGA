@@ -4,6 +4,7 @@ import { Notice } from '../../components/ui';
 import { api } from '../../services/api';
 import type { FollowUp, MarketingWeek } from '../../types';
 import { WriteMessage } from './WriteMessage';
+import { AsksOwed } from './Asks';
 import { errorText, shortDate } from './shared';
 
 const ROWS: [keyof MarketingWeek, string][] = [
@@ -105,6 +106,7 @@ export function WeekPanel({ onToast }: { onToast: (m: string) => void }) {
   return (
     <>
     <FollowUps onToast={onToast} />
+    <AsksOwed onToast={onToast} />
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="overflow-x-auto" role="region" aria-label="Weekly scorecard" tabIndex={0}>
         <table className="w-full min-w-[34rem] text-sm">
