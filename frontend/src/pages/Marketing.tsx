@@ -5,12 +5,16 @@ import { WeekPanel } from './marketing/Week';
 import { NetworkPanel } from './marketing/Network';
 import { WalkInsPanel } from './marketing/WalkIns';
 import { ContactsPanel } from './marketing/Contacts';
+import { InterviewsPanel } from './marketing/Interviews';
+import { CalculatorPanel } from './marketing/Calculator';
 
 const TABS = [
   { id: 'week', label: 'This week' },
   { id: 'network', label: 'My network' },
   { id: 'walk-ins', label: 'Walk-ins' },
   { id: 'contacts', label: 'Contacts' },
+  { id: 'interviews', label: 'Interviews' },
+  { id: 'calculator', label: 'Commission maths' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -60,6 +64,8 @@ export function Marketing() {
         {tab === 'network' && <NetworkPanel onToast={setToast} />}
         {tab === 'walk-ins' && <WalkInsPanel onToast={setToast} />}
         {tab === 'contacts' && <ContactsPanel onToast={setToast} />}
+        {tab === 'interviews' && <InterviewsPanel onToast={setToast} />}
+        {tab === 'calculator' && <CalculatorPanel />}
       </div>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </>

@@ -580,3 +580,34 @@ export interface RenewalTerms {
   renewal_yearly: number;
   renewal_what: string;
 }
+
+export interface CommissionMaths {
+  orders: number;
+  average: number;
+  commission_pct: number;
+  direct_share_pct: number;
+  site_price: number;
+  app_sales: number;
+  commission: number;
+  saved_monthly: number;
+  saved_yearly: number;
+  payback_months: number | null;
+}
+
+export type LadderPoint = 'too_cheap' | 'bargain' | 'expensive' | 'too_expensive';
+
+export interface OwnerInterview {
+  id: number;
+  business: string;
+  category: string;
+  answers: Record<string, string>;
+  prices: Record<string, Partial<Record<LadderPoint, number>>>;
+  at: string;
+}
+
+export interface InterviewSummary {
+  count: number;
+  goal: number;
+  by_category: Record<string, number>;
+  offers: Record<string, Partial<Record<LadderPoint, number | null>> & { answers: number; range: [number, number] | null }>;
+}

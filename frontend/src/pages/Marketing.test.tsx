@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { server } from '../test/server'
 import { mock } from '../test/mock'
 import { mockMountCalls, renderApp } from '../test/render'
 
@@ -135,5 +137,43 @@ describe('Marketing', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Never contact Ramesh?' })
     await user.click(within(dialog).getByRole('button', { name: 'Do not contact' }))
     await waitFor(() => expect(dnc).toHaveLength(1))
+  })
+
+  it('works out the commission maths for a restaurant and links a printout', async () => {
+    const asked: string[] = []
+    server.use(http.get('*/api/marketing/commission', ({ request }) => {
+      asked.push(new URL(request.url).search)
+      return HttpResponse.json({ ok: true, orders: 600, average: 350, commission_pct: 25, direct_share_pct: 20, site_price: 15000,
+        app_sales: 210000, commission: 52500, saved_monthly: 10500, saved_yearly: 126000, payback_months: 2 })
+    }))
+    const user = userEvent.setup()
+    renderApp('/marketing?tab=calculator')
+    await user.type(await screen.findByLabelText('Restaurant (for the printout)'), 'Udupi Tiffins')
+    await user.click(screen.getByRole('button', { name: /work it out/i }))
+    expect(await screen.findByText('₹52,500')).toBeInTheDocument()
+    expect(screen.getByText('2 months')).toBeInTheDocument()
+    expect(asked[0]).toContain('orders=600')
+    expect(screen.getByRole('link', { name: /print a one-pager/i }).getAttribute('href')).toContain('shop=Udupi+Tiffins')
+  })
+
+  it('saves an owner interview with a rising price ladder and shows the fair range', async () => {
+    const offers = [{ id: 'basic_site', label: 'A basic website: one page' }, { id: 'photos', label: 'Photo editing (per photo)' }]
+    const guide = [{ id: 'find_you', question: 'How do new customers find you today?' }]
+    const empty = { count: 0, goal: 15, by_category: {}, offers: { basic_site: { answers: 0, range: null }, photos: { answers: 0, range: null } } }
+    mock.get('/marketing/interviews', { ok: true, items: [], summary: empty, guide, offers })
+    const saved = mock.record('/marketing/interviews', { ok: true, interview: {} })
+    const user = userEvent.setup()
+    renderApp('/marketing?tab=interviews')
+    await user.type(await screen.findByLabelText('Shop'), 'Sri Ganesh Bakery')
+    await user.selectOptions(screen.getByLabelText('Kind of shop'), 'bakery')
+    await user.type(screen.getByLabelText('How do new customers find you today?'), 'Word of mouth')
+    await user.type(screen.getByLabelText('A basic website: A bargain'), '5000')
+    await user.type(screen.getByLabelText('A basic website: Getting expensive'), '9000')
+    mock.get('/marketing/interviews', { ok: true, items: [], guide, offers,
+      summary: { ...empty, count: 1, by_category: { bakery: 1 }, offers: { ...empty.offers, basic_site: { answers: 1, range: [5000, 9000] } } } })
+    await user.click(screen.getByRole('button', { name: /save the interview/i }))
+    await waitFor(() => expect(saved[0]).toEqual({ business: 'Sri Ganesh Bakery', category: 'bakery',
+      answers: { find_you: 'Word of mouth' }, prices: { basic_site: { bargain: 5000, expensive: 9000 }, photos: {} } }))
+    expect(await screen.findByText('₹5,000 to ₹9,000')).toBeInTheDocument()
   })
 })

@@ -48,6 +48,9 @@ import type {
   MarketingWeek,
   FollowUp,
   RenewalTerms,
+  CommissionMaths,
+  OwnerInterview,
+  InterviewSummary,
   VisitOutcome,
   Channel,
 } from '../types';
@@ -349,6 +352,11 @@ export const api = {
   inbound: (message: { ref: string; name: string; phone: string; note: string }) =>
     post<{ ok: true; contact: Contact }>('/marketing/inbound', message),
   followups: () => request<{ ok: true; items: FollowUp[]; sent_this_week: number; weekly_cap: number }>('/marketing/followups'),
+  commission: (q: { orders: number; average: number; commission: number; share: number }) =>
+    request<{ ok: true } & CommissionMaths>(`/marketing/commission?${new URLSearchParams(Object.entries(q).map(([k, v]) => [k, String(v)]))}`),
+  interviews: () => request<{ ok: true; items: OwnerInterview[]; summary: InterviewSummary; guide: { id: string; question: string }[]; offers: { id: string; label: string }[] }>('/marketing/interviews'),
+  addInterview: (data: { business: string; category: string; answers: Record<string, string>; prices: OwnerInterview['prices'] }) =>
+    post<{ ok: true; interview: OwnerInterview }>('/marketing/interviews', data),
   marketingScorecard: () => request<{ ok: true; weeks: MarketingWeek[]; enough_data: boolean }>('/marketing/scorecard'),
 
   getAnalystStatus: () => request<AnalystStatus>('/analyst/status'),

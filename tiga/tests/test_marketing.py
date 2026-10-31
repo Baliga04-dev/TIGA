@@ -250,3 +250,54 @@ def test_a_follow_up_without_a_known_name_says_hello_without_one(store):
     c = visit_with(store, 1, ["whatsapp"], name="")
     text = marketing.followups(store, NOON + timedelta(hours=1))["items"][0]["text"]
     assert text.startswith("Hi, this is") and "(owner)" not in text and c["business"] in text
+
+
+# --- commission maths for restaurants -------------------------------------------------------------
+def test_commission_maths_shows_what_moving_regulars_to_direct_orders_saves():
+    out = marketing.commission_maths(orders=600, average=350, commission=25, direct_share=20, site_price=15000)
+    assert out["app_sales"] == 210000 and out["commission"] == 52500
+    assert out["saved_monthly"] == 10500 and out["saved_yearly"] == 126000 and out["payback_months"] == 2
+    none = marketing.commission_maths(orders=600, average=350, commission=25, direct_share=0, site_price=15000)
+    assert none["saved_monthly"] == 0 and none["payback_months"] is None
+
+
+def test_commission_maths_refuses_impossible_numbers():
+    with pytest.raises(marketing.MarketingError):
+        marketing.commission_maths(orders=600, average=350, commission=80, direct_share=20, site_price=15000)
+    with pytest.raises(marketing.MarketingError):
+        marketing.commission_maths(orders=-1, average=350, commission=25, direct_share=20, site_price=15000)
+
+
+def test_the_commission_sheet_is_honest_about_the_apps():
+    out = marketing.commission_maths(orders=600, average=350, commission=25, direct_share=20, site_price=15000)
+    page = marketing.commission_sheet_html("Udupi <Tiffins>", out, today=NOON.date())
+    assert "Udupi &lt;Tiffins&gt;" in page and "₹52,500" in page and "₹10,500" in page
+    assert "keep" in page.lower() and "new customers" in page   # the apps still bring new customers
+
+
+# --- owner interviews and the price ladder -----------------------------------------------------------
+def ladder(cheap, bargain, expensive, too):
+    return {"too_cheap": cheap, "bargain": bargain, "expensive": expensive, "too_expensive": too}
+
+
+def test_an_interview_keeps_answers_and_a_rising_price_ladder(store):
+    row = marketing.add_interview(store, {"business": "Sri Ganesh Bakery", "category": "bakery",
+                                          "answers": {"find_you": "Word of mouth and Swiggy"},
+                                          "prices": {"basic_site": ladder(2000, 5000, 9000, 15000)}}, NOON)
+    assert row["prices"]["basic_site"]["bargain"] == 5000
+    with pytest.raises(marketing.MarketingError):
+        marketing.add_interview(store, {"business": "X", "category": "bakery", "answers": {},
+                                        "prices": {"basic_site": ladder(9000, 5000, 4000, 1000)}}, NOON)
+    with pytest.raises(marketing.MarketingError):
+        marketing.add_interview(store, {"business": "X", "category": "bakery", "answers": {}, "prices": {"yacht": ladder(1, 2, 3, 4)}}, NOON)
+
+
+def test_the_interview_summary_gives_each_offer_a_price_range_and_counts_kinds_of_shop(store):
+    for bargain, expensive, cat in ((4000, 9000, "bakery"), (6000, 12000, "salon"), (5000, 10000, "bakery")):
+        marketing.add_interview(store, {"business": "Shop", "category": cat, "answers": {},
+                                        "prices": {"basic_site": ladder(1000, bargain, expensive, 20000)}}, NOON)
+    summary = marketing.interview_summary(store.list_owner_interviews())
+    assert summary["count"] == 3 and summary["by_category"] == {"bakery": 2, "salon": 1} and summary["goal"] == 15
+    basic = summary["offers"]["basic_site"]
+    assert basic["answers"] == 3 and basic["range"] == [5000, 10000]
+    assert summary["offers"]["photos"]["answers"] == 0 and summary["offers"]["photos"]["range"] is None

@@ -484,6 +484,99 @@ def route_sheet_html(locality: str, stops: list[dict], *, today: date) -> str:
     return _SHEET.format(title=f"Walk-in route, {e(locality)}", body=body)
 
 
+# ------------------------------------------------------------------------------ restaurant commission
+def commission_maths(*, orders: int, average: int, commission: float, direct_share: float, site_price: int) -> dict:
+    """What delivery-app commission costs a restaurant a month, and what moving some regulars to direct pickup saves."""
+    if not (0 < orders <= 100_000 and 0 < average <= 20_000 and 0 <= commission <= 60 and 0 <= direct_share <= 100
+            and 0 <= site_price <= 1_000_000):
+        raise MarketingError("Check the numbers: orders and order value above 0, commission 0 to 60%, share 0 to 100%.")
+    sales = orders * average
+    saved = orders * direct_share / 100 * average * commission / 100
+    return {"orders": orders, "average": average, "commission_pct": commission, "direct_share_pct": direct_share,
+            "site_price": site_price, "app_sales": round(sales), "commission": round(sales * commission / 100),
+            "saved_monthly": round(saved), "saved_yearly": round(saved * 12),
+            "payback_months": math.ceil(site_price / saved) if saved > 0 else None}
+
+
+def commission_sheet_html(shop: str, m: dict, *, today: date) -> str:
+    e = lambda v: html.escape(str(v or ""), quote=False)
+    r = lambda n: f"₹{n:,}"
+    payback = (f"A {r(m['site_price'])} website pays for itself in about {m['payback_months']} "
+               f"month{'s' if m['payback_months'] != 1 else ''}." if m["payback_months"] else "")
+    body = (f"<h1>{e(shop) or 'Your restaurant'}: the commission maths</h1>"
+            f"<p class='muted'>{today:%-d %B %Y}. Your own numbers; change any of them and the maths changes.</p>"
+            "<table>"
+            f"<tr><th>Orders a month on delivery apps</th><td>{m['orders']:,}</td></tr>"
+            f"<tr><th>Average order</th><td>{r(m['average'])}</td></tr>"
+            f"<tr><th>Sales through the apps</th><td>{r(m['app_sales'])} a month</td></tr>"
+            f"<tr><th>Commission at {m['commission_pct']:g}%</th><td><b>{r(m['commission'])} a month</b></td></tr>"
+            f"<tr><th>If {m['direct_share_pct']:g}% of those orders came to you directly</th>"
+            f"<td><b>{r(m['saved_monthly'])} a month</b> stays with you, {r(m['saved_yearly'])} a year</td></tr></table>"
+            f"<p>{e(payback)}</p>"
+            "<div class='box'>Keep the apps: they bring new customers. This is about your regulars, who already know "
+            "you, ordering pickup straight from your own page and paying you by UPI.</div>")
+    return _SHEET.format(title=f"Commission maths: {e(shop) or 'your restaurant'}", body=body)
+
+
+# ------------------------------------------------------------------------------------ owner interviews
+INTERVIEW_GUIDE = [
+    ("find_you", "How do new customers find you today?"),
+    ("paid_before", "What have you paid for listings, ads or apps in the last year, and did it work?"),
+    ("burned", "Has a vendor ever let you down? What happened?"),
+    ("must_do", "If you had a website, what's the one thing it must do for you?"),
+]
+OFFERS = {
+    "basic_site": "A basic website: one page with your hours, photos, prices and a WhatsApp button",
+    "ordering": "A WhatsApp ordering page: your menu or catalogue, with orders arriving on WhatsApp",
+    "care": "Monthly care: changes, backups and keeping the site running (per month)",
+    "photos": "Photo editing for products or the menu (per photo)",
+}
+LADDER = ("too_cheap", "bargain", "expensive", "too_expensive")
+INTERVIEW_GOAL = 15
+
+
+def add_interview(store: Store, data: dict, now: datetime) -> dict:
+    answers = {k: _clean((data.get("answers") or {}).get(k), 1000) for k, _ in INTERVIEW_GUIDE}
+    prices: dict[str, dict] = {}
+    for offer, ladder in (data.get("prices") or {}).items():
+        if offer not in OFFERS:
+            raise MarketingError(f"Unknown offer {offer!r}.")
+        points = {k: int(ladder[k]) for k in LADDER if isinstance(ladder, dict) and ladder.get(k) not in (None, "")}
+        if any(v < 0 or v > 10_000_000 for v in points.values()):
+            raise MarketingError("Prices are whole rupees, 0 or more.")
+        given = [points[k] for k in LADDER if k in points]
+        if given != sorted(given):
+            raise MarketingError("Prices should rise from 'too cheap' to 'too expensive'. Check the order.")
+        if points:
+            prices[offer] = points
+    if not any(answers.values()) and not prices:
+        raise MarketingError("Write at least one answer or one price.")
+    return store.add_owner_interview(business=_clean(data.get("business"), 200), category=_clean(data.get("category"), 60),
+                                     answers=answers, prices=prices, at=_iso(now), contact_id=data.get("contact_id"))
+
+
+def _median(values: list[int]) -> int | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    return ordered[mid] if len(ordered) % 2 else round((ordered[mid - 1] + ordered[mid]) / 2)
+
+
+def interview_summary(interviews: list[dict]) -> dict:
+    """Per offer, the range from the median 'bargain' to the median 'getting expensive': where a price feels fair."""
+    by_category: dict[str, int] = {}
+    for i in interviews:
+        by_category[i["category"] or "other"] = by_category.get(i["category"] or "other", 0) + 1
+    offers = {}
+    for offer in OFFERS:
+        answered = [i["prices"][offer] for i in interviews if offer in i["prices"]]
+        medians = {k: _median([p[k] for p in answered if k in p]) for k in LADDER}
+        fair = [medians["bargain"], medians["expensive"]] if medians["bargain"] is not None and medians["expensive"] is not None else None
+        offers[offer] = {"answers": len(answered), **medians, "range": fair}
+    return {"count": len(interviews), "goal": INTERVIEW_GOAL, "by_category": by_category, "offers": offers}
+
+
 # ---------------------------------------------------------------------------------------- scorecard
 def scorecard(store: Store, today: date) -> dict:
     monday = today - timedelta(days=today.weekday())

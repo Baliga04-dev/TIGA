@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS touches (
     direction TEXT NOT NULL, kind TEXT NOT NULL, outcome TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
     at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS owner_interviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER, business TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL DEFAULT '', answers TEXT NOT NULL DEFAULT '{}', prices TEXT NOT NULL DEFAULT '{}',
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS pending_actions (
     id TEXT PRIMARY KEY, tool TEXT NOT NULL, args TEXT NOT NULL, summary TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, expires_at TEXT NOT NULL
@@ -552,6 +557,26 @@ class Store:
             sql, args = sql + " AND t.at < ?", [*args, until]
         with self._lock:
             return [dict(r) for r in self._db.execute(sql + " ORDER BY t.at, t.id", args)]
+
+    def add_owner_interview(self, *, business: str, category: str, answers: dict, prices: dict, at: str,
+                            contact_id: int | None = None) -> dict:
+        with self._lock, self._db:
+            cur = self._db.execute("INSERT INTO owner_interviews (contact_id, business, category, answers, prices, at)"
+                                   " VALUES (?, ?, ?, ?, ?, ?)",
+                                   (contact_id, business, category, json.dumps(answers), json.dumps(prices), at))
+            self._write_audit("user", "interview.add", "interview", str(cur.lastrowid), category)
+            row = self._db.execute("SELECT * FROM owner_interviews WHERE id = ?", (cur.lastrowid,)).fetchone()
+        return self._decode_interview(row)
+
+    def list_owner_interviews(self) -> list[dict]:
+        with self._lock:
+            return [self._decode_interview(r) for r in self._db.execute("SELECT * FROM owner_interviews ORDER BY at DESC, id DESC")]
+
+    @staticmethod
+    def _decode_interview(row) -> dict:
+        out = dict(row)
+        out["answers"], out["prices"] = json.loads(out["answers"]), json.loads(out["prices"])
+        return out
 
     def count_documents(self, kind: str, since: str, until: str) -> int:
         with self._lock:

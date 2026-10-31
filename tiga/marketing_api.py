@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+import billing
 import marketing
 import services
 from marketing import MarketingError
@@ -196,6 +197,55 @@ def followups() -> dict:
 def scorecard() -> dict:
     today = marketing.now().astimezone(marketing.IST).date()
     return {"ok": True, **marketing.scorecard(services.get_store(), today)}
+
+
+class InterviewIn(_In):
+    business: str = Field(default="", max_length=200)
+    category: str = Field(default="", max_length=60)
+    answers: dict[str, str] = Field(default_factory=dict)
+    prices: dict[str, dict[str, int | None]] = Field(default_factory=dict)
+
+
+def _site_price() -> int:
+    rates = {r["id"]: r["price"] for r in billing.get_rates(services.get_store())}
+    return rates.get("business_site") or rates.get("one_page") or 0
+
+
+@router.get("/commission")
+def commission(orders: int, average: int, commission: float = 25, share: float = 20, price: int | None = None) -> dict:
+    try:
+        return {"ok": True, **marketing.commission_maths(orders=orders, average=average, commission=commission,
+                                                         direct_share=share, site_price=_site_price() if price is None else price)}
+    except MarketingError as exc:
+        return _refuse(exc)
+
+
+@router.get("/interviews")
+def interviews() -> dict:
+    rows = services.get_store().list_owner_interviews()
+    return {"ok": True, "items": rows, "summary": marketing.interview_summary(rows),
+            "guide": [{"id": k, "question": q} for k, q in marketing.INTERVIEW_GUIDE],
+            "offers": [{"id": k, "label": v} for k, v in marketing.OFFERS.items()]}
+
+
+@router.post("/interviews")
+def add_interview(body: InterviewIn) -> dict:
+    try:
+        return {"ok": True, "interview": marketing.add_interview(services.get_store(), body.model_dump(), marketing.now())}
+    except MarketingError as exc:
+        return _refuse(exc)
+
+
+@router.get("/print/commission", response_class=HTMLResponse)
+def print_commission(orders: int, average: int, commission: float = 25, share: float = 20, price: int | None = None,
+                     shop: str = "") -> HTMLResponse:
+    try:
+        maths = marketing.commission_maths(orders=orders, average=average, commission=commission, direct_share=share,
+                                           site_price=_site_price() if price is None else price)
+    except MarketingError as exc:
+        return HTMLResponse(str(exc), status_code=400, headers={"Content-Security-Policy": _CSP})
+    page = marketing.commission_sheet_html(shop[:120], maths, today=marketing.now().astimezone(marketing.IST).date())
+    return HTMLResponse(page, headers={"Content-Security-Policy": _CSP})
 
 
 @router.get("/print/audit/{prospect_id}", response_class=HTMLResponse)

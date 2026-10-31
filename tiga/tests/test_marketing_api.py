@@ -107,3 +107,22 @@ def test_follow_ups_owed_after_a_visit(client):
     assert out["ok"] and out["weekly_cap"] == 10
     item = out["items"][0]
     assert item["contact"]["gates"]["whatsapp"]["ok"] and "Sri Ganesh Bakery" in item["text"] and not item["overdue"]
+
+
+def test_commission_maths_uses_the_rate_card_and_prints(client):
+    out = client.get("/api/marketing/commission", params={"orders": 600, "average": 350}).json()
+    assert out["ok"] and out["commission"] == 52500 and out["site_price"] == 15000 and out["payback_months"] == 2
+    assert client.get("/api/marketing/commission", params={"orders": 600, "average": 350, "commission": 90}).json()["ok"] is False
+    sheet = client.get("/api/marketing/print/commission", params={"orders": 600, "average": 350, "shop": "Udupi Tiffins"})
+    assert sheet.status_code == 200 and "Udupi Tiffins" in sheet.text and "default-src 'none'" in sheet.headers["content-security-policy"]
+
+
+def test_owner_interviews_over_http(client):
+    out = client.post("/api/marketing/interviews", json={"business": "Sri Ganesh Bakery", "category": "bakery",
+                                                         "answers": {"find_you": "Word of mouth"},
+                                                         "prices": {"basic_site": {"too_cheap": 2000, "bargain": 5000, "expensive": 9000, "too_expensive": None}}}).json()
+    assert out["ok"] and out["interview"]["prices"]["basic_site"] == {"too_cheap": 2000, "bargain": 5000, "expensive": 9000}
+    listing = client.get("/api/marketing/interviews").json()
+    assert listing["summary"]["count"] == 1 and listing["summary"]["offers"]["basic_site"]["range"] == [5000, 9000]
+    assert [g["id"] for g in listing["guide"]][0] == "find_you" and len(listing["offers"]) == 4
+    assert client.post("/api/marketing/interviews", json={"business": "X"}).json()["ok"] is False
