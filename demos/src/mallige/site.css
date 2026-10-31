@@ -1,0 +1,14 @@
+:root {
+  --ground: 247 247 242;
+  --ink: 31 26 34;
+  --soft: 88 80 94;
+  --line: 220 216 214;
+  --field: 46 34 48;
+  --on-field: 243 238 242;
+  --accent: 66 112 72;
+  --on-accent: 255 255 255;
+  --tint: 236 233 238;
+  --bad: 163 36 59;
+  --font-display: "Bodoni Moda Variable", ui-serif, Georgia, serif;
+  --font-body: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
+}

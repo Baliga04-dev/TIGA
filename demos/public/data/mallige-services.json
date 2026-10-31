@@ -1,0 +1,31 @@
+{
+  "groups": [
+    { "id": "women", "name": "Women" },
+    { "id": "men", "name": "Men" },
+    { "id": "bridal", "name": "Bridal" }
+  ],
+  "services": [
+    { "id": "w-cut", "group": "women", "name": "Haircut and blow-dry", "minutes": 45, "price": 750, "note": "Wash, cut, blow-dry. Long hair takes the full 45." },
+    { "id": "w-trim", "group": "women", "name": "Trim and fringe", "minutes": 20, "price": 300, "note": "For a tidy-up between cuts." },
+    { "id": "w-colour", "group": "women", "name": "Global colour", "minutes": 120, "price": 2800, "note": "One shade, root to tip; ammonia-free on request." },
+    { "id": "w-highlights", "group": "women", "name": "Highlights", "minutes": 150, "price": 3500, "note": "Foils through the top and sides." },
+    { "id": "w-keratin", "group": "women", "name": "Keratin smoothing", "minutes": 180, "price": 4500, "note": "Lasts about four months; we'll tell you what to avoid." },
+    { "id": "w-threading", "group": "women", "name": "Eyebrow threading", "minutes": 10, "price": 60, "note": "" },
+    { "id": "w-lip", "group": "women", "name": "Upper lip threading", "minutes": 5, "price": 40, "note": "" },
+    { "id": "w-wax", "group": "women", "name": "Waxing, full arms", "minutes": 30, "price": 350, "note": "Rica wax." },
+    { "id": "w-cleanup", "group": "women", "name": "Clean-up facial", "minutes": 45, "price": 900, "note": "Steam, scrub, pack. Good before an event." },
+    { "id": "m-cut", "group": "men", "name": "Haircut", "minutes": 30, "price": 350, "note": "Includes a wash if you'd like one." },
+    { "id": "m-beard", "group": "men", "name": "Beard trim and shape", "minutes": 20, "price": 200, "note": "Hot towel, line-up, oil." },
+    { "id": "m-shave", "group": "men", "name": "Clean shave", "minutes": 20, "price": 180, "note": "Single-use blade, every time." },
+    { "id": "m-massage", "group": "men", "name": "Head massage with oil", "minutes": 20, "price": 300, "note": "Coconut or almond oil." },
+    { "id": "m-colour", "group": "men", "name": "Hair colour", "minutes": 45, "price": 900, "note": "Covers grey; natural shades." },
+    { "id": "b-trial", "group": "bridal", "name": "Bridal trial", "minutes": 90, "price": 2500, "note": "Hair and make-up trial, three weeks before the wedding. Adjusted against the bridal package." },
+    { "id": "b-mehndi", "group": "bridal", "name": "Bridal mehndi, both hands", "minutes": 120, "price": 3500, "note": "Front and back, to the elbow. Feet are extra." },
+    { "id": "b-saree", "group": "bridal", "name": "Saree draping", "minutes": 30, "price": 800, "note": "Any style: Mysore, Coorg, Nivi." }
+  ],
+  "stylists": [
+    { "id": "shwetha", "name": "Shwetha", "years": 11, "known_for": "Colour and keratin; the person to ask before you go lighter.", "does": ["women", "bridal"], "off": [3] },
+    { "id": "imran", "name": "Imran", "years": 8, "known_for": "Men's cuts, fades and beards, and the quiet head massage.", "does": ["men"], "off": [5] },
+    { "id": "lakshmi", "name": "Lakshmi", "years": 14, "known_for": "Threading, facials and brides; she has done over 300 trials.", "does": ["women", "bridal"], "off": [4] }
+  ]
+}

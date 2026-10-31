@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 // One multi-page build: the hub at /demos/ and one folder per demo site.
-const pages = ["malnad-table", "navilu-boutique", "little-banyan", "sampige-residency"];
+const pages = ["malnad-table", "navilu-boutique", "little-banyan", "sampige-residency", "mallige-salon"];
 
 export default defineConfig({
   base: "/demos/",

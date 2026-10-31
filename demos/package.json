@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "@fontsource-variable/baloo-2": "5.3.0",
+    "@fontsource-variable/bodoni-moda": "^5.3.0",
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/hanken-grotesk": "5.3.0",
     "@fontsource-variable/lexend": "^5.3.0",
     "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource-variable/outfit": "^5.3.0",
     "@fontsource/gloock": "5.3.0",
     "@fontsource/noto-sans-kannada": "^5.3.0",
     "@fontsource/young-serif": "5.3.0",

@@ -1,6 +1,6 @@
 # Demo shop websites
 
-Four complete websites for made-up Bengaluru shops, to show prospects, published at
+Five complete websites for made-up Bengaluru shops, to show prospects, published at
 https://baliga04-dev.github.io/demos/ (linked from the portfolio):
 
 | Folder | Shop | What a visitor can do |
@@ -8,6 +8,7 @@ https://baliga04-dev.github.io/demos/ (linked from the portfolio):
 | `malnad-table/` | Restaurant, Malleshwaram | Build an order on a banana leaf, pick a pickup time, book a table, see if it's open now |
 | `navilu-boutique/` | Saree shop, Jayanagar | Filter the catalogue, keep up to four sarees aside for a trial, book a blouse fitting |
 | `little-banyan/` | Preschool and daycare, HSR Layout | Find a child's class for June 2027 from the birthday, read the day, ask for a visit |
+| `mallige-salon/` | Unisex salon, Indiranagar | Add services and see the time add up, book a slot the stylist is free for |
 | `sampige-residency/` | Hotel, Basavanagudi | Live prices for any dates (weekend rates, extra bed, GST), request a room |
 
 Every order, booking or enquiry ends in a preview of the WhatsApp message the shop would receive; nothing is

@@ -20,6 +20,12 @@ const NAMES = {
     "traditional-montessori-educational-materials": "montessori", "montessori-metal-insets-tray": "insets",
     "asc-leiden-rwanda-2021-016-children-s": "book-shelf", "wooden-toy-castle": "castle",
   },
+  salon: {
+    "hair-salon-arlington-ma": "salon-floor", "salon-z-perukami-hair-lux-wnetrze": "salon-counter",
+    "jasmine-garlands": "jasmine", "back-view-of-a-person-with-long": "jasmine-hair",
+    "mehndi-decoration-on-back-side-of-hands": "mehndi", "detail-of-damascus-steel-hair-cutting-shears": "shears",
+    "inside-the-hair-salon-5577833869": "basin",
+  },
   stay: {
     "bed-in-hotel-room-2": "room-courtyard", "bed-in-hotel-room-5": "room-garden", "bed-in-hotel-room-6": "room-twin",
     "wildlfower-boutique-motel-april-2023-sarah-stierch": "room-family", "glass-house-lalbagh": "glasshouse",

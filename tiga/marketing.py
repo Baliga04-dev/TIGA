@@ -84,7 +84,7 @@ def shop_noun(category: str) -> str:
     return ("an " if noun[0] in "aeiou" else "a ") + noun
 
 
-DEMOS = {"restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
+DEMOS = {"salon": "mallige-salon", "restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
          "jewellery": "navilu-boutique", "florist": "navilu-boutique", "school": "little-banyan",
          "coaching": "little-banyan", "hotel": "sampige-residency", "travel": "sampige-residency"}
 TRUST_TERMS = billing.TRUST_TERMS   # one wording for the audit sheet, proposal and handover sheet
