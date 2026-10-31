@@ -18,6 +18,9 @@ const DEMOS = [
   { slug: "mallige-salon", name: "Mallige", kind: "Unisex salon, Indiranagar",
     line: "Prices with how long each takes, and booking that only offers times the stylist is free for the whole visit.",
     tries: ["Add services and watch the time add up", "Pick a stylist and a free slot", "Request it on WhatsApp"] },
+  { slug: "tulasi-clinic", name: "Tulasi Family Clinic", kind: "Family and dental clinic, Banashankari",
+    line: "Doctors, timings and fees in plain sight, and an appointment request that fills in an OP slip with a token number.",
+    tries: ["See who's in right now", "Pick a doctor and a free time", "Watch the OP slip fill in"] },
   { slug: "sampige-residency", name: "Sampige Residency", kind: "Small hotel, Basavanagudi",
     line: "Prices for any dates, with weekend rates, extra beds and GST worked out, and rooms that are full say so.",
     tries: ["Pick dates and guests for a live price", "Request a room on WhatsApp", "Walk the neighbourhood list"] },
@@ -42,7 +45,7 @@ export default function App() {
       <main>
         <section className="page grid gap-10 pb-16 pt-10 md:pt-20 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-            <h1 className="max-w-[14ch] text-5xl font-semibold leading-[0.98] tracking-tighter md:text-7xl">Five shop websites you can try</h1>
+            <h1 className="max-w-[14ch] text-5xl font-semibold leading-[0.98] tracking-tighter md:text-7xl">Six shop websites you can try</h1>
             <p className="mt-7 max-w-[54ch] text-lg leading-relaxed text-soft md:text-xl">
               Each is a complete website for one kind of Bengaluru shop, built around the thing its customers do most.
               Yours would carry your shop's name, photos, prices and WhatsApp number.
@@ -95,7 +98,7 @@ export default function App() {
       </main>
       <footer className="border-t border-line">
         <div className="page flex flex-col gap-4 py-10 text-[15px] text-soft md:flex-row md:items-center md:justify-between">
-          <p>The five shops are made up for these demos. Photos are from Wikimedia Commons; each demo credits them in its footer.</p>
+          <p>The six shops are made up for these demos. Photos are from Wikimedia Commons; each demo credits them in its footer.</p>
           <a href={waLink("Hi Adithya, I saw your demo websites. I'd like one for my shop.")} target="_blank" rel="noreferrer"
             className="inline-flex items-center gap-2 font-medium text-ink underline underline-offset-4">
             <WhatsappLogo size={18} weight="bold" aria-hidden /> WhatsApp Adithya

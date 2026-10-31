@@ -1,0 +1,17 @@
+:root {
+  --ground: 246 249 248;
+  --ink: 15 36 38;
+  --soft: 70 92 94;
+  --line: 207 222 220;
+  --field: 15 61 70;
+  --on-field: 238 246 244;
+  --accent: 26 112 84;
+  --on-accent: 255 255 255;
+  --tint: 227 239 236;
+  --bad: 164 42 42;
+  --font-display: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+}
+/* the OP slip: a printed outpatient slip, perforated at the top */
+.op-slip { background: #fffef9; color: #1b2a2b; box-shadow: 0 18px 40px -24px rgb(var(--ink) / 0.55); }
+.op-slip::before { content: ""; display: block; height: 10px; background: radial-gradient(circle at 6px -2px, rgb(var(--ground)) 5px, transparent 5.5px) 0 0 / 12px 10px repeat-x; }

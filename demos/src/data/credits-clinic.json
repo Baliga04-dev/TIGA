@@ -1,0 +1,62 @@
+[
+ {
+  "name": "stethoscopes",
+  "width": 1600,
+  "height": 1200,
+  "title": "Stethoscope-ja-2019",
+  "creator": "melvil",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Stethoscope-ja-2019.jpg"
+ },
+ {
+  "name": "dental-chair",
+  "width": 960,
+  "height": 640,
+  "title": "Chair Dentist",
+  "creator": "Daniel Frank",
+  "license": "CC0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "page": "https://stocksnap.io/photo/chair-dentist-3J10QN5PTS"
+ },
+ {
+  "name": "waiting",
+  "width": 1600,
+  "height": 1200,
+  "title": "A waiting room at a medical healthcare clinic, doctor's office, hospital",
+  "creator": "Harrison Keely",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:A_waiting_room_at_a_medical_healthcare_clinic,_doctor%27s_office,_hospital.jpg"
+ },
+ {
+  "name": "tulasi",
+  "width": 1600,
+  "height": 1064,
+  "title": "Thulasi2",
+  "creator": "Challiyan at Malayalam Wikipedia",
+  "license": "CC BY-SA 2.5",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+  "page": "https://commons.wikimedia.org/wiki/File:Thulasi2.jpg"
+ },
+ {
+  "name": "bp-check",
+  "width": 1600,
+  "height": 946,
+  "title": "Blood pressure monitoring",
+  "creator": "rawpixel.com",
+  "license": "CC0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "page": "https://commons.wikimedia.org/wiki/File:Blood_pressure_monitoring.jpg"
+ },
+ {
+  "name": "stethoscope",
+  "width": 1600,
+  "height": 1093,
+  "title": "2023 Stetoskop",
+  "creator": "Jacek Halicki",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:2023_Stetoskop.jpg"
+ }
+]

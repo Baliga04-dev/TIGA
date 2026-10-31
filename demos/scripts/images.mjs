@@ -26,6 +26,10 @@ const NAMES = {
     "mehndi-decoration-on-back-side-of-hands": "mehndi", "detail-of-damascus-steel-hair-cutting-shears": "shears",
     "inside-the-hair-salon-5577833869": "basin",
   },
+  clinic: {
+    "stethoscope-ja-2019": "stethoscopes", "chair-dentist": "dental-chair", "a-waiting-room-at-a-medical-healthcare": "waiting",
+    "thulasi2": "tulasi", "blood-pressure-monitoring": "bp-check", "2023-stetoskop": "stethoscope",
+  },
   stay: {
     "bed-in-hotel-room-2": "room-courtyard", "bed-in-hotel-room-5": "room-garden", "bed-in-hotel-room-6": "room-twin",
     "wildlfower-boutique-motel-april-2023-sarah-stierch": "room-family", "glass-house-lalbagh": "glasshouse",

@@ -1,0 +1,21 @@
+{
+  "doctors": [
+    { "id": "meera", "name": "Dr. Meera Rao", "role": "Family physician", "for": "Adults: fevers, BP, sugar, thyroid, check-ups",
+      "degrees": "MBBS, MD (General Medicine)", "reg": "KMC Reg. No. 00000 (sample)", "languages": "Kannada, English, Hindi",
+      "fee": 400, "slot": 15, "note": "Follow-up within 7 days is free.",
+      "sessions": [ { "days": [1, 2, 3, 4, 5, 6], "from": 540, "to": 780 }, { "days": [1, 3, 5], "from": 1050, "to": 1230 } ] },
+    { "id": "arjun", "name": "Dr. Arjun Hegde", "role": "Children's doctor", "for": "Babies and children up to 16: illness, growth, vaccinations",
+      "degrees": "MBBS, DCH (Paediatrics)", "reg": "KMC Reg. No. 00000 (sample)", "languages": "Kannada, English, Tulu",
+      "fee": 500, "slot": 15, "note": "Bring the vaccination card every time.",
+      "sessions": [ { "days": [1, 2, 3, 4, 5, 6], "from": 1020, "to": 1230 }, { "days": [0], "from": 600, "to": 780 } ] },
+    { "id": "farheen", "name": "Dr. Farheen Khan", "role": "Dentist", "for": "Check-ups, cleaning, fillings, root canals, extractions",
+      "degrees": "BDS, MDS (Conservative Dentistry and Endodontics)", "reg": "KSDC Reg. No. 00000 (sample)", "languages": "English, Hindi, Urdu, Kannada",
+      "fee": 300, "slot": 30, "note": "Treatment cost is quoted in writing before anything starts.",
+      "sessions": [ { "days": [0, 2, 3, 4, 5, 6], "from": 600, "to": 780 }, { "days": [2, 3, 4, 5, 6], "from": 960, "to": 1200 } ] }
+  ],
+  "fees": [
+    { "group": "Family physician", "items": [["Consultation", "₹400"], ["Follow-up within 7 days", "Free"], ["BP and blood sugar check", "₹100"], ["ECG", "₹350"], ["Dressing", "from ₹150"], ["Home visit, within 3 km", "₹1,200"]] },
+    { "group": "Children's doctor", "items": [["Consultation", "₹500"], ["Vaccination visit", "₹300, vaccine at MRP"], ["Growth and development check", "₹500"]] },
+    { "group": "Dentist", "items": [["Consultation", "₹300"], ["X-ray of one tooth", "₹200"], ["Cleaning and polishing", "₹1,200"], ["Tooth-coloured filling", "from ₹1,000"], ["Extraction", "from ₹800"], ["Root canal, front tooth", "from ₹4,500"]] }
+  ]
+}
