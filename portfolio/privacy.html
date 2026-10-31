@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy: your details and how to have them deleted</title>
+<meta name="description" content="What Adithya Baliga, a freelance web developer in Bengaluru, keeps about shop owners he talks to, why, for how long, and how to have it deleted.">
+<meta name="theme-color" content="#05070a">
+<style>
+@font-face{ font-family:'Onest'; font-style:normal; font-weight:100 900; font-display:swap; src:url(fonts/onest-latin-variable.woff2) format('woff2'); }
+:root{ --ink:#05070a; --bone:#dfe7e0; --bone-dim:#aab4ad; --line:#26302c; --vermilion:#e0231c; }
+*{ box-sizing:border-box; }
+body{ margin:0; background:var(--ink); color:var(--bone); font:17px/1.65 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main{ max-width:42rem; margin:0 auto; padding:56px 20px 72px; }
+a{ color:var(--bone); text-underline-offset:4px; }
+a:focus-visible{ outline:2px solid var(--vermilion); outline-offset:3px; border-radius:3px; }
+.back{ font-size:15px; color:var(--bone-dim); }
+h1{ font-size:clamp(2rem, 5vw, 2.8rem); line-height:1.1; font-weight:650; letter-spacing:-0.02em; margin:28px 0 12px; }
+.lede{ color:var(--bone-dim); font-size:19px; margin:0 0 36px; }
+h2{ font-size:1.15rem; font-weight:650; margin:34px 0 8px; padding-top:22px; border-top:1px solid var(--line); }
+p, li{ max-width:62ch; }
+ul{ padding-left:1.2rem; }
+li{ margin:6px 0; }
+.ask{ border:1px solid var(--line); border-left:3px solid var(--vermilion); border-radius:8px; padding:16px 18px; margin:28px 0; }
+.small{ color:var(--bone-dim); font-size:15px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">Adithya Baliga, websites for Bengaluru shops</a>
+  <h1>Your details, and how to have them deleted</h1>
+  <p class="lede">I'm Adithya Baliga, a freelance web developer in Bengaluru. This page says what I keep about shop owners
+    I talk to, why, for how long, and how to make me delete it.</p>
+
+  <div class="ask">
+    <strong>To have your details deleted</strong>, send "delete my number" on WhatsApp to
+    <a data-whatsapp href="mailto:ymitigaa@gmail.com?subject=Delete%20my%20details">my number</a>, or email
+    <a href="mailto:ymitigaa@gmail.com?subject=Delete%20my%20details">ymitigaa@gmail.com</a>. I delete them within 7 days
+    and tell you when it's done. You can also ask what I hold about you.
+  </div>
+
+  <h2>What I keep</h2>
+  <ul>
+    <li>Your name, your shop's name and area, and the phone number or email you gave me.</li>
+    <li>What we talked about, and what you agreed to: for example, "yes, WhatsApp me the demo".</li>
+    <li>If you become a client: the work, the quote, invoices and payments.</li>
+  </ul>
+
+  <h2>Where it comes from</h2>
+  <p>From you, when we meet at your shop or when you message me. Before a visit I may note your shop's public listing
+    (OpenStreetMap). I never buy contact lists.</p>
+
+  <h2>Why I keep it</h2>
+  <p>Only to talk with you about a website, an ordering or booking page, or photo editing for your shop, and, if you
+    hire me, to do the work and send invoices. Nothing else.</p>
+
+  <h2>How I contact you</h2>
+  <p>Only on the channels you said yes to, by hand, one message at a time, during shop hours. I never send bulk messages
+    or use automatic WhatsApp tools. If you say no, I note it so I never contact you again.</p>
+
+  <h2>How long I keep it</h2>
+  <p>Until you ask me to delete it. If we never got talking, I delete your details within six months. A "please don't
+    contact me" is kept as a short note, only so I never contact you by mistake.</p>
+
+  <h2>Who sees it</h2>
+  <p>Only me. Your details are kept on my own computer, and emails stay in my Gmail account. I don't sell or share them.
+    If you agree to let me show your website as my work, I show only what you said yes to.</p>
+
+  <p class="small">Last updated 31 October 2026. This notice follows India's Digital Personal Data Protection Act and its rules.</p>
+</main>
+<script src="site.config.js"></script>
+<script>
+  // The WhatsApp link uses the same number as the rest of the site (site.config.js); without one it stays an email link.
+  if (window.SITE && window.SITE.whatsapp) {
+    for (const a of document.querySelectorAll('[data-whatsapp]')) {
+      a.href = 'https://wa.me/' + window.SITE.whatsapp + '?text=' + encodeURIComponent('Please delete my number');
+    }
+  }
+</script>
+</body>
+</html>

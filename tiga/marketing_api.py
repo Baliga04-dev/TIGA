@@ -307,7 +307,8 @@ def print_audit(prospect_id: int) -> HTMLResponse:
         return HTMLResponse("No such shop.", status_code=404, headers={"Content-Security-Policy": _CSP})
     try:
         page = marketing.audit_sheet_html(prospect, owner=marketing.owner_name(), whatsapp=marketing.owner_whatsapp(),
-                                          demos_url=marketing.demos_url(), today=marketing.now().astimezone(marketing.IST).date())
+                                          demos_url=marketing.demos_url(), today=marketing.now().astimezone(marketing.IST).date(),
+                                          privacy_url=marketing.privacy_url())
     except MarketingError as exc:
         return HTMLResponse(str(exc), status_code=409, headers={"Content-Security-Policy": _CSP})
     return HTMLResponse(page, headers={"Content-Security-Policy": _CSP})

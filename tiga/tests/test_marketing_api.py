@@ -84,6 +84,7 @@ def test_printables_are_static_pages(client):
     sheet = client.get(f"/api/marketing/print/audit/{p['id']}")
     assert sheet.status_code == 200 and "default-src 'none'" in sheet.headers["content-security-policy"]
     assert f"Ref T{p['id']}" in sheet.text and "<script" not in sheet.text
+    assert "baliga04-dev.github.io/privacy.html" in sheet.text
     walk = client.get("/api/marketing/print/route", params={"locality": "Jayanagar", "category": "all", "radius_km": 1})
     assert walk.status_code == 200 and "Udupi Tiffins" in walk.text
     assert client.get("/api/marketing/print/audit/99999").status_code == 404

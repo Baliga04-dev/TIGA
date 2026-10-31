@@ -119,6 +119,10 @@ def owner_name() -> str:
     return config.SENDER_NAME or config.BUSINESS_NAME or ""
 
 
+def privacy_url() -> str:
+    return (config.PORTFOLIO_URL or "https://baliga04-dev.github.io").rstrip("/") + "/privacy.html"
+
+
 def demos_url() -> str:
     return (config.PORTFOLIO_URL or "https://baliga04-dev.github.io").rstrip("/") + "/demos/"
 
@@ -437,7 +441,7 @@ th,td{{text-align:left;padding:.45rem .35rem;border-bottom:1px solid #b9c2bc;ver
 <p class="noprint muted small">Print with Ctrl+P (or Save as PDF).</p></main></body></html>"""
 
 
-def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, today: date) -> str:
+def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, today: date, privacy_url: str = "") -> str:
     e = lambda v: html.escape(str(v or ""), quote=False)  # every shop detail comes from the map or a website
     if not whatsapp:
         raise MarketingError("Set TIGA_WHATSAPP in tiga/.env (or the number in portfolio/site.config.js) for the QR.")
@@ -466,7 +470,8 @@ def audit_sheet_html(prospect: dict, *, owner: str, whatsapp: str, demos_url: st
             f"<div class='qr'>{billing.qr_svg(chat)}</div></div></div>"
             f"<h2>How I work</h2><ul>{terms}</ul>"
             f"<p class='muted small'>If you message me, I keep your name and number only to talk about your website. "
-            f"Say \"delete my number\" any time and I will delete it.</p>")
+            f"Say \"delete my number\" any time and I will delete it."
+            + (f" More: {e(privacy_url)}" if privacy_url else "") + "</p>")
     return _SHEET.format(title=f"{e(prospect.get('name'))}: a look at your shop online", body=body)
 
 
