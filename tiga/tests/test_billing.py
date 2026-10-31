@@ -81,3 +81,35 @@ def test_printable_pages_escape_client_text_and_embed_the_qr():
     page = billing.render_html("invoice", inv)
     assert "<script>alert" not in page and "&lt;script&gt;" in page
     assert "<svg" in page and "INV-2026-0001" in page and "10,000" in page
+
+
+# --- the trust-first quote ------------------------------------------------------------------------
+def test_a_proposal_states_every_trust_term_and_the_year_two_renewal(store):
+    rates = billing.get_rates(store)
+    p = billing.build_proposal(deal(), [{"rate_id": "business_site", "qty": 1}], rates, BIZ, TODAY,
+                               terms=billing.get_terms(store))
+    text, page = billing.proposal_text(p), billing.render_html("proposal", p)
+    for words in ("domain is registered in your name", "No auto-debit", "balance only after the site is live",
+                  "Rs 1,200 a year", "one all-in price"):
+        assert words.lower() in text.lower(), words
+    assert "₹1,200 a year" in page and "registered in your name" in page
+    launch = TODAY.toordinal() + p["days"]
+    assert p["renewal"]["due"] == date.fromordinal(launch + 365).strftime("%B %Y")
+
+
+def test_renewal_terms_are_a_setting_with_limits(store):
+    assert billing.get_terms(store)["renewal_yearly"] == 1200
+    billing.set_terms(store, {"renewal_yearly": 900, "renewal_what": "the .in domain"})
+    assert billing.get_terms(store) == {"renewal_yearly": 900, "renewal_what": "the .in domain"}
+    with pytest.raises(ValueError):
+        billing.set_terms(store, {"renewal_yearly": -1, "renewal_what": "x"})
+
+
+def test_the_handover_sheet_lists_what_the_client_owns_and_never_asks_for_passwords():
+    sheet = billing.build_handover(deal(company="<b>Sri</b> Bakery"), BIZ, {"renewal_yearly": 1200, "renewal_what": "domain"}, TODAY)
+    page = billing.render_html("handover", sheet)
+    assert "&lt;b&gt;Sri&lt;/b&gt; Bakery" in page and "<b>Sri</b>" not in page
+    for row in ("Domain name", "Registered in the name of", "Renews on", "Google Business Profile", "WhatsApp number"):
+        assert row in page, row
+    assert "password" in page.lower() and "Passwords are not written here" in page
+    assert "<input" not in page

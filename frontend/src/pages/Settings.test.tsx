@@ -112,5 +112,21 @@ describe('Settings', () => {
     expect(screen.queryByText('tok')).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /copy token/i })).toBeInTheDocument()
   })
-})
 
+  it('saves the year-two renewal that proposals state', async () => {
+    const saved: unknown[] = []
+    server.use(http.put('*/api/pricing/terms', async ({ request }) => {
+      const body = await request.json()
+      saved.push(body)
+      return HttpResponse.json({ ok: true, terms: body })
+    }))
+    const user = userEvent.setup()
+    renderApp('/settings')
+    const amount = await screen.findByLabelText('Renewal a year (₹)')
+    await user.clear(amount)
+    await user.type(amount, '900')
+    await user.click(screen.getByRole('button', { name: 'Save renewal' }))
+    await waitFor(() => expect(saved[0]).toMatchObject({ renewal_yearly: 900 }))
+    expect(await screen.findByText(/new proposals state this renewal/i)).toBeInTheDocument()
+  })
+})

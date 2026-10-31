@@ -367,7 +367,7 @@ export interface Rate {
 
 export interface DealDocument {
   id: number;
-  kind: 'proposal' | 'invoice';
+  kind: 'proposal' | 'invoice' | 'handover';
   number: string;
   created_at: string;
 }
@@ -573,4 +573,10 @@ export interface FollowUp {
   visit_at: string;
   overdue: boolean;
   text: string;
+}
+
+/** What a proposal says about year two: the yearly renewal the client pays, in their own name. */
+export interface RenewalTerms {
+  renewal_yearly: number;
+  renewal_what: string;
 }

@@ -85,13 +85,7 @@ def shop_noun(category: str) -> str:
 DEMOS = {"restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
          "jewellery": "navilu-boutique", "florist": "navilu-boutique", "school": "little-banyan",
          "coaching": "little-banyan", "hotel": "sampige-residency", "travel": "sampige-residency"}
-TRUST_TERMS = [
-    "One all-in price in writing, with next year's renewal cost and date on it.",
-    "The domain is registered in your name, and you get every login on one sheet.",
-    "A small advance; the balance only after the site is live on your domain.",
-    "No auto-debit, no lock-in, no commission on your orders.",
-    "No promises of leads or rankings: a good website, and you own it.",
-]
+TRUST_TERMS = billing.TRUST_TERMS   # one wording for the audit sheet, proposal and handover sheet
 
 
 class MarketingError(ValueError):

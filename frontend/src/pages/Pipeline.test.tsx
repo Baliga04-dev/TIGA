@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mock } from '../test/mock'
@@ -76,5 +76,16 @@ describe('Pipeline', () => {
     await user.click(screen.getByRole('button', { name: /advance invoice for sri bakery/i }))
     await waitFor(() => expect(inv).toEqual([{ kind: 'advance' }]))
   })
-})
 
+  it('prints a handover sheet for a delivered site', async () => {
+    mock.get('/deals', { ok: true, items: [deal({ stage: 'delivered', amount: 15000, advance_paid: 7500 })], money })
+    const made = mock.record('/deals/1/handover', { ok: true, document: { id: 9, kind: 'handover' } })
+    const opened = vi.spyOn(window, 'open').mockReturnValue(null)
+    const user = userEvent.setup()
+    renderApp('/pipeline')
+    await user.click(await screen.findByRole('button', { name: /handover sheet for sri bakery/i }))
+    await waitFor(() => expect(made).toHaveLength(1))
+    expect(opened).toHaveBeenCalledWith('/api/documents/9', '_blank', 'noopener,noreferrer')
+    opened.mockRestore()
+  })
+})

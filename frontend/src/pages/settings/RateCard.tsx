@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Card, Notice } from '../../components/ui';
+import { Card, Field, Notice } from '../../components/ui';
 import { api } from '../../services/api';
-import type { Rate } from '../../types';
+import type { Rate, RenewalTerms } from '../../types';
 
 /** The prices proposals and the portfolio use. Starter rates are suggestions: change them to yours. */
 export function RateCard() {
@@ -47,6 +47,45 @@ export function RateCard() {
         ))}
       </ul>
       <button className="btn btn-primary mt-3" disabled={JSON.stringify(rates) === saved} onClick={save}>Save prices</button>
+      <Renewal />
     </Card>
+  );
+}
+
+/** The year-two renewal every proposal states, so the client knows the cost and date before they sign. */
+function Renewal() {
+  const [terms, setTerms] = useState<RenewalTerms | null>(null);
+  const [saved, setSaved] = useState('');
+  const [message, setMessage] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
+  useEffect(() => {
+    api.getTerms().then((r) => { setTerms(r.terms); setSaved(JSON.stringify(r.terms)); }).catch((e: Error) => setMessage({ tone: 'error', text: e.message }));
+  }, []);
+  if (!terms) return null;
+  const save = async () => {
+    try {
+      const out = await api.saveTerms(terms);
+      setTerms(out.terms);
+      setSaved(JSON.stringify(out.terms));
+      setMessage({ tone: 'info', text: 'Saved. New proposals state this renewal.' });
+    } catch (e) {
+      setMessage({ tone: 'error', text: e instanceof Error ? e.message : 'Could not save the renewal' });
+    }
+  };
+  return (
+    <div className="mt-6 border-t border-rule pt-4">
+      <h3 className="text-sm font-semibold">Year two</h3>
+      <p className="mb-3 text-sm text-ink-2">What the client pays each year after launch, in their own name. Every proposal states it with the date.</p>
+      {message && <div className="mb-3"><Notice tone={message.tone}>{message.text}</Notice></div>}
+      <div className="grid gap-3 sm:grid-cols-[9rem_1fr]">
+        <Field label="Renewal a year (₹)">{(id) => (
+          <input id={id} inputMode="numeric" className="input" value={terms.renewal_yearly}
+            onChange={(e) => setTerms({ ...terms, renewal_yearly: Number(e.target.value.replace(/\D/g, '')) || 0 })} />
+        )}</Field>
+        <Field label="What it covers">{(id) => (
+          <input id={id} className="input" value={terms.renewal_what} onChange={(e) => setTerms({ ...terms, renewal_what: e.target.value })} />
+        )}</Field>
+      </div>
+      <button className="btn btn-secondary mt-3" disabled={JSON.stringify(terms) === saved} onClick={save}>Save renewal</button>
+    </div>
   );
 }

@@ -126,7 +126,8 @@ def proposal(deal_id: int, body: ProposalIn) -> dict:
     def go():
         store = services.get_store()
         deal = store.get_deal(deal_id)
-        p = billing.build_proposal(deal, body.items, billing.get_rates(store), _business(), datetime.date.today())
+        p = billing.build_proposal(deal, body.items, billing.get_rates(store), _business(), datetime.date.today(),
+                                   terms=billing.get_terms(store))
         doc = store.add_document("proposal", deal_id, p)
         if not deal["amount"]:
             store.update_deal(deal_id, amount=p["total"])
@@ -152,6 +153,20 @@ def invoice(deal_id: int, body: InvoiceIn) -> dict:
     return _guard(go)
 
 
+@router.post("/{deal_id}/handover")
+def handover(deal_id: int) -> dict:
+    def go():
+        store = services.get_store()
+        deal = store.get_deal(deal_id)
+        if deal["stage"] not in ("in_progress", "delivered", "paid"):
+            raise ValueError("A handover sheet is for a site that's built: mark the deal in progress or delivered first")
+        sheet = billing.build_handover(deal, _business(), billing.get_terms(store), datetime.date.today())
+        doc = store.add_document("handover", deal_id, sheet)
+        return {"document": {"id": doc["id"], "kind": "handover"}}
+
+    return _guard(go)
+
+
 @router.get("/{deal_id}/documents")
 def documents(deal_id: int) -> dict:
     return {"ok": True, "items": services.get_store().list_documents(deal_id)}
@@ -172,6 +187,21 @@ def get_pricing() -> dict:
 @pricing_router.put("/pricing")
 def put_pricing(body: RatesIn) -> dict:
     return _guard(lambda: {"rates": billing.set_rates(services.get_store(), body.rates)})
+
+
+class TermsIn(BaseModel):
+    renewal_yearly: int = Field(ge=0, le=100_000)
+    renewal_what: str = Field(default="", max_length=160)
+
+
+@pricing_router.get("/pricing/terms")
+def get_terms() -> dict:
+    return {"ok": True, "terms": billing.get_terms(services.get_store())}
+
+
+@pricing_router.put("/pricing/terms")
+def put_terms(body: TermsIn) -> dict:
+    return _guard(lambda: {"terms": billing.set_terms(services.get_store(), body.model_dump())})
 
 
 @pricing_router.get("/documents/{document_id}")

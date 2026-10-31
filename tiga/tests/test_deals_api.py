@@ -84,3 +84,18 @@ def test_rate_card_round_trip(client):
     rates[0]["price"] = -1
     assert client.put("/api/pricing", json={"rates": rates}).json()["ok"] is False
     assert client.get("/api/documents/999").status_code == 404
+
+
+def test_handover_sheet_and_renewal_terms_over_http(client):
+    d = client.post("/api/deals", json={"email": "ravi@sri.in", "company": "Sri Bakery", "amount": 15000}).json()["deal"]
+    early = client.post(f"/api/deals/{d['id']}/handover").json()
+    assert early["ok"] is False and "delivered" in early["error"]
+    for stage in ("proposal_sent", "won", "in_progress", "delivered"):
+        client.post(f"/api/deals/{d['id']}/move", json={"stage": stage})
+    out = client.post(f"/api/deals/{d['id']}/handover").json()
+    assert out["ok"] and out["document"]["kind"] == "handover"
+    page = client.get(f"/api/documents/{out['document']['id']}")
+    assert page.status_code == 200 and "Sri Bakery" in page.text
+    assert client.get("/api/pricing/terms").json()["terms"]["renewal_yearly"] == 1200
+    saved = client.put("/api/pricing/terms", json={"renewal_yearly": 1500, "renewal_what": "domain and email"}).json()
+    assert saved["ok"] and saved["terms"]["renewal_yearly"] == 1500

@@ -97,6 +97,14 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
             <Receipt className="size-3" aria-hidden="true" /> Balance invoice <span className="sr-only">for {name}</span>
           </button>
         )}
+        {['in_progress', 'delivered', 'paid'].includes(deal.stage) && !docs.some((d) => d.kind === 'handover') && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(async () => {
+            const { document } = await api.writeHandover(deal.id);
+            window.open(`/api/documents/${document.id}`, '_blank', 'noopener,noreferrer');
+          }, `Handover sheet for ${name} is ready to print`)}>
+            <FileText className="size-3" aria-hidden="true" /> Handover sheet <span className="sr-only">for {name}</span>
+          </button>
+        )}
         {!['in_progress', 'delivered'].includes(deal.stage) && (
           <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => act(() => api.moveDeal(deal.id, 'lost'), `${name} marked lost`)}>
             Lost <span className="sr-only">{name}</span>
@@ -107,7 +115,7 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
         <p className="mt-2 flex flex-wrap gap-2 text-xs">
           {docs.map((d) => (
             <a key={d.id} href={`/api/documents/${d.id}`} target="_blank" rel="noopener noreferrer" className="text-pen underline">
-              {d.kind === 'invoice' ? d.number : 'Proposal'}
+              {d.kind === 'invoice' ? d.number : d.kind === 'handover' ? 'Handover sheet' : 'Proposal'}
             </a>
           ))}
         </p>

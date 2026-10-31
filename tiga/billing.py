@@ -43,6 +43,17 @@ CLIENT_PROVIDES = [
     "Domain and hosting logins, or approval for me to buy them at cost in your name",
     "Contact details to show on the site (phone, WhatsApp, email, address)",
 ]
+# The promises that set Tiga's owner apart from the vendors shop owners distrust (research report, "Burned shop
+# owners buy ownership and flat fees"). The audit sheet, the proposal and the handover sheet all use these words.
+TRUST_TERMS = [
+    "One all-in price in writing, with next year's renewal cost and date on it.",
+    "The domain is registered in your name, and you get every login on one sheet.",
+    "A small advance; the balance only after the site is live on your domain.",
+    "No auto-debit, no lock-in, no commission on your orders.",
+    "No promises of leads or rankings: a good website, and you own it.",
+]
+DEFAULT_TERMS = {"renewal_yearly": 1200, "renewal_what": "domain renewal; hosting stays free for a static site"}
+_TERMS_KEY = "billing.terms"
 _RATES_KEY = "billing.rates"
 _UNITS = {"project", "image", "month", "page", "hour"}
 
@@ -69,7 +80,24 @@ def set_rates(store: Store, rates: list[dict]) -> list[dict]:
     return clean
 
 
-def build_proposal(deal: dict, items: list[dict], rates: list[dict], business: dict, today: date) -> dict:
+def get_terms(store: Store) -> dict:
+    saved = store.get_value(_TERMS_KEY, "")
+    return {**DEFAULT_TERMS, **(json.loads(saved) if saved else {})}
+
+
+def set_terms(store: Store, terms: dict) -> dict:
+    amount = terms.get("renewal_yearly")
+    if not isinstance(amount, int) or not 0 <= amount <= 100_000:
+        raise ValueError("the year-two renewal must be a whole number of rupees, 0 to 1,00,000")
+    clean = {"renewal_yearly": amount, "renewal_what": str(terms.get("renewal_what", "")).strip()[:160]
+             or DEFAULT_TERMS["renewal_what"]}
+    store.set_value(_TERMS_KEY, json.dumps(clean))
+    store.audit("user", "billing.terms", "terms", str(amount))
+    return clean
+
+
+def build_proposal(deal: dict, items: list[dict], rates: list[dict], business: dict, today: date,
+                   terms: dict | None = None) -> dict:
     by_id = {r["id"]: r for r in rates}
     if not items:
         raise ValueError("choose at least one service for the proposal")
@@ -83,26 +111,55 @@ def build_proposal(deal: dict, items: list[dict], rates: list[dict], business: d
                       "price": rate["price"], "total": rate["price"] * qty, "days": rate["days"]})
     total = sum(line["total"] for line in lines)
     advance = total // 2
+    terms = {**DEFAULT_TERMS, **(terms or {})}
+    days = max(7, max(l["days"] for l in lines) + 3)
+    launch = today + timedelta(days=days)
     return {
         "kind": "proposal", "deal_id": deal["id"], "client": deal.get("company") or deal.get("contact") or deal["email"],
         "client_email": deal["email"], "business": business, "date": today.isoformat(),
         "valid_until": (today + timedelta(days=14)).isoformat(), "lines": lines, "total": total,
-        "advance": advance, "balance": total - advance, "days": max(7, max(l["days"] for l in lines) + 3),
-        "client_provides": list(CLIENT_PROVIDES),
+        "advance": advance, "balance": total - advance, "days": days,
+        "client_provides": list(CLIENT_PROVIDES), "trust": list(TRUST_TERMS),
+        "renewal": {"amount": terms["renewal_yearly"], "what": terms["renewal_what"],
+                    "due": (launch + timedelta(days=365)).strftime("%B %Y")},
     }
 
 
 def proposal_text(p: dict) -> str:
     rows = "\n".join(f"- {l['name']} x{l['qty']}: Rs {l['total']:,}" for l in p["lines"])
     provides = "\n".join(f"- {x}" for x in p["client_provides"])
+    trust = "\n".join(f"- {x}" for x in p.get("trust", TRUST_TERMS))
     return (
         f"Hi,\n\nThanks for the chat. Here is my proposal for {p['client']}.\n\nWHAT YOU GET\n{rows}\n\n"
         f"Total: Rs {p['total']:,}\nTimeline: about {p['days']} days from the advance and your content.\n\n"
-        f"PAYMENT\n50% advance (Rs {p['advance']:,}) to start; 50% balance (Rs {p['balance']:,}) on delivery, "
-        f"before handover. UPI or bank transfer.\n\nWHAT I NEED FROM YOU\n{provides}\n\n"
+        f"PAYMENT\n50% advance (Rs {p['advance']:,}) to start; 50% balance (Rs {p['balance']:,}) only after the site is "
+        f"live on your own domain and you've checked it. UPI or bank transfer.\n\n"
+        f"YEAR TWO\n{_renewal_line(p)}\n\nHOW I WORK\n{trust}\n\nWHAT I NEED FROM YOU\n{provides}\n\n"
         f"Includes one round of changes after the first preview. This quote is valid until {p['valid_until']}.\n\n"
         f"Reply 'yes' and I'll send the advance invoice.\n\nBest,\n{p['business']['name']}"
     )
+
+
+def _renewal_line(p: dict) -> str:
+    r = p.get("renewal") or {"amount": DEFAULT_TERMS["renewal_yearly"], "what": DEFAULT_TERMS["renewal_what"], "due": "a year after launch"}
+    if not r["amount"]:
+        return "Nothing to renew: there is no yearly cost after the first year."
+    return (f"Rs {r['amount']:,} a year ({r['what']}), first due around {r['due']}. You pay it to the registrar, in "
+            "your name; nothing is auto-debited, and you can move the site anywhere.")
+
+
+def build_handover(deal: dict, business: dict, terms: dict, today: date) -> dict:
+    """What the client owns and where it lives, filled in by hand at handover. Never passwords."""
+    terms = {**DEFAULT_TERMS, **terms}
+    client = deal.get("company") or deal.get("contact") or deal["email"]
+    return {"kind": "handover", "deal_id": deal["id"], "client": client, "client_email": deal["email"],
+            "business": business, "date": today.isoformat(), "renewal_yearly": terms["renewal_yearly"],
+            "renewal_what": terms["renewal_what"],
+            "rows": ["Domain name", "Registrar (where the domain is registered)", f"Registered in the name of: {client}",
+                     "Login email for the registrar", f"Renews on (date), about ₹{terms['renewal_yearly']:,} a year",
+                     "Hosting (where the site runs)", "How to change prices, photos or hours",
+                     "Google Business Profile: owners and managers", "WhatsApp number orders and enquiries go to",
+                     "Site editor or admin login (if any)", "Anything else handed over"]}
 
 
 def next_invoice_number(store: Store, today: date) -> str:
@@ -170,13 +227,27 @@ def render_html(kind: str, doc: dict) -> str:
         rows = "".join(f"<tr><td><b>{e(l['name'])}</b><br><span class='muted'>{e(l['description'])}</span></td>"
                        f"<td class='r'>{l['qty']}</td><td class='r'>₹{l['total']:,}</td></tr>" for l in doc["lines"])
         provides = "".join(f"<li>{e(x)}</li>" for x in doc["client_provides"])
+        renewal = doc.get("renewal") or {"amount": DEFAULT_TERMS["renewal_yearly"], "what": DEFAULT_TERMS["renewal_what"], "due": "a year after launch"}
+        trust = "".join(f"<li>{e(x)}</li>" for x in doc.get("trust", TRUST_TERMS))
+        year_two = (f"<b>Year two:</b> ₹{renewal['amount']:,} a year ({e(renewal['what'])}), first due around {e(renewal['due'])}, "
+                    "paid by you to the registrar in your name. Nothing is auto-debited." if renewal["amount"]
+                    else "<b>Year two:</b> nothing to renew.")
         body = (f"<h1>Proposal for {e(doc['client'])}</h1>{head}<p class='muted'>{e(doc['date'])} · valid until "
                 f"{e(doc['valid_until'])}</p><table><tr><th>Service</th><th class='r'>Qty</th><th class='r'>Price</th></tr>{rows}"
                 f"<tr><td class='total'>Total</td><td></td><td class='r total'>₹{doc['total']:,}</td></tr></table>"
                 f"<div class='box'><b>Timeline:</b> about {doc['days']} days from the advance and your content.<br>"
-                f"<b>Payment:</b> 50% advance ₹{doc['advance']:,} to start, 50% balance ₹{doc['balance']:,} on delivery.<br>"
-                f"Includes one round of changes after the first preview.</div><h2>What I need from you</h2><ul>{provides}</ul>")
+                f"<b>Payment:</b> 50% advance ₹{doc['advance']:,} to start; 50% balance ₹{doc['balance']:,} only after the "
+                f"site is live on your own domain and you've checked it.<br>{year_two}<br>"
+                f"Includes one round of changes after the first preview.</div><h2>How I work</h2><ul>{trust}</ul>"
+                f"<h2>What I need from you</h2><ul>{provides}</ul>")
         return _PAGE.format(title=f"Proposal: {e(doc['client'])}", body=body)
+    if kind == "handover":
+        rows = "".join(f"<tr><th style='width:42%'>{e(r)}</th><td>&nbsp;</td></tr>" for r in doc["rows"])
+        body = (f"<h1>Handover: {e(doc['client'])}</h1>{head}<p class='muted'>{e(doc['date'])}. Everything below belongs "
+                f"to {e(doc['client'])}.</p><table>{rows}</table><div class='box'>Passwords are not written here: write them "
+                "on your own copy by hand, or keep them in a password manager. Change any password I set as soon as you "
+                f"take over.</div><p>Questions later? {e(biz['name'])}, {e(biz.get('email', ''))}.</p>")
+        return _PAGE.format(title=f"Handover: {e(doc['client'])}", body=body)
     what = "50% advance" if doc["invoice_kind"] == "advance" else "Balance on delivery"
     body = (f"<h1>Invoice {e(doc['number'])}</h1>{head}<p>Billed to <b>{e(doc['client'])}</b> ({e(doc['client_email'])})<br>"
             f"Date {e(doc['date'])} · due {e(doc['due'])}</p><table><tr><th>Description</th><th class='r'>Amount</th></tr>"

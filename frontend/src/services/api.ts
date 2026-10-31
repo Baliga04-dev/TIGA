@@ -47,6 +47,7 @@ import type {
   WalkRoute,
   MarketingWeek,
   FollowUp,
+  RenewalTerms,
   VisitOutcome,
   Channel,
 } from '../types';
@@ -207,6 +208,9 @@ export const api = {
   writeProposal: (dealId: number, items: { rate_id: string; qty: number }[]) =>
     post<{ ok: true; document: { id: number; total: number }; draft: OutreachItem | null }>(`/deals/${dealId}/proposal`, { items }),
 
+  writeHandover: (dealId: number) => post<{ ok: true; document: { id: number; kind: 'handover' } }>(`/deals/${dealId}/handover`),
+  getTerms: () => request<{ ok: true; terms: RenewalTerms }>('/pricing/terms'),
+  saveTerms: (terms: RenewalTerms) => request<{ ok: true; terms: RenewalTerms }>('/pricing/terms', { method: 'PUT', body: JSON.stringify(terms) }),
   writeInvoice: (dealId: number, kind: 'advance' | 'balance') =>
     post<{ ok: true; document: { id: number; number: string; amount: number }; draft: OutreachItem | null }>(`/deals/${dealId}/invoice`, { kind }),
 
