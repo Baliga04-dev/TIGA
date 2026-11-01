@@ -53,6 +53,7 @@ Playwright needs Chromium's system libraries; see README.md ("Browser tests").
 
 ## Gotchas
 
+- The owner does not review or merge by hand: Claude lands a finished feature branch with `tiga/.venv/bin/python tiga/ship.py` (tests, push, PR, merge commit, deletes the branch, syncs local main). Never commit to main directly, and never let the Dev bot use it.
 - Never add a path that sends mail without going through `Mailer.approve` -> `send_next` (or its two halves, `next_due` -> `record_send`, which `relay.py` uses to send through Claude's Gmail connector; see `.claude/skills/tiga-mail`).
 
 - `config.py` calls `load_dotenv()` at import. `tests/conftest.py` sets safe env vars before importing anything; keep new test modules importing through it. Override later with `monkeypatch.setattr(config, ...)`.
