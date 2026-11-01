@@ -113,3 +113,23 @@ def test_the_handover_sheet_lists_what_the_client_owns_and_never_asks_for_passwo
         assert row in page, row
     assert "password" in page.lower() and "Passwords are not written here" in page
     assert "<input" not in page
+
+
+def test_the_starter_rates_include_a_google_listing_tune_up_as_a_low_price_first_job(store):
+    tune = next(r for r in billing.get_rates(store) if r["id"] == "gbp_tuneup")
+    assert tune["price"] <= 2000 and "Google" in tune["name"] and "review" in tune["description"].lower()
+
+
+def test_a_review_card_for_a_clients_shop_has_the_qr_the_link_and_no_incentive():
+    card = billing.build_review_card(deal(company="<i>Sri</i> Bakery"), "https://g.page/r/CbX9sriBakery/review", BIZ, TODAY)
+    page = billing.render_html("review_card", card)
+    assert "&lt;i&gt;Sri&lt;/i&gt; Bakery" in page and "<svg" in page and "g.page/r/CbX9sriBakery/review" in page
+    assert "WhatsApp" in page
+    for bribe in ("discount", "free", "offer", "% off"):
+        assert bribe not in page.split("For the shop")[0].lower()
+
+
+@pytest.mark.parametrize("link", ["http://g.page/r/x/review", "https://evil.example/review", "javascript:alert(1)", ""])
+def test_a_review_card_only_takes_a_google_review_link(link):
+    with pytest.raises(ValueError):
+        billing.build_review_card(deal(), link, BIZ, TODAY)

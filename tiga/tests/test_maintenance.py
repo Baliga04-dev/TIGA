@@ -9,24 +9,52 @@ import main
 import crew
 
 
-async def test_loop_survives_a_failing_cycle_and_keeps_running(monkeypatch):
-    calls = []
+def run_loop(monkeypatch, *, hours, outcome=None):
+    """Run the daily loop for one check per entry in `hours` (the Bengaluru hour at each check)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
 
-    async def cycle():
-        calls.append(1)
-        if len(calls) == 1:
-            raise RuntimeError("boom")
-        return {"ok": True}
+    calls, clock = [], iter(hours)
+    now = {"t": None}
 
-    async def fast_sleep(_seconds):
-        if len(calls) >= 2:
+    async def once():
+        calls.append(now["t"])
+        if outcome:
+            return outcome(len(calls))
+        return {"report": {"ok": True}, "errors": []}
+
+    async def fake_sleep(_seconds):
+        try:
+            day, hour = next(clock)
+        except StopIteration:
             raise asyncio.CancelledError
+        now["t"] = datetime(2026, 11, day, hour, 0, tzinfo=ZoneInfo("Asia/Kolkata"))
 
-    monkeypatch.setattr(crew, "run_agent_cycle", cycle)
-    monkeypatch.setattr(main, "_sleep", fast_sleep)
-    monkeypatch.setattr(config, "GITHUB_TOKEN", "")
+    monkeypatch.setattr(main, "_maintenance_once", once)
+    monkeypatch.setattr(main, "_sleep", fake_sleep)
+    monkeypatch.setattr(main, "_local_now", lambda: now["t"])
     with pytest.raises(asyncio.CancelledError):
-        await main._daily_maintenance()
+        asyncio.run(main._daily_maintenance())
+    return calls
+
+
+def test_the_daily_run_happens_once_a_day_soon_after_start_whatever_the_restarts(monkeypatch):
+    calls = run_loop(monkeypatch, hours=[(1, 9), (1, 10), (1, 23), (2, 8), (2, 9)])
+    assert [c.day for c in calls] == [1, 2]
+
+
+def test_it_waits_for_the_morning(monkeypatch):
+    calls = run_loop(monkeypatch, hours=[(1, 3), (1, 6), (1, 7)])
+    assert [c.hour for c in calls] == [7]
+
+
+def test_a_run_that_crashes_is_tried_again_at_the_next_check(monkeypatch):
+    def outcome(n):
+        if n == 1:
+            raise RuntimeError("boom")
+        return {"report": {"ok": True}, "errors": []}
+
+    calls = run_loop(monkeypatch, hours=[(1, 9), (1, 9), (1, 10)], outcome=outcome)
     assert len(calls) == 2
 
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FileText, IndianRupee, Plus, Receipt } from 'lucide-react';
 import { ProposalDialog } from './pipeline/ProposalDialog';
 import { ProofDialog } from './pipeline/ProofDialog';
+import { ReviewCardDialog } from './pipeline/ReviewCardDialog';
 import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
@@ -36,6 +37,7 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
   const [busy, setBusy] = useState(false);
   const [proposing, setProposing] = useState(false);
   const [proofing, setProofing] = useState(false);
+  const [carding, setCarding] = useState(false);
   const [docs, setDocs] = useState<DealDocument[]>([]);
   const name = deal.company || deal.contact || deal.email;
   useEffect(() => {
@@ -108,6 +110,11 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
           </button>
         )}
         {['delivered', 'paid'].includes(deal.stage) && (
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setCarding(true)}>
+            Review QR card <span className="sr-only">for {name}</span>
+          </button>
+        )}
+        {['delivered', 'paid'].includes(deal.stage) && (
           <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setProofing(true)}>
             Proof <span className="sr-only">from {name}</span>
           </button>
@@ -122,12 +129,13 @@ function DealCard({ deal, onDone, onError }: { deal: Deal; onDone: (m: string) =
         <p className="mt-2 flex flex-wrap gap-2 text-xs">
           {docs.map((d) => (
             <a key={d.id} href={`/api/documents/${d.id}`} target="_blank" rel="noopener noreferrer" className="text-pen underline">
-              {d.kind === 'invoice' ? d.number : d.kind === 'handover' ? 'Handover sheet' : 'Proposal'}
+              {d.kind === 'invoice' ? d.number : d.kind === 'handover' ? 'Handover sheet' : d.kind === 'review_card' ? 'Review card' : 'Proposal'}
             </a>
           ))}
         </p>
       )}
       {proofing && <ProofDialog deal={deal} onClose={() => setProofing(false)} />}
+      {carding && <ReviewCardDialog deal={deal} onClose={() => setCarding(false)} onDone={(m) => { setCarding(false); onDone(m); }} />}
       {proposing && (
         <ProposalDialog deal={deal} onClose={() => setProposing(false)}
           onDone={(message) => { setProposing(false); onDone(message); }} />
@@ -164,6 +172,7 @@ export function Pipeline() {
   const done = (m: string) => { setToast(m); refresh(); };
   const closed = deals.filter((d) => d.stage === 'paid' || d.stage === 'lost');
   const [proofDeal, setProofDeal] = useState<Deal | null>(null);
+  const [cardDeal, setCardDeal] = useState<Deal | null>(null);
 
   return (
     <>
@@ -227,6 +236,11 @@ export function Pipeline() {
                     {d.stage === 'paid' && <span className="text-ledger">{rupees(d.amount)}</span>}
                     <span className={cn('badge', d.stage === 'paid' ? 'badge-green' : 'badge-gray')}>{d.stage}</span>
                     {d.stage === 'paid' && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => setCardDeal(d)}>
+                        Review card <span className="sr-only">for {d.company || d.email}</span>
+                      </button>
+                    )}
+                    {d.stage === 'paid' && (
                       <button className="btn btn-ghost btn-sm" onClick={() => setProofDeal(d)}>
                         Proof <span className="sr-only">from {d.company || d.email}</span>
                       </button>
@@ -245,6 +259,7 @@ export function Pipeline() {
       </div>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {proofDeal && <ProofDialog deal={proofDeal} onClose={() => setProofDeal(null)} />}
+      {cardDeal && <ReviewCardDialog deal={cardDeal} onClose={() => setCardDeal(null)} onDone={(m) => { setCardDeal(null); done(m); }} />}
     </>
   );
 }

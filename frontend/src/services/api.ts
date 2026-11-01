@@ -214,6 +214,8 @@ export const api = {
   writeProposal: (dealId: number, items: { rate_id: string; qty: number }[]) =>
     post<{ ok: true; document: { id: number; total: number }; draft: OutreachItem | null }>(`/deals/${dealId}/proposal`, { items }),
 
+  writeReviewCard: (dealId: number, link: string) =>
+    post<{ ok: true; document: { id: number; kind: 'review_card' } }>(`/deals/${dealId}/review-card`, { link }),
   writeHandover: (dealId: number) => post<{ ok: true; document: { id: number; kind: 'handover' } }>(`/deals/${dealId}/handover`),
   getTerms: () => request<{ ok: true; terms: RenewalTerms }>('/pricing/terms'),
   saveTerms: (terms: RenewalTerms) => request<{ ok: true; terms: RenewalTerms }>('/pricing/terms', { method: 'PUT', body: JSON.stringify(terms) }),

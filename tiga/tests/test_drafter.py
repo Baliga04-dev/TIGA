@@ -10,7 +10,7 @@ def words(text):
 
 def test_rule_based_draft_follows_the_house_rules():
     d = drafter.write_draft(LEAD, sender_name="Jo", offer="websites and software for small businesses")
-    assert 40 <= words(d["body"]) <= 130
+    assert 25 <= words(d["body"]) <= 65   # short wins replies (R&D proposal #3)
     assert len(d["subject"].split()) <= 8 and not d["subject"].lower().startswith("re:")
     assert "Acme" in d["body"] and d["body"].rstrip().endswith("Jo")
     assert "http" not in d["body"]  # no links in a first mail
@@ -67,7 +67,7 @@ def test_site_findings_become_the_honest_opener(problem, phrase):
     lead = {"company": "Sri Bakery", "problems": [problem], "category": "bakery"}
     d = drafter.write_draft(lead, sender_name="Jo", offer="websites and apps")
     assert phrase in d["body"].lower()
-    assert 40 <= words(d["body"]) <= 130 and len(d["subject"].split()) <= 8
+    assert 25 <= words(d["body"]) <= 65 and len(d["subject"].split()) <= 8
     assert "Sri Bakery" in d["body"]
 
 

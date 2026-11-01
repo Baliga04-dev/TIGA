@@ -1,5 +1,8 @@
 # TIGA + Email Bot - Implementation Complete
 
+> **Historical.** This describes the first build (October 2026) and is long out of date. For the system as it is
+> now, read `CLAUDE.md` and `README.md`.
+
 ## What's Been Built
 
 ### Backend (FastAPI + Python)

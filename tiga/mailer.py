@@ -198,10 +198,10 @@ _NO = re.compile(r"not interested|no thanks|no thank you|not now|don't need|do n
 _YES = re.compile(r"interested|schedule|\bcall\b|sounds good|let's talk|tell me more|send (me )?(a |the )?(quote|proposal|details)|\byes\b", re.I)
 _QUOTE_START = re.compile(r"^(>|On .{0,80}wrote:?\s*$)", re.I)
 FOLLOWUP_AFTER = timedelta(days=5)
-MAX_FOLLOWUPS = 2
+MAX_FOLLOWUPS = 1   # one follow-up per contact: more reads as pressure and invites spam reports
 _FOLLOWUP_BODY = (
-    "Hi, just following up on my note below in case it got buried. Happy to share a couple of ideas{for_company} if useful.",
-    "Last note from me. If now isn't the right time, no problem at all.",
+    "Hi, following up once on my note below in case it got buried. Happy to share a plan{for_company} if useful; "
+    "if not, no problem, and I won't write again.",
 )
 
 

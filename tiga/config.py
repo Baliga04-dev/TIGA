@@ -64,6 +64,7 @@ OFFER = os.getenv("TIGA_OFFER", "websites and custom software for small business
 
 # The overnight Analyst (16:00-02:00 collect, morning drafts). 0 minutes turns the schedule off.
 ANALYST_TICK_MINUTES = int(os.getenv("TIGA_ANALYST_TICK_MINUTES", "20"))
+DAILY_RUN_HOUR = int(os.getenv("TIGA_DAILY_RUN_HOUR", "7"))  # the daily run happens once a day from this hour (local time)
 ANALYST_DRAFTS_PER_MORNING = int(os.getenv("TIGA_ANALYST_DRAFTS_PER_MORNING", "15"))
 TIMEZONE = os.getenv("TIGA_TIMEZONE", "Asia/Kolkata")
 

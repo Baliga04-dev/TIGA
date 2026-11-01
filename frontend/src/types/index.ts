@@ -367,7 +367,7 @@ export interface Rate {
 
 export interface DealDocument {
   id: number;
-  kind: 'proposal' | 'invoice' | 'handover';
+  kind: 'proposal' | 'invoice' | 'handover' | 'review_card';
   number: string;
   created_at: string;
 }

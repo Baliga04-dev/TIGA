@@ -44,9 +44,28 @@ async def _maintenance_once() -> dict:
     return await jobs.run_configured_daily()
 
 
+DAILY_CHECK_SECONDS = 900   # how often the loop looks at the clock
+
+
+def _local_now():
+    import datetime
+    from zoneinfo import ZoneInfo
+
+    return datetime.datetime.now(ZoneInfo(config.TIMEZONE))
+
+
 async def _daily_maintenance() -> None:
+    """The daily run, once per Bengaluru day from DAILY_RUN_HOUR on. A claim per date means a restart (WSL, a new
+    session) never skips the day or runs it twice; a run that crashes gives the claim back and is tried again."""
     while True:
-        await _sleep(max(60, config.GITHUB_SYNC_INTERVAL_MINUTES * 60))
+        await _sleep(DAILY_CHECK_SECONDS)
+        now = _local_now()
+        if now.hour < config.DAILY_RUN_HOUR:
+            continue
+        day = now.date().isoformat()
+        store = services.get_store()
+        if not store.claim_job("daily_run", day):
+            continue
         try:
             outcome = await _maintenance_once()
             if not outcome["report"].get("ok"):
@@ -54,7 +73,8 @@ async def _daily_maintenance() -> None:
             for error in outcome["errors"]:
                 logger.warning("Daily run step failed: %s", error)
         except Exception:
-            logger.exception("Daily maintenance run failed; will retry next interval")
+            store.release_job("daily_run", day)
+            logger.exception("Daily run failed; will try again at the next check")
 
 
 async def _analyst_loop() -> None:
