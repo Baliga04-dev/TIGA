@@ -100,3 +100,13 @@ def test_handover_sheet_and_renewal_terms_over_http(client):
     assert client.get("/api/pricing/terms").json()["terms"]["renewal_yearly"] == 1200
     saved = client.put("/api/pricing/terms", json={"renewal_yearly": 1500, "renewal_what": "domain and email"}).json()
     assert saved["ok"] and saved["terms"]["renewal_yearly"] == 1500
+
+
+def test_review_card_over_http(client):
+    d = client.post("/api/deals", json={"email": "ravi@sri.in", "company": "Sri Bakery", "amount": 15000}).json()["deal"]
+    bad = client.post(f"/api/deals/{d['id']}/review-card", json={"link": "https://example.com/x"}).json()
+    assert bad["ok"] is False and "Google" in bad["error"]
+    out = client.post(f"/api/deals/{d['id']}/review-card", json={"link": "https://g.page/r/CbX9/review"}).json()
+    assert out["ok"] and out["document"]["kind"] == "review_card"
+    page = client.get(f"/api/documents/{out['document']['id']}")
+    assert page.status_code == 200 and "Sri Bakery" in page.text

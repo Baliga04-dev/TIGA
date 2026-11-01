@@ -87,7 +87,15 @@ def shop_noun(category: str) -> str:
 DEMOS = {"clinic": "tulasi-clinic", "salon": "mallige-salon", "restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
          "jewellery": "navilu-boutique", "florist": "navilu-boutique", "school": "little-banyan",
          "coaching": "little-banyan", "hotel": "sampige-residency", "travel": "sampige-residency"}
-TRUST_TERMS = billing.TRUST_TERMS   # one wording for the audit sheet, proposal and handover sheet
+TRUST_TERMS = billing.TRUST_TERMS
+# What a shop's Google Business Profile needs; checked by hand at the visit (Google's own API costs money).
+GOOGLE_CHECKS = [
+    "Opening hours are right, including holidays",
+    "At least ten recent photos: the front, inside, products",
+    "A website or ordering link that works",
+    "The right category, and services or a menu filled in",
+    "Replies to reviews, good and bad",
+]   # one wording for the audit sheet, proposal and handover sheet
 
 
 class MarketingError(ValueError):
@@ -516,6 +524,9 @@ def _audit_body(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, to
             f"<div class='box'><h2 style='margin-top:0'>Talk to me on WhatsApp</h2>"
             f"<p class='small'>Scan to message me. Your message carries this code:</p><p class='ref'>Ref {ref}</p>"
             f"<div class='qr'>{billing.qr_svg(chat)}</div></div></div>"
+            "<h2>Your Google listing</h2><p class='small muted'>Let's look at it together on your phone:</p>"
+            "<ul style='list-style:none;padding-left:0'>"
+            + "".join(f"<li>☐ {e(item)}</li>" for item in GOOGLE_CHECKS) + "</ul>"
             f"<h2>How I work</h2><ul>{terms}</ul>"
             f"<p class='muted small'>If you message me, I keep your name and number only to talk about your website. "
             f"Say \"delete my number\" any time and I will delete it."

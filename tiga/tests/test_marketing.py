@@ -446,3 +446,10 @@ def test_one_printable_holds_an_audit_sheet_per_stop_each_on_its_own_page(store)
                                        demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
     assert page.count("<!doctype html>") == 1 and page.count("break-after:page") == 1
     assert "First &amp; Co" in page and "Second Stores" in page and f"Ref T{a['id']}" in page and f"Ref T{b['id']}" in page
+
+
+def test_the_audit_sheet_carries_a_google_listing_checklist_to_tick_at_the_shop(store):
+    p = prospect(store, n=500, category="bakery")
+    page = marketing.audit_sheet_html(p, owner="Adithya", whatsapp="917795052550",
+                                      demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
+    assert "Your Google listing" in page and page.count("☐") >= 5 and "review" in page.lower()

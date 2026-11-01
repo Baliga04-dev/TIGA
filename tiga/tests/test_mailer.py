@@ -204,12 +204,13 @@ def test_followup_drafted_after_five_quiet_days_and_needs_approval(mailer):
     assert mailer.due_followups(now=T0 + timedelta(days=6)) == []  # not drafted twice
 
 
-def test_at_most_two_followups(mailer):
-    row = sent_mail(mailer)
-    for n, day in ((1, 5), (2, 12)):
-        follow = mailer.due_followups(now=T0 + timedelta(days=day))[0]
-        mailer.approve(follow["id"])
-        mailer.send_next(now=T0 + timedelta(days=day))
+def test_at_most_one_followup(mailer):
+    sent_mail(mailer)
+    follow = mailer.due_followups(now=T0 + timedelta(days=5))[0]
+    assert "won't write again" in follow["body"]
+    mailer.approve(follow["id"])
+    mailer.send_next(now=T0 + timedelta(days=5))
+    assert mailer.due_followups(now=T0 + timedelta(days=12)) == []
     assert mailer.due_followups(now=T0 + timedelta(days=30)) == []
 
 

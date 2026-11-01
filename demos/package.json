@@ -32,10 +32,10 @@
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.7.0",
     "autoprefixer": "10.4.20",
-    "postcss": "8.4.49",
+    "postcss": "^8.5.30",
     "sharp": "0.35.5",
     "tailwindcss": "3.4.17",
     "typescript": "5.6.3",
-    "vite": "5.4.21"
+    "vite": "^7.3.7"
   }
 }

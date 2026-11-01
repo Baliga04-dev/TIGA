@@ -166,6 +166,21 @@ def handover(deal_id: int) -> dict:
     return _guard(go)
 
 
+class ReviewCardIn(BaseModel):
+    link: str = Field(max_length=500)
+
+
+@router.post("/{deal_id}/review-card")
+def review_card(deal_id: int, body: ReviewCardIn) -> dict:
+    def go():
+        store = services.get_store()
+        card = billing.build_review_card(store.get_deal(deal_id), body.link, _business(), datetime.date.today())
+        doc = store.add_document("review_card", deal_id, card)
+        return {"document": {"id": doc["id"], "kind": "review_card"}}
+
+    return _guard(go)
+
+
 @router.get("/{deal_id}/documents")
 def documents(deal_id: int) -> dict:
     return {"ok": True, "items": services.get_store().list_documents(deal_id)}

@@ -33,6 +33,9 @@ DEFAULT_RATES = [
      "description": "Two concepts, one round of changes, files for print and web."},
     {"id": "photo_edit", "name": "Photo editing", "price": 150, "unit": "image", "days": 2,
      "description": "Colour, light and background clean-up for product or shop photos."},
+    {"id": "gbp_tuneup", "name": "Google listing tune-up", "price": 1500, "unit": "project", "days": 2,
+     "description": "Your Google Business Profile set up properly: category, services, hours, photos, website link "
+                    "and a review QR card, so people searching nearby find you. A good first job."},
     {"id": "care", "name": "Monthly website care", "price": 1500, "unit": "month", "days": 0,
      "description": "Updates, backups, small text/photo changes and uptime checks."},
 ]
@@ -162,6 +165,25 @@ def build_handover(deal: dict, business: dict, terms: dict, today: date) -> dict
                      "Site editor or admin login (if any)", "Anything else handed over"]}
 
 
+_REVIEW_HOSTS = ("g.page", "google.com", "goo.gl")
+
+
+def build_review_card(deal: dict, link: str, business: dict, today: date) -> dict:
+    """A counter card for a client's shop: a QR to their Google review page and a WhatsApp line to send customers."""
+    from urllib.parse import urlparse
+
+    url = (link or "").strip()
+    host = urlparse(url).hostname or ""
+    if not url.startswith("https://") or not any(host == h or host.endswith("." + h) for h in _REVIEW_HOSTS):
+        raise ValueError("Paste the shop's Google review link (from their Business Profile: 'Ask for reviews', "
+                         "starting https://g.page/ or a google.com link)")
+    client = deal.get("company") or deal.get("contact") or deal["email"]
+    return {"kind": "review_card", "deal_id": deal["id"], "client": client, "link": url, "business": business,
+            "date": today.isoformat(),
+            "whatsapp": f"Thank you for visiting {client}! If you have a minute, a Google review helps other people find "
+                        f"us: {url}"}
+
+
 def next_invoice_number(store: Store, today: date) -> str:
     key = f"billing.invoice.{today.year}"
     n = int(store.get_value(key, "0")) + 1
@@ -241,6 +263,16 @@ def render_html(kind: str, doc: dict) -> str:
                 f"Includes one round of changes after the first preview.</div><h2>How I work</h2><ul>{trust}</ul>"
                 f"<h2>What I need from you</h2><ul>{provides}</ul>")
         return _PAGE.format(title=f"Proposal: {e(doc['client'])}", body=body)
+    if kind == "review_card":
+        card = (f"<div class='box' style='text-align:center;max-width:22rem;margin:1.5rem auto;padding:1.6rem'>"
+                f"<h1 style='font-size:1.6rem'>Liked your visit?</h1><p>A Google review helps other people find "
+                f"<b>{e(doc['client'])}</b>. It takes a minute.</p><div class='qr' style='display:flex;justify-content:center'>"
+                f"{qr_svg(doc['link'])}</div><p class='muted' style='font-size:.8rem;word-break:break-all'>{e(doc['link'])}</p></div>")
+        body = (f"<h2>Review card for {e(doc['client'])}</h2><p class='muted'>Print and keep it at the counter or on the "
+                f"bill folder.</p>{card}<h2>To send customers on WhatsApp</h2><div class='box'>{e(doc['whatsapp'])}</div>"
+                "<h2>For the shop</h2><p class='muted'>Ask every customer, not only the happy ones, and never offer a "
+                "discount or gift for a review: Google removes reviews that break its rules.</p>")
+        return _PAGE.format(title=f"Review card: {e(doc['client'])}", body=body)
     if kind == "handover":
         rows = "".join(f"<tr><th style='width:42%'>{e(r)}</th><td>&nbsp;</td></tr>" for r in doc["rows"])
         body = (f"<h1>Handover: {e(doc['client'])}</h1>{head}<p class='muted'>{e(doc['date'])}. Everything below belongs "

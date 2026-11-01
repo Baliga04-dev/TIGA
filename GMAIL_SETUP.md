@@ -1,5 +1,9 @@
 # Gmail API Setup Guide for TIGA Email Bot
 
+> **You may not need this.** Tiga sends approved cold mail and reads replies through Claude's own Gmail connector
+> (see `.claude/skills/tiga-mail`): no Google Cloud project, no `credentials.json`. Set up the app-side access below
+> only if you want Tiga to send its daily report mail or use the Email Bot page without a Claude session open.
+
 ## Quick Start
 
 ### 1. Create Google Cloud Project
