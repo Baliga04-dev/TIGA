@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader, Card, Notice, CopyButton } from '../components/ui';
 import { api } from '../services/api';
 import type { LabIncident, LabLogLine, LabMissionSummary, LabSnapshot, LabStatus } from '../types';
 import { cn } from '../lib/utils';
 import { ServiceMap } from './lab/ServiceMap';
 import { MissionView } from './lab/MissionView';
+import { BuildNotes } from './learn/BuildNotes';
 
 const INSTALL = 'sudo apt update && sudo apt install -y docker.io docker-compose-v2 && sudo usermod -aG docker $USER';
 const LOG_SERVICES = ['', 'gateway', 'menu', 'orders', 'payments', 'notifier', 'customers'];
@@ -141,8 +143,7 @@ function Incidents({ items, onOpen }: { items: LabIncident[]; onOpen: (mission: 
   );
 }
 
-export function Learn() {
-  const [hidden, setHidden] = useState(false);
+function ShopLab({ onHidden }: { onHidden: () => void }) {
   const [missions, setMissions] = useState<LabMissionSummary[] | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
   const [status, setStatus] = useState<LabStatus | null>(null);
@@ -153,8 +154,8 @@ export function Learn() {
   useEffect(() => {
     api.labMissions()
       .then((r) => { setMissions(r.items); setCurrent((c) => c ?? r.items[0]?.id ?? null); })
-      .catch((e: Error & { status?: number }) => { if (e.status === 404) setHidden(true); else setError(e.message); });
-  }, []);
+      .catch((e: Error & { status?: number }) => { if (e.status === 404) onHidden(); else setError(e.message); });
+  }, [onHidden]);
 
   const refresh = useCallback(async () => {
     try {
@@ -181,19 +182,9 @@ export function Learn() {
   const start = async () => { try { await api.labUp(); refresh(); } catch (e) { setError(e instanceof Error ? e.message : 'Could not start the lab'); } };
   const stop = async () => { try { await api.labDown(); setSnap(null); refresh(); } catch (e) { setError(e instanceof Error ? e.message : 'Could not stop the lab'); } };
 
-  if (hidden) {
-    return (
-      <>
-        <PageHeader title="Learn" description="This service is switched off." />
-        <Notice tone="info">Set TIGA_LEARN_ENABLED=true in your own tiga/.env and restart to use it.</Notice>
-      </>
-    );
-  }
-
   const running = !!status?.running;
   return (
     <>
-      <PageHeader title="Learn" description="ShopLab: a small online bakery built as real microservices. Break it, watch it, fix it, and learn why." />
       {error && <div className="mb-6"><Notice>{error}</Notice></div>}
 
       <div className="mb-8 space-y-6">
@@ -239,6 +230,65 @@ export function Learn() {
       </div>
 
       <div className="mt-10"><Logs running={running} /></div>
+    </>
+  );
+}
+
+const TABS = [
+  { id: 'lab', label: 'ShopLab', description: 'ShopLab: a small online bakery built as real microservices. Break it, watch it, fix it, and learn why.' },
+  { id: 'notes', label: 'Build notes', description: 'One note for every tool your builds brought in: why it was picked, how it works there, and what interviewers ask.' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
+
+export function Learn() {
+  const [hidden, setHidden] = useState(false);
+  const onHidden = useCallback(() => setHidden(true), []);
+  const [params, setParams] = useSearchParams();
+  const tab: TabId = params.get('tab') === 'notes' ? 'notes' : 'lab';
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const choose = (id: TabId) => setParams(id === 'lab' ? {} : { tab: id }, { replace: true });
+  const onKey = (e: KeyboardEvent, i: number) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const to = (i + 1) % TABS.length;
+    choose(TABS[to].id);
+    refs.current[to]?.focus();
+  };
+
+  if (hidden) {
+    return (
+      <>
+        <PageHeader title="Learn" description="This service is switched off." />
+        <Notice tone="info">Set TIGA_LEARN_ENABLED=true in your own tiga/.env and restart to use it.</Notice>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader title="Learn" description={TABS.find((t) => t.id === tab)!.description} />
+      <div role="tablist" aria-label="Learn" className="mb-6 flex gap-1 border-b border-rule">
+        {TABS.map((t, i) => (
+          <button
+            key={t.id}
+            ref={(el) => { refs.current[i] = el; }}
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => choose(t.id)}
+            onKeyDown={(e) => onKey(e, i)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${tab === t.id ? 'border-pen text-ink' : 'border-transparent text-ink-2 hover:text-ink'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === 'lab' ? <ShopLab onHidden={onHidden} /> : <BuildNotes onHidden={onHidden} />}
+      </div>
     </>
   );
 }

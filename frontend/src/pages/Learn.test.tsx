@@ -92,6 +92,39 @@ describe('Learn (ShopLab)', () => {
     expect(await screen.findByText(/Not yet\. It went below zero/)).toBeInTheDocument()
   })
 
+  it('shows build notes per project, with interview answers folded until opened', async () => {
+    mock.get('/learn/notes', { ok: true, items: [
+      { id: 'finance-app/0001-expo', project: 'finance-app', title: 'Expo', kind: 'tool', date: '2026-11-02', summary: 'React Native without a Mac' },
+      { id: 'TIGA/0001-fastapi', project: 'TIGA', title: 'FastAPI', kind: 'tool', date: '2026-11-03', summary: '' },
+    ] })
+    mock.get('/learn/notes/finance-app/0001-expo', { ok: true, note: {
+      id: 'finance-app/0001-expo', project: 'finance-app', title: 'Expo', kind: 'tool', date: '2026-11-02', summary: 'React Native without a Mac',
+      sections: [
+        { title: 'What it is', text: 'A **framework** for apps.' },
+        { title: 'What interviewers ask', text: '**Q: Why Expo?**\nNo Mac needed.\n\nAnd it ships to both stores.\n\n**Q: What does Expo Go lack?**\nCustom native code.' },
+      ],
+    } })
+    renderApp('/learn?tab=notes')
+    expect(await screen.findByRole('heading', { name: 'Expo' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Build notes' })).toHaveAttribute('aria-selected', 'true')
+    const nav = screen.getByRole('navigation', { name: 'Build notes' })
+    expect(within(nav).getByRole('heading', { name: 'TIGA' })).toBeInTheDocument()
+    expect(screen.getByText('framework')).toBeInTheDocument()
+    const answer = screen.getByText('And it ships to both stores.')
+    expect(answer).not.toBeVisible()
+    await userEvent.click(screen.getByText('Q: Why Expo?'))
+    expect(answer).toBeVisible()
+    expect(screen.getByText('Custom native code.')).not.toBeVisible()
+  })
+
+  it('says what build notes are before there are any', async () => {
+    mock.get('/lab/status', { ok: true, docker: true, running: false, services: [], job: null, last_job: null })
+    mock.get('/learn/notes', { ok: true, items: [] })
+    renderApp('/learn')
+    await userEvent.click(await screen.findByRole('tab', { name: 'Build notes' }))
+    expect(await screen.findByText('No build notes yet')).toBeInTheDocument()
+  })
+
   it('starts the lab', async () => {
     mock.get('/lab/status', { ok: true, docker: true, running: false, services: [], job: null, last_job: null })
     const started = mock.record('/lab/up', { ok: true, started: true })

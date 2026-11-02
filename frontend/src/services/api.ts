@@ -33,6 +33,8 @@ import type {
   LabMissionSummary,
   LabMission,
   LabLogLine,
+  BuildNoteSummary,
+  BuildNote,
   DevStatus,
   RndStatus,
   Note,
@@ -327,6 +329,10 @@ export const api = {
   listLessons: () => request<{ lessons: { name: string; title: string }[] }>('/learn/lessons'),
 
   getMission: () => request<{ text: string }>('/learn/mission'),
+
+  learnNotes: () => request<{ ok: true; items: BuildNoteSummary[] }>('/learn/notes'),
+
+  learnNote: (id: string) => request<{ ok: true; note: BuildNote }>(`/learn/notes/${id}`),
 
   listProspects: (status = '') =>
     request<{ ok: true; items: Prospect[]; counts: Record<string, number> }>(`/prospects${status ? `?status=${status}` : ''}`),

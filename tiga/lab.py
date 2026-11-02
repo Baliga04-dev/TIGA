@@ -108,7 +108,7 @@ def summarize(prev: list, cur: list, seconds: float) -> dict:
 # ------------------------------------------------------------------------------------------- missions
 def parse_mission(text: str) -> dict:
     meta, body = {}, text
-    if text.startswith("---"):
+    if text.startswith("---") and "\n---" in text[3:]:
         head, body = text[3:].split("\n---", 1)
         for line in head.strip().splitlines():
             if ":" in line:
