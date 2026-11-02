@@ -398,6 +398,8 @@ export interface LabSnapshot {
 export interface LabIncident { id: number; rule: string; title: string; detail: string; mission: string; opened_at: string; last_seen: string; resolved_at: string; seen: number }
 export interface LabMissionSummary { id: string; title: string; topic: string; actions: string[] }
 export interface LabMission extends LabMissionSummary { sections: { title: string; text: string }[] }
+export interface BuildNoteSummary { id: string; project: string; title: string; kind: string; date: string; summary: string }
+export interface BuildNote extends BuildNoteSummary { sections: { title: string; text: string }[] }
 export interface LabLogLine { ts: number; service: string; event: string; request_id: string; route?: string; status?: number; ms?: number; [key: string]: unknown }
 
 export interface Meeting {
