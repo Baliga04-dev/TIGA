@@ -39,8 +39,9 @@ DEFAULT_RATES = [
     {"id": "care", "name": "Monthly website care", "price": 1500, "unit": "month", "days": 0,
      "description": "Updates, backups, small text/photo changes and uptime checks."},
     {"id": "photo_refresh", "name": "Monthly Google photo refresh", "price": 1200, "unit": "month", "days": 0,
-     "description": "8-10 freshly edited photos of your shop and products on your Google listing, and one post a "
-                    "month with a Call or WhatsApp button. An add-on to the listing tune-up."},
+     "description": "8-10 real photos of your shop and products on your Google listing, only cleaned up (crop, "
+                    "light, colour), never generated or stock, and one post a month with a Call or WhatsApp button. "
+                    "An add-on to the listing tune-up."},
 ]
 CLIENT_PROVIDES = [
     "Your logo (or approval of a new one)",
@@ -184,7 +185,7 @@ def build_review_card(deal: dict, link: str, business: dict, today: date) -> dic
     return {"kind": "review_card", "deal_id": deal["id"], "client": client, "link": url, "business": business,
             "date": today.isoformat(),
             "whatsapp": f"Thank you for visiting {client}! If you have a minute, a Google review helps other people find "
-                        f"us: {url}"}
+                        f"us, and a photo with it helps even more: {url}"}
 
 
 def next_invoice_number(store: Store, today: date) -> str:

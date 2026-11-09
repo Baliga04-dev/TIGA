@@ -42,6 +42,7 @@ class SiteReport:
     area_in_title: bool = False
     phone_on_site: bool = False
     local_schema: bool = False
+    single_page: bool = False   # no link to any other page of its own: nothing for each service to rank with
 
     @property
     def problems(self) -> list[str]:
@@ -58,7 +59,20 @@ class SiteReport:
             out.append("slow")
         out += [key for key, ok in (("no_area_in_title", self.area_in_title), ("no_phone_on_site", self.phone_on_site),
                                     ("no_local_schema", self.local_schema)) if not ok]
+        if self.single_page:
+            out.append("single_page")
         return out
+
+
+def _own_pages(soup: BeautifulSoup, home: str) -> set[str]:
+    """Other pages of the same site the homepage links to (not anchors on itself, not other sites)."""
+    base = urlparse(home)
+    out = set()
+    for a in soup.find_all("a", href=True):
+        url = urlparse(urljoin(home, a["href"]))
+        if url.scheme in ("http", "https") and url.hostname == base.hostname and url.path.rstrip("/") != base.path.rstrip("/"):
+            out.add(url.path)
+    return out
 
 
 def _local_words(area: str) -> list[str]:
@@ -127,6 +141,7 @@ async def inspect(url: str, *, year: int, area: str = "") -> SiteReport:
         report.area_in_title = any(w in heads for w in _local_words(area))
         report.phone_on_site = bool(soup.select('a[href^="tel:"]')) or bool(_PHONE.search(soup.get_text(" ")))
         report.local_schema = _local_schema(soup)
+        report.single_page = not _own_pages(soup, str(home.url))
 
         contact = next((a["href"] for a in soup.find_all("a", href=True)
                         if "contact" in a["href"].lower() or "contact" in a.get_text().lower()), None)

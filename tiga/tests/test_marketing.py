@@ -454,6 +454,7 @@ def test_the_audit_sheet_carries_a_google_listing_checklist_to_tick_at_the_shop(
                                       demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
     assert "Your Google listing" in page and page.count("☐") >= 5 and "review" in page.lower()
     assert "Main category" in page and "Extra categories" in page and "Competitors use" in page
+    assert "Latest review" in page and "board" in page    # hours on the listing against the board at the door
 
 
 def test_the_audit_sheet_names_local_search_gaps_on_the_shops_own_site(store):

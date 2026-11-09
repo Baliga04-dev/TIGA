@@ -76,6 +76,8 @@ PROBLEMS: dict[str, tuple[str, str]] = {
                          "Your number at the top of every page, with tap-to-call and WhatsApp buttons."),
     "no_local_schema": ("Your website doesn't give Google your address and hours in the form it reads.",
                         "Your address, hours and phone marked up for Google, so search shows them correctly."),
+    "single_page": ("Your website is a single page, so there's no page of its own for each thing you offer.",
+                    "A short page for each service or product line, so each one can turn up when people search for it."),
 }
 # How a shop owner would name their kind of business, with its article ("an electronics shop").
 SHOP_NOUNS = {"restaurant": "restaurant", "cafe": "café", "bakery": "bakery", "salon": "salon", "clinic": "clinic",
@@ -570,7 +572,8 @@ def _audit_body(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, to
             + "".join(f"<li>☐ {e(item)}</li>" for item in GOOGLE_CHECKS) + "</ul>"
             # The main category decides which searches the listing shows up in; up to nine extras widen that.
             "<p class='small'>Main category: ____________________ &nbsp; Extra categories: ____________________<br>"
-            "Competitors use: ____________________________________________</p>"
+            "Competitors use: ____________________________________________<br>"
+            "Latest review: ______________ &nbsp; Hours on the listing match the board at the door: Y / N</p>"
             f"<h2>How I work</h2><ul>{terms}</ul>"
             f"<p class='muted small'>If you message me, I keep your name and number only to talk about your website. "
             f"Say \"delete my number\" any time and I will delete it."

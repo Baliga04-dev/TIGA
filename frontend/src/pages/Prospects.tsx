@@ -16,6 +16,7 @@ const PROBLEM_LABEL: Record<string, string> = {
   no_area_in_title: 'area not in title',
   no_phone_on_site: 'no phone on site',
   no_local_schema: 'no Google address markup',
+  single_page: 'single page',
 };
 
 const COUNT_LABELS: [string, string][] = [
