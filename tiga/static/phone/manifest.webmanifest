@@ -1,0 +1,9 @@
+{
+  "name": "Tiga remote",
+  "short_name": "Tiga",
+  "start_url": "/phone",
+  "display": "standalone",
+  "background_color": "#0f4d3a",
+  "theme_color": "#0f4d3a",
+  "icons": [{ "src": "/phone/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

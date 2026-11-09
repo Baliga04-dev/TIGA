@@ -1,0 +1,98 @@
+/* Tiga's phone remote: the same palette as the PC app (enamel signboard green, signal yellow), built for one thumb. */
+:root {
+  --paper: #f5f6f3; --sheet: #ffffff; --wash: #eceee9; --rule: #dee2dc;
+  --ink: #151a17; --ink-2: #4b554f; --pen: #136b50; --flag: #b23a2e; --mark: #f2c230;
+  --board: #0f4d3a; --on-board: #eef3ef; --on-pen: #ffffff;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e1311; --sheet: #151b18; --wash: #1b2320; --rule: #29332e;
+    --ink: #e7ece9; --ink-2: #a7b2ac; --pen: #5cc49c; --flag: #f08a7e; --mark: #f2c230;
+    --board: #0b3326; --on-board: #e7ece9; --on-pen: #0a1410;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: var(--board); color: var(--on-board);
+}
+.bar h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: .01em; }
+.mark {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px;
+  background: var(--mark); color: #151a17; font-weight: 800;
+}
+.status { margin: 0 0 0 auto; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #9aa59f; }
+.status.good::before { background: #5cc49c; }
+.status.warn::before { background: var(--mark); }
+.status.bad::before { background: #f08a7e; }
+
+main { max-width: 34rem; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+#app { display: grid; gap: 16px; }
+#app[hidden], [hidden] { display: none !important; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 14px; }
+.notice h2 { margin: 0 0 6px; font-size: 18px; }
+.notice p { margin: 0; color: var(--ink-2); }
+.label { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+
+.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pad + .pad { margin-top: 10px; }
+.key {
+  height: 64px; border: 1px solid var(--rule); border-radius: 12px; background: var(--wash); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer; touch-action: manipulation;
+  transition: transform .08s ease, background-color .15s ease;
+}
+.key svg { width: 28px; height: 28px; fill: currentColor; }
+.key-main { background: var(--pen); color: var(--on-pen); border-color: var(--pen); }
+.key:active, .key.sent { transform: scale(.96); }
+.key.sent:not(.key-main) { background: var(--rule); }
+
+.ask textarea {
+  width: 100%; resize: vertical; min-height: 64px; padding: 12px; border-radius: 10px; font: inherit;
+  border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+}
+.row { display: flex; gap: 10px; margin-top: 10px; }
+.btn {
+  min-height: 48px; padding: 0 18px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer;
+  border: 1px solid transparent; touch-action: manipulation;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .55; }
+.btn-go { background: var(--pen); color: var(--on-pen); margin-left: auto; }
+.btn-quiet { background: var(--wash); color: var(--ink); border-color: var(--rule); }
+#talk { flex: 1; }
+#talk.live { background: var(--mark); color: #151a17; }
+.hint { margin: 8px 0 0; font-size: 14px; color: var(--ink-2); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--rule);
+  background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer;
+}
+
+.alerts, .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.alert {
+  display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px;
+  background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--mark);
+}
+.alert p { margin: 0; flex: 1; }
+.said { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 12px; }
+.said p { margin: 0; }
+.said .you { font-size: 14px; color: var(--ink-2); }
+.said .reply { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.said.failed { border-color: var(--flag); }
+.confirm { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 8px; }
+.confirm p { width: 100%; margin: 0 0 4px; font-weight: 600; }
+.confirm .btn-go { margin-left: 0; }
+
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

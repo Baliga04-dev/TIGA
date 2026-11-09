@@ -24,6 +24,7 @@ import assistant_api
 import bridge as bridge_mod
 import deals_api
 import marketing_api
+import phone
 import services
 import tts as tts_mod
 import ai
@@ -165,12 +166,16 @@ app.include_router(assistant_api.router)
 app.include_router(deals_api.router)
 app.include_router(deals_api.pricing_router)
 app.include_router(marketing_api.router)
+app.include_router(phone.router)
 
 
 @app.websocket("/ws/bridge")
 async def bridge_socket(ws: WebSocket):
     """The Tiga Bridge extension connects here; it must present the shared token from tiga/.env."""
     token = ws.query_params.get("token", "")
+    if not _from_this_pc(ws.client.host if ws.client else ""):
+        await ws.close(code=4403)
+        return
     if not config.BRIDGE_TOKEN or not hmac.compare_digest(token, config.BRIDGE_TOKEN):
         await ws.close(code=4401)
         return
@@ -204,10 +209,12 @@ def features() -> dict:
     return {"learn": config.LEARN_ENABLED}
 
 
-def _origin_allowed(origin: str) -> bool:
+def _origin_allowed(origin: str, request: Request) -> bool:
     parsed = urlparse(origin)
     if parsed.scheme in ("http", "https") and parsed.hostname in _LOCAL_HOSTS:
         return True
+    if origin.rstrip("/") == f"{request.url.scheme}://{request.headers.get('host', '')}":
+        return True   # Tiga's own page, such as the phone remote opened at the PC's Wi-Fi address
     return origin.rstrip("/") in config.ALLOWED_ORIGINS
 
 
@@ -216,8 +223,24 @@ async def refuse_cross_site_writes(request: Request, call_next):
     """A page on another site must not be able to trigger state-changing calls."""
     if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api/"):
         origin = request.headers.get("origin")
-        if origin is not None and not _origin_allowed(origin):
+        if origin is not None and not _origin_allowed(origin, request):
             return JSONResponse(status_code=403, content={"detail": "Cross-site request refused"})
+    return await call_next(request)
+
+
+def _from_this_pc(host: str) -> bool:
+    return config.HOST in _LOCAL_HOSTS or host in _LOCAL_HOSTS
+
+
+def _phone_route(path: str) -> bool:
+    return config.PHONE_ENABLED and (path == "/phone" or path.startswith(("/phone/", "/api/phone/")))
+
+
+@app.middleware("http")
+async def only_the_phone_from_the_network(request: Request, call_next):
+    """When Tiga listens on the Wi-Fi (the phone remote), other devices reach the phone's page and API and nothing else."""
+    if not _from_this_pc(request.client.host if request.client else "") and not _phone_route(request.url.path):
+        return JSONResponse(status_code=403, content={"detail": "Only the phone remote is reachable from other devices"})
     return await call_next(request)
 
 
@@ -403,4 +426,5 @@ async def github_sync():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host=config.HOST, port=config.PORT)
+    # proxy_headers off: the client address is the socket's, so no header can make a phone look like this PC.
+    uvicorn.run("main:app", host=config.HOST, port=config.PORT, proxy_headers=False)

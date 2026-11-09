@@ -36,7 +36,9 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 GITHUB_BRANCH = os.getenv("GITHUB_BRANCH", "main").strip()
 GITHUB_SYNC_INTERVAL_MINUTES = int(os.getenv("GITHUB_SYNC_INTERVAL_MINUTES", "1440"))
 
-HOST = os.getenv("HOST", "127.0.0.1")
+# The phone remote (phone.py): Tiga also listens on the home Wi-Fi, where only a paired phone gets anything.
+PHONE_ENABLED = os.getenv("TIGA_PHONE", "").strip().lower() in ("1", "on", "true", "yes")
+HOST = os.getenv("HOST", "").strip() or ("0.0.0.0" if PHONE_ENABLED else "127.0.0.1")
 PORT = int(os.getenv("PORT", "8000"))
 
 # Extra browser origins allowed to call state-changing API routes (comma separated).

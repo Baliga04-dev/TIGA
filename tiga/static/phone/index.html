@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tiga remote</title>
+<meta name="theme-color" content="#0F4D3A">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="/phone/manifest.webmanifest">
+<link rel="icon" href="/phone/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/phone/phone.css">
+</head>
+<body>
+<header class="bar">
+  <span class="mark" aria-hidden="true">T</span>
+  <h1>Tiga</h1>
+  <p id="status" class="status" role="status">Connecting…</p>
+</header>
+
+<main>
+  <section id="unpaired" class="card notice" hidden>
+    <h2>Pair this phone</h2>
+    <p>On your PC, open Tiga, go to Settings, and scan the QR code under "Phone remote" with this phone's camera.</p>
+  </section>
+
+  <div id="app" hidden>
+    <section aria-labelledby="alerts-title" id="alerts" hidden>
+      <h2 id="alerts-title" class="label">Needs you</h2>
+      <ul id="alert-list" class="alerts"></ul>
+    </section>
+
+    <section aria-labelledby="music-title" class="card">
+      <h2 id="music-title" class="label">Music and sound on the PC</h2>
+      <div class="pad" role="group" aria-label="Media">
+        <button class="key" data-press="previous" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg>
+        </button>
+        <button class="key key-main" data-press="play_pause" aria-label="Play or pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14l8-7zM14 5h2.5v14H14zm4.5 0H21v14h-2.5z"/></svg>
+        </button>
+        <button class="key" data-press="next" aria-label="Next track">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg>
+        </button>
+      </div>
+      <div class="pad" role="group" aria-label="Volume">
+        <button class="key" data-press="volume_down" aria-label="Volume down">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zm11 2h7v2h-7z"/></svg>
+        </button>
+        <button class="key" data-press="mute" aria-label="Mute or unmute">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zm13.6-1.4L15.2 9l2.6 3-2.6 3 1.4 1.4 2.6-3 2.6 3 1.4-1.4-2.6-3 2.6-3-1.4-1.4-2.6 3z"/></svg>
+        </button>
+        <button class="key" data-press="volume_up" aria-label="Volume up">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zm13 2h2V8h2v3h2v2h-2v3h-2v-3h-2z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <section aria-labelledby="ask-title" class="card">
+      <h2 id="ask-title" class="label">Tell Tiga</h2>
+      <form id="ask" class="ask">
+        <label for="text" class="sr">What should Tiga do?</label>
+        <textarea id="text" rows="2" maxlength="500" enterkeyhint="send" autocomplete="off"
+          placeholder="Play lo-fi on YouTube"></textarea>
+        <div class="row">
+          <button type="button" id="talk" class="btn btn-quiet" hidden>Hold to talk</button>
+          <button class="btn btn-go" id="send">Send</button>
+        </div>
+      </form>
+      <p class="hint" id="mic-hint">To speak, tap the microphone on your keyboard.</p>
+      <div class="chips" role="group" aria-label="Quick commands">
+        <button class="chip" data-say="Good morning">Morning briefing</button>
+        <button class="chip" data-say="Who is waiting on me?">Who's waiting on me?</button>
+        <button class="chip" data-say="What are my reminders?">My reminders</button>
+        <button class="chip" data-say="Tiga stop">Stop Tiga</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="said-title">
+      <h2 id="said-title" class="label">Replies</h2>
+      <ol id="log" class="log" aria-live="polite"></ol>
+      <p id="log-empty" class="hint">Nothing yet. Tiga's answers show here, newest first.</p>
+    </section>
+  </div>
+</main>
+<script src="/phone/phone.js"></script>
+</body>
+</html>

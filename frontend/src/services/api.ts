@@ -14,6 +14,7 @@ import type {
   FindLeadsResponse,
   OutreachItem,
   Batch,
+  PhonePairing,
   NewDraft,
   Scorecard,
   ReportRow,
@@ -354,6 +355,10 @@ export const api = {
   addContact: (data: Partial<Pick<Contact, 'name' | 'business' | 'category' | 'phone' | 'email' | 'area' | 'source' | 'source_detail' | 'note'>>) =>
     post<{ ok: true; contact: Contact }>('/marketing/contacts', data),
   deleteContact: (id: number) => request<{ ok: true }>(`/marketing/contacts/${id}`, { method: 'DELETE' }),
+
+  getPhonePairing: () => request<PhonePairing>('/settings/phone'),
+
+  newPhoneCode: () => post<PhonePairing>('/settings/phone/new-code'),
 
   erasePerson: (who: string) =>
     post<{ ok: true; erased: { contacts: number; mails: number; shops: number } }>('/marketing/erase', { who }),
