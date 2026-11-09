@@ -134,7 +134,7 @@ function EraseRequest({ onClose, onErased }: { onClose: () => void; onErased: (m
     <Modal title="Erase someone who asked" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         <p className="text-sm">Their contact, emails and shop listing are deleted. Tiga keeps only a scrambled copy of the
-          email or number, enough to never contact them or list them again, not enough to read it.</p>
+          email or number, used for nothing but never contacting them or listing them again.</p>
         {error && <Notice>{error}</Notice>}
         <Field label="Their email or phone, as they gave it" hint="Both work, separated by a comma.">{(id) => (
           <input id={id} className="input" value={who} onChange={(e) => setWho(e.target.value)} required minLength={3} />

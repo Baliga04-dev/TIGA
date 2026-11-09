@@ -163,7 +163,8 @@ class TransitionError(ValueError):
 
 
 def _hashed(address: str) -> str:
-    """How an erased person's address is kept: enough to recognise it, not to read it."""
+    """How an erased person's address is kept: enough to recognise it again. Not anonymous: a phone number's hash can be
+    found by trying every number, so it is kept only to honour the request, and the notice doesn't claim otherwise."""
     return "sha256:" + hashlib.sha256(address.encode()).hexdigest()
 
 
