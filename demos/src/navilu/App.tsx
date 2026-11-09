@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock, CoatHanger, MapPin, Needle, Ruler, Scissors, WhatsappLogo, X } from "@phosphor-icons/react";
 import credits from "../data/credits-boutique.json";
-import { PHONE, bengaluruNow, clock, niceDate, openDays, rupees, slotsFor } from "../shared/site";
+import { PHONE, bengaluruNow, clock, niceDate, openDays, slotsFor } from "../shared/site";
 import { useJson, type Loaded } from "../shared/useJson";
 import { Credits, DayChips, DemoBar, Field, LoadError, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
@@ -13,12 +13,11 @@ const OPEN = 10 * 60 + 30, CLOSE = 20 * 60 + 30;
 const MAX_TRIAL = 4;
 
 type Weave = { id: string; name: string };
-type Item = { id: string; weave: string; name: string; price: number; occasions: string[]; stock: number; pic?: string;
+type Item = { id: string; weave: string; name: string; occasions: string[]; stock: number; pic?: string;
   picAlt?: string; colours: [string, string, string]; desc: string; length: string; care: string };
 type Catalogue = { weaves: Weave[]; items: Item[] };
 
 const OCCASIONS = [["all", "Any occasion"], ["wedding", "Wedding"], ["festive", "Festival"], ["office", "Office"], ["daily", "Every day"]];
-const PRICES = [["all", "Any price"], ["low", "Under ₹3,000"], ["mid", "₹3,000 to ₹10,000"], ["high", "Over ₹10,000"]];
 
 export default function App() {
   const [catalogue, retry] = useJson<Catalogue>("navilu-catalogue.json");
@@ -180,20 +179,14 @@ function Shelf({ catalogue, retry, kept, toggle }:
   { catalogue: Loaded<Catalogue>; retry: () => void; kept: string[]; toggle: (id: string) => void }) {
   const [weave, setWeave] = useState("all");
   const [occasion, setOccasion] = useState("all");
-  const [price, setPrice] = useState("all");
-  const [sort, setSort] = useState("shelf");
   const [open, setOpen] = useState<Item | null>(null);
 
   const shown = useMemo(() => {
     if (catalogue.status !== "ok") return [];
-    const fit = catalogue.data.items.filter((i) => (weave === "all" || i.weave === weave)
-      && (occasion === "all" || i.occasions.includes(occasion))
-      && (price === "all" || (price === "low" ? i.price < 3000 : price === "mid" ? i.price >= 3000 && i.price <= 10000 : i.price > 10000)));
-    if (sort === "low") return [...fit].sort((a, b) => a.price - b.price);
-    if (sort === "high") return [...fit].sort((a, b) => b.price - a.price);
-    return fit;
-  }, [catalogue, weave, occasion, price, sort]);
-  const reset = () => { setWeave("all"); setOccasion("all"); setPrice("all"); };
+    return catalogue.data.items.filter((i) => (weave === "all" || i.weave === weave)
+      && (occasion === "all" || i.occasions.includes(occasion)));
+  }, [catalogue, weave, occasion]);
+  const reset = () => { setWeave("all"); setOccasion("all"); };
   const weaveName = (id: string) => catalogue.status === "ok" ? catalogue.data.weaves.find((w) => w.id === id)?.name ?? id : id;
 
   return (
@@ -221,19 +214,9 @@ function Shelf({ catalogue, retry, kept, toggle }:
               </button>
             ))}
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <select aria-label="Occasion" className="input" value={occasion} onChange={(e) => setOccasion(e.target.value)}>
-              {OCCASIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <select aria-label="Price" className="input" value={price} onChange={(e) => setPrice(e.target.value)}>
-              {PRICES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <select aria-label="Sort" className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="shelf">As they sit on the shelf</option>
-              <option value="low">Price, low to high</option>
-              <option value="high">Price, high to low</option>
-            </select>
-          </div>
+          <select aria-label="Occasion" className="input sm:max-w-xs" value={occasion} onChange={(e) => setOccasion(e.target.value)}>
+            {OCCASIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
         </div>
       )}
 
@@ -254,8 +237,7 @@ function Shelf({ catalogue, retry, kept, toggle }:
           <div>
             <p className="font-display text-2xl">Nothing on the shelf fits all of that.</p>
             <p className="mt-2 max-w-[56ch] text-soft">
-              Most wedding silks are over ₹10,000 and most cottons under ₹3,000. Widen the price or the occasion, or
-              ask us: the weavers take orders for colours we don't have.
+              Try another weave or occasion, or ask us: the weavers take orders for colours we don't have.
             </p>
             <button type="button" onClick={reset} className="btn-ink mt-5">Show every piece</button>
           </div>
@@ -277,10 +259,7 @@ function Shelf({ catalogue, retry, kept, toggle }:
                         <Picture item={item} className={`w-full ${wide ? "aspect-[4/5] lg:aspect-[8/5]" : "aspect-[4/5]"}`} />
                       </span>
                     </span>
-                    <span className="mt-3 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                      <span className="font-medium leading-snug group-hover:underline group-hover:underline-offset-4">{item.name}</span>
-                      <span className="shrink-0 font-semibold tabular-nums">{rupees(item.price)}</span>
-                    </span>
+                    <span className="mt-3 block font-medium leading-snug group-hover:underline group-hover:underline-offset-4">{item.name}</span>
                     <span className="mt-1 block text-sm text-soft">
                       {weaveName(item.weave)}, {item.stock === 0 ? "sold out" : item.stock === 1 ? "last one" : `${item.stock} in the shop`}
                     </span>
@@ -326,7 +305,6 @@ function ItemDialog({ item, onClose, kept, toggle, weaveName }:
               </button>
               <p className="pr-12 text-sm font-medium text-soft">{weaveName}, piece {item.id}</p>
               <h2 id="item-title" className="mt-2 pr-8 text-3xl leading-tight tracking-tight md:text-4xl">{item.name}</h2>
-              <p className="mt-4 text-2xl font-semibold tabular-nums">{rupees(item.price)}</p>
               <p className="mt-5 text-[17px] leading-relaxed">{item.desc}</p>
               <dl className="mt-6 divide-y divide-line border-y border-line text-[15px]">
                 <div className="grid grid-cols-[7rem_1fr] gap-4 py-3"><dt className="text-soft">Length</dt><dd>{item.length}</dd></div>
@@ -349,7 +327,7 @@ function ItemDialog({ item, onClose, kept, toggle, weaveName }:
         )}
       </dialog>
       <MessagePreview open={ask} onClose={() => setAsk(false)} title="Your question is ready" shop={SHOP}
-        message={item ? `Hello Navilu, I'm asking about piece ${item.id}, ${item.name} (${rupees(item.price)}). Is it available in another colour, and can you send a photo of the pallu?` : ""} />
+        message={item ? `Hello Navilu, I'm asking about piece ${item.id}, ${item.name}. Is it available in another colour, and can you send a photo of the pallu?` : ""} />
     </>
   );
 }
@@ -364,7 +342,6 @@ function TrialShelf({ items, remove }: { items: Item[]; remove: (id: string) => 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
   const times = slotsFor(day, OPEN, CLOSE - 60);
-  const total = items.reduce((n, i) => n + i.price, 0);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -376,7 +353,7 @@ function TrialShelf({ items, remove }: { items: Item[]; remove: (id: string) => 
     setErrors(next);
     if (!Object.keys(next).length) setPreview(true);
   };
-  const message = ["Hello Navilu, please keep these aside for a trial:", ...items.map((i) => `- ${i.id} ${i.name} (${rupees(i.price)})`),
+  const message = ["Hello Navilu, please keep these aside for a trial:", ...items.map((i) => `- ${i.id} ${i.name}`),
     "", `I'll come on ${niceDate(day)} at ${time === "" ? "" : clock(time)}.`, `${name.trim()}, ${phone.trim()}`].join("\n");
 
   return (
@@ -403,7 +380,7 @@ function TrialShelf({ items, remove }: { items: Item[]; remove: (id: string) => 
                     <Picture item={i} className="h-16 w-14 shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium leading-snug">{i.name}</p>
-                      <p className="text-sm tabular-nums text-soft">{i.id}, {rupees(i.price)}</p>
+                      <p className="text-sm tabular-nums text-soft">Piece {i.id}</p>
                     </div>
                     <button type="button" onClick={() => remove(i.id)} aria-label={`Take ${i.name} off the trial shelf`}
                       className="btn h-11 w-11 shrink-0 p-0 hover:bg-ink/5"><X size={18} aria-hidden /></button>
@@ -412,7 +389,7 @@ function TrialShelf({ items, remove }: { items: Item[]; remove: (id: string) => 
               </AnimatePresence>
             </ul>
           )}
-          {items.length > 0 && <p className="mt-3 text-[15px] tabular-nums text-soft">{items.length} of {MAX_TRIAL} kept, {rupees(total)} if you took them all</p>}
+          {items.length > 0 && <p className="mt-3 text-[15px] tabular-nums text-soft">{items.length} of {MAX_TRIAL} kept</p>}
           {errors.items && <p role="alert" className="mt-3 text-sm font-medium text-bad">{errors.items}</p>}
         </div>
         <form onSubmit={submit} noValidate className="min-w-0 space-y-5 self-start rounded-[2rem] bg-ground p-6 md:p-9">
@@ -446,8 +423,8 @@ function TrialShelf({ items, remove }: { items: Item[]; remove: (id: string) => 
 
 // ------------------------------------------------------------------------------------------ tailoring
 const STITCHING = [
-  ["Simple blouse", 650], ["Lined blouse", 950], ["Princess cut, with piping", 1450], ["Saree fall and pico", 180],
-  ["Kuchu tassels on the pallu", 350], ["Express, ready in 48 hours", 300],
+  ["Simple blouse", "5 days"], ["Lined blouse", "5 days"], ["Princess cut, with piping", "7 days"], ["Saree fall and pico", "2 days"],
+  ["Kuchu tassels on the pallu", "3 days"], ["Express, any blouse", "48 hours"],
 ] as const;
 const STEPS = [
   [Ruler, "Measure", "Twelve measurements, or bring a blouse that fits and we copy it."],
@@ -492,13 +469,13 @@ function Tailoring() {
         </ol>
         <div className="mt-16 grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
           <div>
-            <h3 className="font-display text-3xl">Stitching prices</h3>
+            <h3 className="font-display text-3xl">What we stitch, and how soon</h3>
             <table className="mt-5 w-full text-[15px]">
-              <caption className="sr-only">Stitching prices</caption>
+              <caption className="sr-only">Stitching, and how many days each takes</caption>
               <tbody className="divide-y divide-on-field/20 border-y border-on-field/20">
-                {STITCHING.map(([label, price]) => (
+                {STITCHING.map(([label, ready]) => (
                   <tr key={label}><th scope="row" className="py-3 text-left font-normal">{label}</th>
-                    <td className="py-3 text-right font-semibold tabular-nums">{label.startsWith("Express") ? "+" : ""}{rupees(price)}</td></tr>
+                    <td className="py-3 text-right font-semibold tabular-nums">{ready}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -511,7 +488,7 @@ function Tailoring() {
               {(a) => (
                 <select {...a} className="input" value={service} onChange={(e) => setService(e.target.value)}>
                   <option value="">Choose one</option>
-                  {STITCHING.slice(0, 5).map(([l, p]) => <option key={l} value={l}>{l}, {rupees(p)}</option>)}
+                  {STITCHING.slice(0, 5).map(([l]) => <option key={l} value={l}>{l}</option>)}
                   <option value="Alteration">Alteration of something you own</option>
                 </select>
               )}
@@ -629,7 +606,7 @@ function Footer() {
           </p>
         </div>
         <div className="text-ground/85">
-          <Credits credits={credits} note="Pieces, prices and the address are sample content for this demo. Pieces without a photo are drawn." />
+          <Credits credits={credits} note="Pieces and the address are sample content for this demo. Pieces without a photo are drawn." />
         </div>
       </div>
     </footer>

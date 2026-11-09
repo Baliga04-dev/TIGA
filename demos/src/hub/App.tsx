@@ -11,27 +11,27 @@ const DEMOS = [
     tries: ["Build an order and pick a pickup time", "Book a table for tonight", "See whether it's open right now"] },
   { slug: "navilu-boutique", name: "Navilu", kind: "Saree shop, Jayanagar",
     line: "A catalogue of handloom sarees with filters, and a trial shelf: keep four aside and come in to try them on.",
-    tries: ["Filter by weave, occasion and price", "Keep sarees aside for a trial", "Book a blouse fitting"] },
+    tries: ["Filter by weave and occasion", "Keep sarees aside for a trial", "Book a blouse fitting"] },
   { slug: "little-banyan", name: "Little Banyan", kind: "Preschool and daycare, HSR Layout",
-    line: "Parents enter a birthday and a wall chart shows the class for June 2027, the hours and the fee.",
+    line: "Parents enter a birthday and a wall chart shows the class for June 2027 and its hours.",
     tries: ["Find a child's class from the birthday", "Read a day at the school, hour by hour", "Ask for a visit"] },
   { slug: "mallige-salon", name: "Mallige", kind: "Unisex salon, Indiranagar",
-    line: "Prices with how long each takes, and booking that only offers times the stylist is free for the whole visit.",
+    line: "Every service with how long it takes, and booking that only offers times the stylist is free for the whole visit.",
     tries: ["Add services and watch the time add up", "Pick a stylist and a free slot", "Request it on WhatsApp"] },
   { slug: "tulasi-clinic", name: "Tulasi Family Clinic", kind: "Family and dental clinic, Banashankari",
-    line: "Doctors, timings and fees in plain sight, and an appointment request that fills in an OP slip with a token number.",
+    line: "Doctors and timings in plain sight, and an appointment request that fills in an OP slip with a token number.",
     tries: ["See who's in right now", "Pick a doctor and a free time", "Watch the OP slip fill in"] },
   { slug: "sampige-residency", name: "Sampige Residency", kind: "Small hotel, Basavanagudi",
-    line: "Prices for any dates, with weekend rates, extra beds and GST worked out, and rooms that are full say so.",
-    tries: ["Pick dates and guests for a live price", "Request a room on WhatsApp", "Walk the neighbourhood list"] },
+    line: "Pick dates and a group size and see which rooms are free every night, with extra beds counted; rooms that are full say so.",
+    tries: ["Pick dates and guests to see free rooms", "Request a room on WhatsApp", "Walk the neighbourhood list"] },
 ];
 
 const INCLUDED = [
   "Your own domain, registered in your name, with the logins handed to you",
   "Orders, bookings and enquiries straight to the WhatsApp you already use",
-  "No commission on orders and no auto-debit: one price, paid when the site is live",
+  "No commission on your orders and no auto-debit",
   "Fast on a basic Android phone and slow mobile data",
-  "Your real photos, prices and hours, in English and Kannada if you want both",
+  "Your real photos and hours, in English and Kannada if you want both",
   "Linked from your Google Business Profile, so people searching for you find it",
 ];
 
@@ -48,7 +48,7 @@ export default function App() {
             <h1 className="max-w-[14ch] text-5xl font-semibold leading-[0.98] tracking-tighter md:text-7xl">Six shop websites you can try</h1>
             <p className="mt-7 max-w-[54ch] text-lg leading-relaxed text-soft md:text-xl">
               Each is a complete website for one kind of Bengaluru shop, built around the thing its customers do most.
-              Yours would carry your shop's name, photos, prices and WhatsApp number.
+              Yours would carry your shop's name, photos and WhatsApp number.
             </p>
           </motion.div>
           <motion.div className="flex flex-wrap gap-3 lg:justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...spring, delay: 0.15 }}>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarBlank, Clock, MagnifyingGlass, MapPin, Minus, Pepper, Plus, Users, WhatsappLogo } from "@phosphor-icons/react";
 import credits from "../data/credits-restaurant.json";
-import { PHONE, addDays, bengaluruNow, clock, niceDate, rupees } from "../shared/site";
+import { PHONE, addDays, bengaluruNow, clock, niceDate } from "../shared/site";
 import { useJson, type Loaded } from "../shared/useJson";
 import { Credits, DemoBar, Field, LoadError, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
@@ -10,7 +10,7 @@ const SHOP = "Malnad Table";
 const Pic = makePic("restaurant", credits);
 
 type Category = { id: string; name: string; note: string };
-type Dish = { id: string; category: string; name: string; local: string; desc: string; price: number; veg: boolean;
+type Dish = { id: string; category: string; name: string; local: string; desc: string; veg: boolean;
   spice: number; pic?: string };
 type Menu = { categories: Category[]; dishes: Dish[] };
 
@@ -66,7 +66,6 @@ export default function App() {
   const [leaf, setLeaf] = useState<Record<string, number>>({});
   const dishes = menu.status === "ok" ? menu.data.dishes : [];
   const lines = dishes.filter((d) => leaf[d.id]).map((d) => ({ dish: d, qty: leaf[d.id] }));
-  const total = lines.reduce((n, l) => n + l.qty * l.dish.price, 0);
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const change = (id: string, by: number) =>
     setLeaf((cur) => {
@@ -92,10 +91,10 @@ export default function App() {
               </p>
               <MenuList menu={menu} retry={retry} leaf={leaf} change={change} />
             </div>
-            <Leaf lines={lines} total={total} count={count} change={change} clear={() => setLeaf({})} />
+            <Leaf lines={lines} count={count} change={change} clear={() => setLeaf({})} />
           </div>
         </section>
-        <Direct total={total} />
+        <Direct lines={lines} />
         <Kitchen />
         <Booking />
         <Visit />
@@ -104,7 +103,7 @@ export default function App() {
       {count > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-ground/95 backdrop-blur lg:hidden">
           <div className="page flex items-center justify-between gap-4 py-3">
-            <p className="font-semibold tabular-nums">{count} on your leaf, {rupees(total)}</p>
+            <p className="font-semibold tabular-nums">{count} on your leaf</p>
             <a href="#leaf" className="btn-accent">Review order</a>
           </div>
         </div>
@@ -175,7 +174,7 @@ function Hero() {
         </div>
         <dl className="mt-12 grid max-w-lg grid-cols-2 gap-x-8 gap-y-5 border-t border-line pt-6 text-[15px] sm:grid-cols-3">
           <div><dt className="text-soft">Pickup</dt><dd className="font-semibold">Ready in 25 minutes</dd></div>
-          <div><dt className="text-soft">Prices</dt><dd className="font-semibold">Same as the counter</dd></div>
+          <div><dt className="text-soft">Pay</dt><dd className="font-semibold">At the counter</dd></div>
           <div><dt className="text-soft">Closed</dt><dd className="font-semibold">Mondays</dd></div>
         </dl>
       </motion.div>
@@ -187,7 +186,7 @@ function Hero() {
         <figure className="absolute -bottom-8 left-4 w-[42%] max-w-[230px] rotate-[-3deg] rounded-[1.4rem] bg-ground p-2 shadow-[0_18px_40px_-18px_rgb(var(--ink)/0.5)] md:-left-8">
           <Pic name="akki-rotti" sizes="230px" alt="Akki rotti with butter and chutney on a steel plate"
             className="aspect-square w-full rounded-[1rem] object-cover" />
-          <figcaption className="px-1.5 pb-1 pt-2 text-sm font-medium">Akki rotti, {rupees(110)}</figcaption>
+          <figcaption className="px-1.5 pb-1 pt-2 text-sm font-medium">Akki rotti, butter and chutney</figcaption>
         </figure>
       </motion.div>
     </section>
@@ -317,8 +316,7 @@ function MenuList({ menu, retry, leaf, change }:
                         <div className="mt-1.5"><Spice n={d.spice} /></div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-                      <p className="text-lg font-semibold tabular-nums">{rupees(d.price)}</p>
+                    <div className="flex items-center justify-end sm:items-start">
                       <Stepper dish={d} qty={leaf[d.id] ?? 0} change={change} />
                     </div>
                   </motion.li>
@@ -348,8 +346,8 @@ function LeafArt() {
 
 type Line = { dish: Dish; qty: number };
 
-function Leaf({ lines, total, count, change, clear }:
-  { lines: Line[]; total: number; count: number; change: (id: string, by: number) => void; clear: () => void }) {
+function Leaf({ lines, count, change, clear }:
+  { lines: Line[]; count: number; change: (id: string, by: number) => void; clear: () => void }) {
   const slots = useMemo(() => pickupSlots(), []);
   const [slot, setSlot] = useState("");
   const [name, setName] = useState("");
@@ -379,9 +377,9 @@ function Leaf({ lines, total, count, change, clear }:
     `Phone: ${phone.trim()}`,
     `Pickup: ${chosen?.label ?? ""}`,
     "",
-    ...lines.map((l) => `${l.qty} x ${l.dish.name}: ${rupees(l.qty * l.dish.price)}`),
+    ...lines.map((l) => `${l.qty} x ${l.dish.name}`),
     "",
-    `Total: ${rupees(total)}, paid at the counter`,
+    "Paying at the counter",
   ].join("\n");
 
   return (
@@ -394,7 +392,7 @@ function Leaf({ lines, total, count, change, clear }:
             {count > 0 && <button type="button" onClick={clear} className="text-sm underline underline-offset-4">Clear</button>}
           </div>
           <p className="mt-0.5 text-sm text-on-field/85" aria-live="polite">
-            {count ? `${count} ${count === 1 ? "dish" : "dishes"}, ${rupees(total)}` : "Nothing served yet"}
+            {count ? `${count} ${count === 1 ? "dish" : "dishes"}` : "Nothing served yet"}
           </p>
           {count === 0 ? (
             <div className="mt-8 max-w-[22ch] text-on-field/90">
@@ -438,7 +436,7 @@ function Leaf({ lines, total, count, change, clear }:
           </Field>
         </div>
         <button type="submit" className="btn-accent w-full text-lg">
-          <WhatsappLogo size={20} weight="bold" aria-hidden /> Send the leaf on WhatsApp{count ? `, ${rupees(total)}` : ""}
+          <WhatsappLogo size={20} weight="bold" aria-hidden /> Send the leaf on WhatsApp
         </button>
       </form>
       <MessagePreview open={preview} onClose={() => setPreview(false)} title="Your order is ready to send" message={message} shop={SHOP} />
@@ -447,36 +445,35 @@ function Leaf({ lines, total, count, change, clear }:
 }
 
 // -------------------------------------------------------------------------------------------- direct
-function Direct({ total }: { total: number }) {
-  const bill = total || 500;
-  const cut = Math.round(bill * 0.25);
+function Direct({ lines }: { lines: Line[] }) {
+  const shown = lines.length ? lines.map((l) => [l.qty, l.dish.name] as const)
+    : ([[2, "Neer dosa"], [1, "Kori rotti"], [1, "Filter coffee"]] as const);
   return (
     <section aria-labelledby="direct-title" className="bg-field text-on-field">
       <div className="page grid items-center gap-12 py-20 md:py-28 lg:grid-cols-[1.2fr_1fr]">
         <div>
-          <h2 id="direct-title" className="text-4xl font-bold tracking-tight md:text-5xl">Counter prices, every time</h2>
+          <h2 id="direct-title" className="text-4xl font-bold tracking-tight md:text-5xl">Straight to the kitchen</h2>
           <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-on-field/90">
-            Delivery apps take up to a quarter of every bill from the kitchen, so dishes there cost more. Order here and
-            collect it yourself: you pay the counter price, and all of it stays in the kitchen that cooked it.
+            Your leaf goes to the kitchen as one WhatsApp message, not through a delivery app. The cooks see it the moment
+            you send it, start on it in time for your pickup, and it all stays with the kitchen that cooked it.
           </p>
           <p className="mt-4 max-w-[52ch] text-on-field/80">
-            Prefer the apps? We're on them too, at their prices. Regulars mostly order here.
+            Prefer the apps? We're on them too. Regulars mostly order here.
           </p>
         </div>
         <figure className="mx-auto w-full max-w-sm rotate-[1.5deg] rounded-[0.5rem] bg-ground px-7 py-8 text-ink shadow-[0_30px_60px_-30px_rgb(0_0_0/0.6)]">
           <figcaption className="text-center">
             <span className="block text-lg font-bold">{SHOP}</span>
-            <span className="block text-sm text-soft">{total ? "Your leaf, two ways" : "A ₹500 order, two ways"}</span>
+            <span className="block text-sm text-soft">{lines.length ? "Your leaf, as the kitchen sees it" : "An order, as the kitchen sees it"}</span>
           </figcaption>
-          <dl className="mt-6 space-y-2 border-t border-dashed border-ink/30 pt-5 text-[15px] tabular-nums">
-            <div className="flex justify-between"><dt>Food</dt><dd>{rupees(bill)}</dd></div>
-            <div className="flex justify-between text-soft"><dt>App commission (25%)</dt><dd>-{rupees(cut)}</dd></div>
-            <div className="flex justify-between font-semibold"><dt>Kitchen keeps, app order</dt><dd>{rupees(bill - cut)}</dd></div>
-          </dl>
-          <dl className="mt-5 space-y-2 border-t border-dashed border-ink/30 pt-5 text-[15px] tabular-nums">
-            <div className="flex justify-between"><dt>Food</dt><dd>{rupees(bill)}</dd></div>
-            <div className="flex justify-between text-soft"><dt>Commission</dt><dd>{rupees(0)}</dd></div>
-            <div className="flex justify-between text-lg font-bold"><dt>Kitchen keeps, ordered here</dt><dd>{rupees(bill)}</dd></div>
+          <ul className="mt-6 space-y-2 border-t border-dashed border-ink/30 pt-5 text-[15px]">
+            {shown.map(([qty, name]) => (
+              <li key={name} className="flex justify-between gap-4"><span>{name}</span><span className="tabular-nums">x{qty}</span></li>
+            ))}
+          </ul>
+          <dl className="mt-5 space-y-2 border-t border-dashed border-ink/30 pt-5 text-[15px]">
+            <div className="flex justify-between"><dt>Pickup</dt><dd>In 25 minutes</dd></div>
+            <div className="flex justify-between font-semibold"><dt>Paying</dt><dd>At the counter</dd></div>
           </dl>
         </figure>
       </div>
@@ -704,7 +701,7 @@ function Footer() {
           </p>
         </div>
         <div className="space-y-5 text-ground/85">
-          <Credits credits={credits} note="Dishes, prices and the address are sample content for this demo." />
+          <Credits credits={credits} note="Dishes and the address are sample content for this demo." />
         </div>
       </div>
     </footer>

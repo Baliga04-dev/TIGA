@@ -53,20 +53,21 @@ const done = (section, text) => { const p = section.querySelector('.shop-done');
 
 // Bakery: build an order and show the message the shop would receive.
 const bakery = document.getElementById('screen-bakery');
-const total = () => [...bakery.querySelectorAll('li')].reduce((s, li) => s + Number(li.dataset.price) * Number(li.querySelector('output').value || li.querySelector('output').textContent), 0);
+const count = () => [...bakery.querySelectorAll('output')].reduce((s, o) => s + Number(o.textContent), 0);
 bakery.addEventListener('click', (e) => {
   const b = e.target.closest('[data-step]');
   if (!b) return;
   const out = b.parentElement.querySelector('output');
   out.textContent = String(Math.max(0, Math.min(20, Number(out.textContent) + Number(b.dataset.step))));
-  bakery.querySelector('[data-total]').textContent = `₹${total()}`;
+  const n = count();
+  bakery.querySelector('[data-count]').textContent = n ? `${n} ${n === 1 ? 'item' : 'items'}` : 'Nothing yet';
   bakery.querySelector('.shop-done').hidden = true;
 });
 bakery.querySelector('[data-order]').addEventListener('click', () => {
   const lines = [...bakery.querySelectorAll('li')].filter((li) => Number(li.querySelector('output').textContent) > 0)
     .map((li) => `${li.querySelector('output').textContent} ${li.dataset.item}`);
   done(bakery, lines.length
-    ? `Order sent to the bakery's WhatsApp: ${lines.join(', ')}. Total ₹${total()}. (Demo: nothing was sent.)`
+    ? `Order sent to the bakery's WhatsApp: ${lines.join(', ')}. Pay at the counter. (Demo: nothing was sent.)`
     : 'Add something first: tap + next to an item.');
 });
 

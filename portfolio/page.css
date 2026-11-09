@@ -947,7 +947,7 @@ body{ font-size:16px; }
 .shop-head b{ font:600 1.3rem/1.1 'Wordmark','Onest',sans-serif; letter-spacing:.01em; text-transform:uppercase; }
 .shop-head span{ font-size:.8125rem; opacity:.85; }
 .menu{ list-style:none; margin:0; padding:0; }
-.menu li{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed rgba(59,31,14,.35); }
+.menu li{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed rgba(59,31,14,.35); }
 .qty{ display:inline-flex; align-items:center; gap:4px; }
 .qty button{ width:32px; height:32px; border-radius:50%; background:#3B1F0E; color:#FFF8EA; font-size:1.1rem; display:grid; place-items:center; }
 .qty button:active{ transform:scale(.92); }
