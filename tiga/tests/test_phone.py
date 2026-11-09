@@ -113,3 +113,12 @@ def test_the_browser_extension_socket_is_for_this_pc_only(phone, monkeypatch):
     with pytest.raises(WebSocketDisconnect):
         with phone.websocket_connect("/ws/bridge?token=secret") as ws:
             ws.receive_json()
+
+
+@pytest.mark.parametrize("host, phone, expected", [
+    ("", False, "127.0.0.1"), ("127.0.0.1", False, "127.0.0.1"),
+    ("", True, "0.0.0.0"), ("127.0.0.1", True, "0.0.0.0"),       # an old .env pinning loopback can't block the phone
+    ("192.168.0.102", True, "192.168.0.102"), ("0.0.0.0", False, "0.0.0.0"),
+])
+def test_where_tiga_listens(host, phone, expected):
+    assert config.listen_host(host, phone) == expected

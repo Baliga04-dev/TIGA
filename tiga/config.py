@@ -38,7 +38,18 @@ GITHUB_SYNC_INTERVAL_MINUTES = int(os.getenv("GITHUB_SYNC_INTERVAL_MINUTES", "14
 
 # The phone remote (phone.py): Tiga also listens on the home Wi-Fi, where only a paired phone gets anything.
 PHONE_ENABLED = os.getenv("TIGA_PHONE", "").strip().lower() in ("1", "on", "true", "yes")
-HOST = os.getenv("HOST", "").strip() or ("0.0.0.0" if PHONE_ENABLED else "127.0.0.1")
+
+
+def listen_host(host: str, phone: bool) -> str:
+    """Where the server listens: this PC only, unless the phone remote is on (then every interface; main.py lets
+    other devices reach only the phone's routes). An explicit non-loopback HOST is kept as it is."""
+    host = host.strip()
+    if phone and host in ("", "127.0.0.1", "localhost", "::1"):
+        return "0.0.0.0"
+    return host or "127.0.0.1"
+
+
+HOST = listen_host(os.getenv("HOST", ""), PHONE_ENABLED)
 PORT = int(os.getenv("PORT", "8000"))
 
 # Extra browser origins allowed to call state-changing API routes (comma separated).
