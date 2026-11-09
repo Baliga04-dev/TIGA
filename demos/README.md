@@ -9,8 +9,8 @@ https://baliga04-dev.github.io/demos/ (linked from the portfolio):
 | `navilu-boutique/` | Saree shop, Jayanagar | Filter the catalogue, keep up to four sarees aside for a trial, book a blouse fitting |
 | `little-banyan/` | Preschool and daycare, HSR Layout | Find a child's class for June 2027 from the birthday, read the day, ask for a visit |
 | `mallige-salon/` | Unisex salon, Indiranagar | Add services and see the time add up, book a slot the stylist is free for |
-| `tulasi-clinic/` | Family and dental clinic, Banashankari | See who's in now, fees up front, request an appointment that fills an OP slip (informational only, per medical council rules) |
-| `sampige-residency/` | Hotel, Basavanagudi | Live prices for any dates (weekend rates, extra bed, GST), request a room |
+| `tulasi-clinic/` | Family and dental clinic, Banashankari | See who's in now, what each doctor does, request an appointment that fills an OP slip (informational only, per medical council rules) |
+| `sampige-residency/` | Hotel, Basavanagudi | Rooms free for any dates and group size (extra beds counted), request a room |
 
 Every order, booking or enquiry ends in a preview of the WhatsApp message the shop would receive; nothing is
 sent. "Get one for your shop" goes to Adithya's WhatsApp (`OWNER_WA` in `src/shared/site.ts`).
@@ -25,7 +25,8 @@ npm run build      # dist/, built for the /demos/ path
 
 Vite multi-page app: React 18, TypeScript, Tailwind 3, Framer Motion, Phosphor icons, fonts from Fontsource.
 Each site has `src/<site>/` (App, its own colours and fonts in `site.css`); shared pieces are in `src/shared/`.
-Menus, catalogue and room rates are JSON in `public/data/` and load with real loading and error states.
+Menus, the catalogue, rooms and services are JSON in `public/data/` and load with real loading and error states.
+The demos show no prices: every shop sets its own, so a prospect is never put off by someone else's numbers.
 
 ## Photos
 

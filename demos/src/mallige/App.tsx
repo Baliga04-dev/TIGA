@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock, MapPin, Plus, Check, Scissors, Sparkle, Drop, WhatsappLogo, X } from "@phosphor-icons/react";
 import credits from "../data/credits-salon.json";
-import { PHONE, bengaluruNow, clock, niceDate, openDays, rupees } from "../shared/site";
+import { PHONE, bengaluruNow, clock, niceDate, openDays } from "../shared/site";
 import { useJson, type Loaded } from "../shared/useJson";
 import { Credits, DayChips, DemoBar, Field, LoadError, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
@@ -13,7 +13,7 @@ const CLOSED_DAY = 2; // Tuesday
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 type Group = { id: string; name: string };
-type Service = { id: string; group: string; name: string; minutes: number; price: number; note: string };
+type Service = { id: string; group: string; name: string; minutes: number; note: string };
 type Stylist = { id: string; name: string; years: number; known_for: string; does: string[]; off: number[] };
 type Menu = { groups: Group[]; services: Service[]; stylists: Stylist[] };
 
@@ -69,7 +69,7 @@ export default function App() {
       <Header />
       <main>
         <Hero />
-        <Prices menu={menu} retry={retry} chosen={chosen} toggle={toggle} picked={picked} />
+        <Services menu={menu} retry={retry} chosen={chosen} toggle={toggle} picked={picked} />
         <Booking menu={menu} picked={picked} remove={toggle} />
         <Stylists menu={menu} />
         <Care />
@@ -99,12 +99,12 @@ function Header() {
         </a>
         <nav aria-label="Sections" className="hidden md:block">
           <ul className="flex items-center gap-7 text-[15px]">
-            {[["#prices", "Prices"], ["#book", "Book"], ["#stylists", "Stylists"], ["#bridal", "Bridal"], ["#visit", "Visit"]].map(([h, l]) => (
+            {[["#services", "Services"], ["#book", "Book"], ["#stylists", "Stylists"], ["#bridal", "Bridal"], ["#visit", "Visit"]].map(([h, l]) => (
               <li key={h}><a href={h} className="underline-offset-8 hover:underline">{l}</a></li>
             ))}
           </ul>
         </nav>
-        <a href="#prices" className="btn-accent min-h-[40px] shrink-0 whitespace-nowrap px-4 py-1.5">Book a slot</a>
+        <a href="#services" className="btn-accent min-h-[40px] shrink-0 whitespace-nowrap px-4 py-1.5">Book a slot</a>
       </div>
     </header>
   );
@@ -121,7 +121,7 @@ function Hero() {
           want, see how long it takes, and take a time your stylist is actually free.
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
-          <Magnetic><a href="#prices" className="btn-accent px-7 text-lg">Choose your services</a></Magnetic>
+          <Magnetic><a href="#services" className="btn-accent px-7 text-lg">Choose your services</a></Magnetic>
           <a href="#stylists" className="btn-line px-6 text-lg">Meet the stylists</a>
         </div>
       </motion.div>
@@ -139,27 +139,26 @@ function Hero() {
   );
 }
 
-// ------------------------------------------------------------------------------------------- prices
-function Prices({ menu, retry, chosen, toggle, picked }:
+// ----------------------------------------------------------------------------------------- services
+function Services({ menu, retry, chosen, toggle, picked }:
   { menu: Loaded<Menu>; retry: () => void; chosen: string[]; toggle: (id: string) => void; picked: Service[] }) {
   const [group, setGroup] = useState("women");
   const minutes = picked.reduce((n, s) => n + s.minutes, 0);
-  const total = picked.reduce((n, s) => n + s.price, 0);
   return (
-    <section id="prices" aria-labelledby="prices-title" className="bg-tint">
+    <section id="services" aria-labelledby="services-title" className="bg-tint">
       <div className="page grid gap-10 py-20 md:py-24 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14">
         <div>
-          <h2 id="prices-title" className="text-4xl md:text-6xl">Prices, and how long each takes</h2>
-          <p className="mt-4 max-w-[56ch] text-lg text-soft">Add what you want; the time adds up as you go. Prices include GST.</p>
+          <h2 id="services-title" className="text-4xl md:text-6xl">Services, and how long each takes</h2>
+          <p className="mt-4 max-w-[56ch] text-lg text-soft">Add what you want; the time adds up as you go.</p>
           {menu.status === "loading" && (
-            <div className="mt-8 space-y-3" aria-busy="true" aria-label="Loading prices">
+            <div className="mt-8 space-y-3" aria-busy="true" aria-label="Loading services">
               {Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-16" />)}
             </div>
           )}
-          {menu.status === "error" && <div className="mt-8"><LoadError what="price list" error={menu.error} retry={retry} /></div>}
+          {menu.status === "error" && <div className="mt-8"><LoadError what="service list" error={menu.error} retry={retry} /></div>}
           {menu.status === "ok" && (
             <>
-              <div className="mt-8 flex gap-2" role="group" aria-label="Show prices for">
+              <div className="mt-8 flex gap-2" role="group" aria-label="Show services for">
                 {menu.data.groups.map((g) => (
                   <button key={g.id} type="button" aria-pressed={group === g.id} onClick={() => setGroup(g.id)}
                     className={`btn min-h-[40px] px-5 py-1.5 ${group === g.id ? "bg-field text-on-field" : "bg-ground hover:bg-line/60"}`}>{g.name}</button>
@@ -175,14 +174,12 @@ function Prices({ menu, retry, chosen, toggle, picked }:
                         {s.note && <p className="text-sm text-soft">{s.note}</p>}
                       </div>
                       <div className="flex items-center gap-4">
-                        <p className="hidden text-right text-sm tabular-nums text-soft sm:block">{s.minutes} min</p>
-                        <p className="w-16 text-right font-semibold tabular-nums">{rupees(s.price)}</p>
+                        <p className="w-16 text-right text-sm tabular-nums text-soft">{s.minutes} min</p>
                         <button type="button" aria-pressed={on} onClick={() => toggle(s.id)} aria-label={`${on ? "Remove" : "Add"} ${s.name}`}
                           className={`btn h-10 min-h-0 w-10 p-0 ${on ? "bg-accent text-on-accent" : "border border-line hover:border-ink/40"}`}>
                           {on ? <Check size={18} weight="bold" aria-hidden /> : <Plus size={18} weight="bold" aria-hidden />}
                         </button>
                       </div>
-                      <p className="col-span-2 text-sm tabular-nums text-soft sm:hidden">{s.minutes} min</p>
                     </motion.li>
                   );
                 })}
@@ -208,7 +205,7 @@ function Prices({ menu, retry, chosen, toggle, picked }:
                 </AnimatePresence>
               </ul>
               <p className="mt-4 border-t border-on-field/20 pt-4 text-lg" aria-live="polite">
-                <span className="font-semibold tabular-nums">{rupees(total)}</span>, about <span className="tabular-nums">{minutes}</span> minutes in the chair
+                About <span className="font-semibold tabular-nums">{minutes}</span> minutes in the chair
               </p>
               <a href="#book" className="btn-accent mt-5 w-full">Choose a time</a>
             </>
@@ -262,7 +259,6 @@ function Booking({ menu, picked, remove }: { menu: Loaded<Menu>; picked: Service
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
   const minutes = picked.reduce((n, s) => n + s.minutes, 0);
-  const total = picked.reduce((n, s) => n + s.price, 0);
   const stylists = menu.status === "ok" ? menu.data.stylists : [];
   const groups = new Set(picked.map((s) => s.group));
   const able = stylists.filter((st) => [...groups].every((g) => st.does.includes(g)));
@@ -279,7 +275,7 @@ function Booking({ menu, picked, remove }: { menu: Loaded<Menu>; picked: Service
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const next: Record<string, string> = {};
-    if (!picked.length) next.services = "Add at least one service from the price list.";
+    if (!picked.length) next.services = "Add at least one service from the list.";
     if (!time) next.time = "Pick a start time.";
     if (name.trim().length < 2) next.name = "Write your name.";
     if (!PHONE.test(phone.trim())) next.phone = "Write a 10-digit Indian mobile number, like 99001 73524.";
@@ -287,7 +283,7 @@ function Booking({ menu, picked, remove }: { menu: Loaded<Menu>; picked: Service
     if (!Object.keys(next).length) setPreview(true);
   };
   const message = time ? [`Booking request, ${SHOP}`, `${niceDate(day)}, ${clock(time.start)} to ${clock(time.start + minutes)} with ${nameOf(time.stylist)}`,
-    ...picked.map((s) => `- ${s.name} (${s.minutes} min, ${rupees(s.price)})`), `Total ${rupees(total)}`, `${name.trim()}, ${phone.trim()}`].join("\n") : "";
+    ...picked.map((s) => `- ${s.name} (${s.minutes} min)`), `${name.trim()}, ${phone.trim()}`].join("\n") : "";
 
   return (
     <section id="book" aria-labelledby="book-title" className="page py-20 md:py-24">
@@ -299,7 +295,7 @@ function Booking({ menu, picked, remove }: { menu: Loaded<Menu>; picked: Service
             waits and nobody rushes.
           </p>
           {picked.length === 0 ? (
-            <p className="mt-6 rounded-2xl border border-dashed border-line p-5 text-[15px]">Choose services in <a href="#prices" className="underline underline-offset-4">the price list</a> first.</p>
+            <p className="mt-6 rounded-2xl border border-dashed border-line p-5 text-[15px]">Choose services in <a href="#services" className="underline underline-offset-4">the service list</a> first.</p>
           ) : (
             <>
               <ul className="mt-6 flex flex-wrap gap-2">
@@ -356,7 +352,7 @@ function Booking({ menu, picked, remove }: { menu: Loaded<Menu>; picked: Service
               })}
             {errors.time && <p role="alert" className="mt-2 text-sm font-medium text-bad">{errors.time}</p>}
           </fieldset>
-          {time && <p className="text-[15px]" aria-live="polite">{niceDate(day)}, {clock(time.start)} to {clock(time.start + minutes)} with {nameOf(time.stylist)}. {rupees(total)}.</p>}
+          {time && <p className="text-[15px]" aria-live="polite">{niceDate(day)}, {clock(time.start)} to {clock(time.start + minutes)} with {nameOf(time.stylist)}.</p>}
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Name" error={errors.name}>{(a) => <input {...a} className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />}</Field>
             <Field label="Mobile number" error={errors.phone}>{(a) => <input {...a} className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" />}</Field>
@@ -438,9 +434,9 @@ function Bridal() {
             Mysore, Coorg or Nivi. The jasmine comes fresh from the flower sellers that morning.
           </p>
           <ul className="mt-8 divide-y divide-line border-y border-line text-[15px]">
-            {[["Bridal trial", rupees(2500), "adjusted against the package"], ["Mehndi, both hands", rupees(3500), "feet extra"],
-              ["The wedding day: hair, make-up, draping", "from " + rupees(12000), "quoted after the trial"]].map(([a, b, c]) => (
-              <li key={a} className="grid grid-cols-[1fr_auto] gap-x-4 py-3"><span>{a}<span className="block text-sm text-soft">{c}</span></span><span className="font-semibold tabular-nums">{b}</span></li>
+            {[["Bridal trial", "Three weeks before, to settle the look"], ["Mehndi, both hands", "The evening before; feet too, if you like"],
+              ["The wedding day: hair, make-up, draping", "Planned with you at the trial"]].map(([a, c]) => (
+              <li key={a} className="py-3">{a}<span className="block text-sm text-soft">{c}</span></li>
             ))}
           </ul>
         </div>
@@ -473,12 +469,12 @@ function Footer() {
         <div>
           <p className="flex items-center gap-3 font-display text-6xl italic md:text-8xl"><Flower className="h-12 w-12 text-ground md:h-16 md:w-16" /> Mallige</p>
           <p className="mt-4 max-w-[52ch] text-ground/80">
-            A demo salon website by Adithya Baliga, Bengaluru: prices with times, and bookings that only offer slots the
+            A demo salon website by Adithya Baliga, Bengaluru: services with times, and bookings that only offer slots the
             stylist is free for, arriving on the salon's WhatsApp. No booking app, no commission.
           </p>
         </div>
         <div className="text-ground/85">
-          <Credits credits={credits} note="Services, prices, stylists and the address are sample content for this demo. The diary is made up." />
+          <Credits credits={credits} note="Services, stylists and the address are sample content for this demo. The diary is made up." />
         </div>
       </div>
     </footer>

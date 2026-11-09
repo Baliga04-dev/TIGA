@@ -28,7 +28,7 @@ export function makePic(site: string, credits: Credit[]) {
 /** The strip on top of every demo: what this is, and the one way to get one. */
 export function DemoBar({ shop }: { shop: string }) {
   return (
-    <div className="bg-ink text-ground">
+    <aside aria-label="About this demo" className="bg-ink text-ground">
       <div className="page flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5 py-2 text-sm">
         <p className="opacity-90">
           Demo website by {OWNER_NAME}. {shop} is a made-up shop, and nothing on this page is sent anywhere.
@@ -44,7 +44,7 @@ export function DemoBar({ shop }: { shop: string }) {
           </a>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
 

@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, BowlFood, CaretDown, FirstAid, MapPin, Moon, ShieldCheck, Sun, WhatsappLogo } from "@phosphor-icons/react";
 import credits from "../data/credits-preschool.json";
-import { PHONE, bengaluruNow, clock, niceDate, openDays, rupees, slotsFor } from "../shared/site";
+import { PHONE, bengaluruNow, clock, niceDate, openDays, slotsFor } from "../shared/site";
 import { Credits, DayChips, DemoBar, Field, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
 const SHOP = "Little Banyan";
@@ -10,18 +10,18 @@ const Pic = makePic("preschool", credits);
 const TERM_START = "2027-06-01";
 const CLOSED_DAY = 0; // Sunday
 
-type Programme = { id: string; name: string; from: number; to: number; age: string; hours: string; fee: string; colour: string; note: string };
+type Programme = { id: string; name: string; from: number; to: number; age: string; hours: string; colour: string; note: string };
 const PROGRAMMES: Programme[] = [
   { id: "roots", name: "Little roots daycare", from: 18, to: 24, age: "18 months to 2 years", hours: "8:30am to 6:30pm, Mon to Sat",
-    fee: `${rupees(14500)} a month`, colour: "#cfe0ff", note: "Full day with a cooked lunch and two naps." },
+    colour: "#cfe0ff", note: "Full day with a cooked lunch and two naps." },
   { id: "playgroup", name: "Playgroup", from: 24, to: 36, age: "2 years by 1 June", hours: "9:30am to 12pm, Mon to Fri",
-    fee: `${rupees(62000)} a year`, colour: "#ffe9a3", note: "Six children to a teacher. Sand, water, songs." },
+    colour: "#ffe9a3", note: "Six children to a teacher. Sand, water, songs." },
   { id: "nursery", name: "Nursery", from: 36, to: 48, age: "3 years by 1 June", hours: "9am to 12:30pm, Mon to Fri",
-    fee: `${rupees(68000)} a year`, colour: "#c9ecd2", note: "Montessori trays, first letters, Kannada rhymes." },
+    colour: "#c9ecd2", note: "Montessori trays, first letters, Kannada rhymes." },
   { id: "lkg", name: "LKG", from: 48, to: 60, age: "4 years by 1 June", hours: "9am to 1pm, Mon to Fri",
-    fee: `${rupees(74000)} a year`, colour: "#ffd4c4", note: "Reading readiness, numbers to 50, the garden plot." },
+    colour: "#ffd4c4", note: "Reading readiness, numbers to 50, the garden plot." },
   { id: "ukg", name: "UKG", from: 60, to: 72, age: "5 years by 1 June", hours: "9am to 1pm, Mon to Fri",
-    fee: `${rupees(78000)} a year`, colour: "#e3d9ff", note: "Reading, writing and a year getting ready for Class 1." },
+    colour: "#e3d9ff", note: "Reading, writing and a year getting ready for Class 1." },
 ];
 
 function monthsOld(dob: string, on = TERM_START): number {
@@ -53,7 +53,7 @@ export default function App() {
         <Hero />
         <WhichClass choose={(id) => { setChosen(id); document.getElementById("admissions")?.scrollIntoView({ behavior: "smooth" }); }} />
         <Day />
-        <Fees />
+        <Classes />
         <Care />
         <Faq />
         <Admissions programme={chosen} setProgramme={setChosen} />
@@ -81,7 +81,7 @@ function Header() {
         </a>
         <nav aria-label="Sections" className="hidden lg:block">
           <ul className="flex items-center gap-7 text-[15px] font-bold">
-            {[["#which-class", "Which class?"], ["#day", "A day here"], ["#fees", "Fees"], ["#care", "Care"], ["#faq", "Questions"]].map(([h, l]) => (
+            {[["#which-class", "Which class?"], ["#day", "A day here"], ["#classes", "Classes"], ["#care", "Care"], ["#faq", "Questions"]].map(([h, l]) => (
               <li key={h}><a href={h} className="underline-offset-8 hover:underline">{l}</a></li>
             ))}
           </ul>
@@ -171,7 +171,7 @@ function WhichClass({ choose }: { choose: (id: string) => void }) {
                 {fit.kind === "class" ? (
                   <>
                     <p className="mt-2 font-display text-3xl font-extrabold leading-tight">{fit.programme.name}</p>
-                    <p className="mt-1">{fit.programme.hours}. {fit.programme.fee}.</p>
+                    <p className="mt-1">{fit.programme.hours}.</p>
                     <button type="button" className="btn-accent mt-5" onClick={() => choose(fit.programme.id)}>
                       Book a visit for {fit.programme.name}
                     </button>
@@ -277,20 +277,20 @@ function Day() {
   );
 }
 
-function Fees() {
+function Classes() {
   return (
-    <section id="fees" aria-labelledby="fees-title" className="bg-tint">
+    <section id="classes" aria-labelledby="classes-title" className="bg-tint">
       <div className="page py-20 md:py-24">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
-          <h2 id="fees-title" className="text-4xl font-extrabold leading-none tracking-tight md:text-6xl">Classes and fees, 2027 to 2028</h2>
-          <p className="max-w-[40ch] text-[15px] text-soft">Paid in three terms. Admission fee {rupees(12000)}, once. No donation, no capitation, no van.</p>
+          <h2 id="classes-title" className="text-4xl font-extrabold leading-none tracking-tight md:text-6xl">Classes, 2027 to 2028</h2>
+          <p className="max-w-[40ch] text-[15px] text-soft">Admissions open in January for June. Parents drop off and pick up; there's no school van.</p>
         </div>
-        <div className="mt-10 overflow-x-auto rounded-[1.5rem] bg-ground" tabIndex={0} role="region" aria-label="Classes and fees table">
+        <div className="mt-10 overflow-x-auto rounded-[1.5rem] bg-ground" tabIndex={0} role="region" aria-label="Classes table">
           <table className="w-full min-w-[640px] text-left text-[15px]">
-            <caption className="sr-only">Classes, ages, hours and fees</caption>
+            <caption className="sr-only">Classes, ages and hours</caption>
             <thead className="border-b border-line text-sm text-soft">
               <tr><th scope="col" className="px-6 py-4 font-bold">Class</th><th scope="col" className="px-6 py-4 font-bold">Age on 1 June</th>
-                <th scope="col" className="px-6 py-4 font-bold">Hours</th><th scope="col" className="px-6 py-4 text-right font-bold">Fee</th></tr>
+                <th scope="col" className="px-6 py-4 font-bold">Hours</th></tr>
             </thead>
             <tbody className="divide-y divide-line">
               {PROGRAMMES.map((p) => (
@@ -301,13 +301,11 @@ function Fees() {
                   </th>
                   <td className="px-6 py-5">{p.age}</td>
                   <td className="px-6 py-5">{p.hours}</td>
-                  <td className="px-6 py-5 text-right font-bold tabular-nums">{p.fee}</td>
                 </tr>
               ))}
               <tr>
                 <th scope="row" className="px-6 py-5 font-display text-xl font-bold">After-class daycare</th>
                 <td className="px-6 py-5">Any class, up to 8 years</td><td className="px-6 py-5">Until 6:30pm</td>
-                <td className="px-6 py-5 text-right font-bold tabular-nums">{rupees(8500)} a month</td>
               </tr>
             </tbody>
           </table>
@@ -356,7 +354,7 @@ function Care() {
 const FAQ = [
   ["Does my child need to be toilet trained?", "Not for daycare or Playgroup. We help with that, and ask you to send spare clothes and nappies. From Nursery up, we expect most children to be trained."],
   ["Which language do the teachers speak?", "English and Kannada through the day, and Hindi or Telugu when a child needs comfort in the language they know. Rhymes come in all of them."],
-  ["Can my child join in the middle of the year?", "Yes, when a seat is free. Fees are charged from the term your child joins."],
+  ["Can my child join in the middle of the year?", "Yes, when a seat is free. The first week is shorter, so they settle in."],
   ["Do you have a school van?", "No. Most families live within 3 km and drop off on the way to work. We share a list of parents who are happy to car-pool."],
   ["How will I know how my child's day went?", "A note in the diary every day, a WhatsApp photo or two each week, and a meeting with the class teacher every term."],
   ["Is there an entrance test or interview?", "No test. We meet the family and the child plays in the class for an hour, so you can both see if it suits."],
@@ -447,7 +445,7 @@ function Admissions({ programme, setProgramme }: { programme: string; setProgram
             {(a) => (
               <select {...a} className="input" value={programme} onChange={(e) => setProgramme(e.target.value)}>
                 <option value="">Choose a class</option>
-                {PROGRAMMES.map((p) => <option key={p.id} value={p.id}>{p.name}, {p.fee}</option>)}
+                {PROGRAMMES.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             )}
           </Field>
@@ -490,12 +488,12 @@ function Footer() {
           <p className="mt-5 flex items-start gap-3 text-ground/85"><MapPin size={22} className="mt-0.5 shrink-0" aria-hidden />
             Sector 2, HSR Layout, Bengaluru 560102. Classes Mon to Fri; daycare Mon to Sat.</p>
           <p className="mt-3 max-w-[54ch] text-ground/75">
-            A demo preschool website by Adithya Baliga, Bengaluru: classes, fees, a class finder and visit requests that
+            A demo preschool website by Adithya Baliga, Bengaluru: classes, a class finder and visit requests that
             arrive on the school's WhatsApp.
           </p>
         </div>
         <div className="text-ground/85">
-          <Credits credits={credits} note="Classes, fees, timings and the address are sample content for this demo." />
+          <Credits credits={credits} note="Classes, timings and the address are sample content for this demo." />
         </div>
       </div>
     </footer>

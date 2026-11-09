@@ -6,10 +6,6 @@ export function waLink(text: string, number = OWNER_WA): string {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
-export function rupees(n: number): string {
-  return "₹" + Math.round(n).toLocaleString("en-IN");
-}
-
 /** The current weekday (0 = Sunday) and minutes since midnight in Bengaluru, whatever the visitor's clock says. */
 export function bengaluruNow(at: Date = new Date()): { day: number; minutes: number; date: string } {
   const parts = Object.fromEntries(

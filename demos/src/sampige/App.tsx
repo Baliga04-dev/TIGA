@@ -2,42 +2,30 @@ import { useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bathtub, Bed, CaretDown, Coffee, Fan, MapPin, Minus, PersonSimpleWalk, Plus, Snowflake, Train, Car, Users, WhatsappLogo, WifiHigh } from "@phosphor-icons/react";
 import credits from "../data/credits-stay.json";
-import { PHONE, addDays, bengaluruNow, niceDate, rupees } from "../shared/site";
+import { PHONE, addDays, bengaluruNow, niceDate } from "../shared/site";
 import { useJson, type Loaded } from "../shared/useJson";
 import { Credits, DemoBar, Field, LoadError, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
 const SHOP = "Sampige Residency";
 const Pic = makePic("stay", credits);
 
-type Room = { id: string; name: string; size: number; beds: string; sleeps: number; weekday: number; weekend: number;
+type Room = { id: string; name: string; size: number; beds: string; sleeps: number;
   pic: string; view: string; count: number; fullIn: number[] };
-type Rates = { rooms: Room[]; extraBed: number; gst: number };
+type Stay = { rooms: Room[] };
 
-type Quote =
-  | { ok: true; nights: { date: string; rate: number; weekend: boolean }[]; extraBeds: number; subtotal: number; gst: number; total: number }
-  | { ok: false; reason: string };
+type Fit = { ok: true; extraBed: boolean } | { ok: false; reason: string };
 
-/** The price of one room for these dates and guests: weekend rates on Friday and Saturday nights, GST by nightly rate. */
-function quoteFor(room: Room, rates: Rates, checkIn: string, nights: number, guests: number, today: string): Quote {
+/** Whether one room is free every night of the stay and sleeps the group (one extra bed allowed). */
+function fitFor(room: Room, checkIn: string, nights: number, guests: number, today: string): Fit {
   if (guests > room.sleeps + 1) return { ok: false, reason: `Sleeps ${room.sleeps}, or ${room.sleeps + 1} with an extra bed` };
   const full = new Set(room.fullIn.map((n) => addDays(today, n)));
-  const dates = Array.from({ length: nights }, (_, i) => addDays(checkIn, i));
-  const clash = dates.find((d) => full.has(d));
+  const clash = Array.from({ length: nights }, (_, i) => addDays(checkIn, i)).find((d) => full.has(d));
   if (clash) return { ok: false, reason: `Full on the night of ${niceDate(clash)}` };
-  const extraBeds = guests > room.sleeps ? 1 : 0;
-  const rows = dates.map((date) => {
-    const day = new Date(date + "T00:00:00Z").getUTCDay();
-    const weekend = day === 5 || day === 6;
-    return { date, weekend, rate: (weekend ? room.weekend : room.weekday) + extraBeds * rates.extraBed };
-  });
-  const subtotal = rows.reduce((n, r) => n + r.rate, 0);
-  // GST on hotel rooms: 5% when the night costs up to ₹7,500, 18% above that
-  const gst = rows.reduce((n, r) => n + r.rate * (r.rate <= 7500 ? rates.gst : 0.18), 0);
-  return { ok: true, nights: rows, extraBeds, subtotal, gst: Math.round(gst), total: Math.round(subtotal + gst) };
+  return { ok: true, extraBed: guests > room.sleeps };
 }
 
 export default function App() {
-  const [rates, retry] = useJson<Rates>("sampige-rates.json");
+  const [rates, retry] = useJson<Stay>("sampige-rooms.json");
   return (
     <div>
       <DemoBar shop={SHOP} />
@@ -91,11 +79,11 @@ function Hero() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
           <h1 className="text-[2.6rem] leading-[1.05] md:text-6xl xl:text-7xl">Eighteen rooms by Lalbagh's west gate</h1>
           <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-on-field/85 md:text-xl">
-            Sampige Residency is a small hotel in Basavanagudi, a nine-minute walk from Lalbagh. Rooms from {rupees(3400)} a night
+            Sampige Residency is a small hotel in Basavanagudi, a nine-minute walk from Lalbagh. Every room comes
             with breakfast: dosa and filter coffee under the sampige tree.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Magnetic><a href="#stay" className="btn-accent px-7 text-lg">See prices for your dates</a></Magnetic>
+            <Magnetic><a href="#stay" className="btn-accent px-7 text-lg">See rooms for your dates</a></Magnetic>
             <a href="#rooms" className="btn border border-on-field/30 px-6 text-lg hover:bg-on-field/10">The rooms</a>
           </div>
           <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-on-field/15 pt-6 text-[15px]">
@@ -134,7 +122,7 @@ function Counter({ label, value, set, min, max, hint }: { label: string; value: 
   );
 }
 
-function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) {
+function Planner({ rates, retry }: { rates: Loaded<Stay>; retry: () => void }) {
   const today = bengaluruNow().date;
   const [checkIn, setCheckIn] = useState(addDays(today, 3));
   const [nights, setNights] = useState(2);
@@ -144,7 +132,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
   const [dateError, setDateError] = useState("");
   const guests = adults + children;
   const quotes = useMemo(() => rates.status === "ok"
-    ? rates.data.rooms.map((r) => ({ room: r, quote: quoteFor(r, rates.data, checkIn, nights, guests, today) }))
+    ? rates.data.rooms.map((r) => ({ room: r, quote: fitFor(r, checkIn, nights, guests, today) }))
     : [], [rates, checkIn, nights, guests, today]);
   const picked = quotes.find((q) => q.room.id === chosen && q.quote.ok);
   const anyFree = quotes.some((q) => q.quote.ok);
@@ -160,8 +148,8 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
     <section id="stay" aria-labelledby="stay-title" className="page py-20 md:py-24">
       <div className="grid gap-12 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-16">
         <div>
-          <h2 id="stay-title" className="text-4xl leading-tight md:text-5xl">Prices for your dates</h2>
-          <p className="mt-4 text-lg text-soft">Every room, with breakfast, taxes and the weekend rate worked out. Nothing to pay until you arrive.</p>
+          <h2 id="stay-title" className="text-4xl leading-tight md:text-5xl">Rooms free on your dates</h2>
+          <p className="mt-4 text-lg text-soft">Every room, checked night by night for your dates and your group. Breakfast is always included.</p>
           <div className="mt-8 space-y-5">
             <Field label="Check-in" error={dateError}>
               {(a) => <input {...a} type="date" className="input" min={today} max={addDays(today, 180)} value={checkIn}
@@ -177,7 +165,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
 
         <div>
           {rates.status === "loading" && (
-            <div className="space-y-4" aria-busy="true" aria-label="Loading prices">
+            <div className="space-y-4" aria-busy="true" aria-label="Loading rooms">
               {Array.from({ length: 4 }, (_, i) => (
                 <div key={i} className="grid grid-cols-[96px_1fr_auto] items-center gap-5 border-b border-line pb-4">
                   <div className="skeleton h-20 w-24" /><div className="space-y-2"><div className="skeleton h-5 w-1/2" /><div className="skeleton h-4 w-3/4" /></div>
@@ -186,7 +174,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
               ))}
             </div>
           )}
-          {rates.status === "error" && <LoadError what="prices" error={rates.error} retry={retry} />}
+          {rates.status === "error" && <LoadError what="rooms" error={rates.error} retry={retry} />}
           {rates.status === "ok" && (
             <>
               <p className="text-[15px] text-soft" aria-live="polite">
@@ -200,7 +188,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
                       <h3 className="font-display text-xl">{room.name}</h3>
                       {quote.ok ? (
                         <p className="mt-1 text-sm text-soft">
-                          {summarise(quote.nights)}{quote.extraBeds ? `, extra bed ${rupees(rates.data.extraBed)} a night` : ""}, GST {rupees(quote.gst)}
+                          Free all {nights} {nights === 1 ? "night" : "nights"}. {room.beds}{quote.extraBed ? ", with an extra bed" : ""}, {room.size} m²
                         </p>
                       ) : (
                         <p className="mt-1 text-sm font-medium text-bad">{quote.reason}</p>
@@ -208,13 +196,10 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
                     </div>
                     <div className="col-span-2 flex items-center justify-between gap-4 sm:col-span-1 sm:flex-col sm:items-end sm:gap-2">
                       {quote.ok ? (
-                        <>
-                          <p className="text-xl font-semibold tabular-nums">{rupees(quote.total)}</p>
-                          <button type="button" aria-pressed={chosen === room.id} onClick={() => setChosen(room.id)}
-                            className={chosen === room.id ? "btn-ink min-h-[40px] px-5 py-1.5" : "btn-line min-h-[40px] px-5 py-1.5"}>
-                            {chosen === room.id ? "Chosen" : "Choose"}
-                          </button>
-                        </>
+                        <button type="button" aria-pressed={chosen === room.id} onClick={() => setChosen(room.id)}
+                          className={chosen === room.id ? "btn-ink min-h-[40px] px-5 py-1.5" : "btn-line min-h-[40px] px-5 py-1.5"}>
+                          {chosen === room.id ? "Chosen" : "Choose"} <span className="sr-only">the {room.name}</span>
+                        </button>
                       ) : <p className="text-sm text-soft">Try other dates</p>}
                     </div>
                   </motion.li>
@@ -229,7 +214,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
               <AnimatePresence>
                 {picked && picked.quote.ok && (
                   <motion.div key={picked.room.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
-                    <BookingForm room={picked.room} total={picked.quote.total} checkIn={checkIn} nights={nights} guests={guests} />
+                    <BookingForm room={picked.room} extraBed={picked.quote.ok && picked.quote.extraBed} checkIn={checkIn} nights={nights} guests={guests} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -241,13 +226,7 @@ function Planner({ rates, retry }: { rates: Loaded<Rates>; retry: () => void }) 
   );
 }
 
-function summarise(nights: { rate: number; weekend: boolean }[]): string {
-  const week = nights.filter((n) => !n.weekend), end = nights.filter((n) => n.weekend);
-  const part = (list: typeof nights, word: string) => list.length ? `${list.length} ${word}${list.length === 1 ? "" : "s"} at ${rupees(list[0].rate)}` : "";
-  return [part(week, "weeknight"), part(end, "weekend night")].filter(Boolean).join(" and ");
-}
-
-function BookingForm({ room, total, checkIn, nights, guests }: { room: Room; total: number; checkIn: string; nights: number; guests: number }) {
+function BookingForm({ room, extraBed, checkIn, nights, guests }: { room: Room; extraBed: boolean; checkIn: string; nights: number; guests: number }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [arrival, setArrival] = useState("");
@@ -265,11 +244,11 @@ function BookingForm({ room, total, checkIn, nights, guests }: { room: Room; tot
   };
   const message = [`Booking request, ${SHOP}`, `${room.name}, ${guests} ${guests === 1 ? "guest" : "guests"}`,
     `${niceDate(checkIn)} to ${niceDate(addDays(checkIn, nights))} (${nights} ${nights === 1 ? "night" : "nights"})`,
-    `Quoted: ${rupees(total)} with breakfast and GST`, `Arriving: ${arrival}`, `${name.trim()}, ${phone.trim()}`,
+    ...(extraBed ? ["With an extra bed"] : []), `Arriving: ${arrival}`, `${name.trim()}, ${phone.trim()}`,
     ...(note.trim() ? [`Note: ${note.trim()}`] : [])].join("\n");
   return (
     <form onSubmit={submit} noValidate className="mt-8 rounded-[1.75rem] bg-field p-6 text-on-field md:p-8 on-field">
-      <h3 className="font-display text-2xl">Request the {room.name}, {rupees(total)}</h3>
+      <h3 className="font-display text-2xl">Request the {room.name}</h3>
       <p className="mt-1 text-[15px] text-on-field/80">We confirm on WhatsApp within the hour, 7am to 11pm. Free cancellation until 48 hours before check-in.</p>
       <div className="mt-6 grid gap-5 text-ink sm:grid-cols-3 [&_label]:text-on-field [&_p]:text-on-field/85">
         <Field label="Name" error={errors.name}>
@@ -301,7 +280,7 @@ function BookingForm({ room, total, checkIn, nights, guests }: { room: Room; tot
 // ---------------------------------------------------------------------------------------------- rooms
 const AMENITIES = [[Snowflake, "Air conditioning"], [Fan, "Ceiling fan"], [WifiHigh, "Wi-Fi, 100 Mbps"], [Coffee, "Breakfast included"]] as const;
 
-function Rooms({ rates }: { rates: Loaded<Rates> }) {
+function Rooms({ rates }: { rates: Loaded<Stay> }) {
   const layout = ["lg:col-span-7", "lg:col-span-5 lg:mt-24", "lg:col-span-5", "lg:col-span-7"];
   return (
     <section id="rooms" aria-labelledby="rooms-title" className="bg-tint">
@@ -318,10 +297,7 @@ function Rooms({ rates }: { rates: Loaded<Rates> }) {
               <motion.li key={r.id} variants={itemIn} className={layout[i]}>
                 <Pic name={r.pic} sizes="(min-width: 1024px) 50vw, 100vw" alt={`The ${r.name}`}
                   className={`w-full rounded-[1.75rem] object-cover ${i % 3 === 0 ? "aspect-[16/10]" : "aspect-[4/3]"}`} />
-                <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-                  <h3 className="font-display text-3xl">{r.name}</h3>
-                  <p className="tabular-nums"><span className="text-xl font-semibold">{rupees(r.weekday)}</span> <span className="text-soft">a night, {rupees(r.weekend)} Fri and Sat</span></p>
-                </div>
+                <h3 className="mt-5 font-display text-3xl">{r.name}</h3>
                 <p className="mt-2 max-w-[52ch] text-[17px] leading-relaxed text-soft">{r.view}</p>
                 <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[15px]">
                   <li className="flex items-center gap-2"><Bed size={20} aria-hidden /> {r.beds}</li>
@@ -410,7 +386,7 @@ const RULES = [
   ["Can unmarried couples stay?", "Yes. Each of you shows your own ID at check-in, the same as anyone else."],
   ["Can we check in early or leave late?", "Early check-in from 9am and late check-out until 2pm are free when the room is free. Ask on WhatsApp the day before."],
   ["How do we pay?", "At the desk when you leave, by UPI, card or cash. No advance, and no card details on WhatsApp."],
-  ["What if we cancel?", "Free until 48 hours before check-in. After that, we charge the first night."],
+  ["What if we cancel?", "Tell us on WhatsApp. Cancelling is free until 48 hours before check-in."],
   ["Pets, parking, smoking?", "No pets, sorry. Six car spaces, first come. No smoking indoors; the terrace has a corner for it."],
 ] as const;
 
@@ -441,12 +417,12 @@ function Footer() {
           <p className="mt-5 flex items-start gap-3 text-ground/85"><MapPin size={22} className="mt-0.5 shrink-0" aria-hidden />
             Near Lalbagh West Gate, Basavanagudi, Bengaluru 560004. Desk open 24 hours.</p>
           <p className="mt-3 max-w-[54ch] text-ground/75">
-            A demo hotel website by Adithya Baliga, Bengaluru: live prices for any dates, booking requests on the hotel's
+            A demo hotel website by Adithya Baliga, Bengaluru: free rooms for any dates, booking requests on the hotel's
             WhatsApp, and no booking-site commission on direct guests.
           </p>
         </div>
         <div className="text-ground/85">
-          <Credits credits={credits} note="Rooms, prices and the address are sample content for this demo. Room photos are not of a real Sampige Residency." />
+          <Credits credits={credits} note="Rooms and the address are sample content for this demo. Room photos are not of a real Sampige Residency." />
         </div>
       </div>
     </footer>

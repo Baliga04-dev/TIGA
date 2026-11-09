@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Clock, FirstAid, MapPin, Phone, Tooth, Baby, Stethoscope, WhatsappLogo } from "@phosphor-icons/react";
 import credits from "../data/credits-clinic.json";
-import { PHONE, addDays, bengaluruNow, clock, niceDate, rupees } from "../shared/site";
+import { PHONE, addDays, bengaluruNow, clock, niceDate } from "../shared/site";
 import { useJson, type Loaded } from "../shared/useJson";
 import { Credits, DayChips, DemoBar, Field, LoadError, Magnetic, MessagePreview, itemIn, listIn, makePic, spring } from "../shared/ui";
 
@@ -12,8 +12,8 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 
 type Session = { days: number[]; from: number; to: number };
 type Doctor = { id: string; name: string; role: string; for: string; degrees: string; reg: string; languages: string;
-  fee: number; slot: number; note: string; sessions: Session[] };
-type Data = { doctors: Doctor[]; fees: { group: string; items: [string, string][] }[] };
+  slot: number; note: string; sessions: Session[] };
+type Data = { doctors: Doctor[]; services: { group: string; items: string[] }[] };
 
 const ICONS: Record<string, typeof Stethoscope> = { meera: Stethoscope, arjun: Baby, farheen: Tooth };
 
@@ -85,7 +85,7 @@ export default function App() {
         <Hero data={data} />
         <Doctors data={data} retry={retry} />
         <Booking data={data} />
-        <Fees data={data} />
+        <Services data={data} />
         <Before />
         <Visit />
       </main>
@@ -112,7 +112,7 @@ function Header() {
         </a>
         <nav aria-label="Sections" className="hidden lg:block">
           <ul className="flex items-center gap-7 text-[15px] font-medium">
-            {[["#doctors", "Doctors"], ["#book", "Appointments"], ["#fees", "Fees"], ["#visit", "Visit"]].map(([h, l]) => (
+            {[["#doctors", "Doctors"], ["#book", "Appointments"], ["#services", "Services"], ["#visit", "Visit"]].map(([h, l]) => (
               <li key={h}><a href={h} className="underline-offset-8 hover:underline">{l}</a></li>
             ))}
           </ul>
@@ -134,11 +134,11 @@ function Hero({ data }: { data: Loaded<Data> }) {
         <h1 className="mt-5 text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl xl:text-7xl">Your family doctor, two streets away</h1>
         <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-soft md:text-xl">
           Tulasi is a family and dental clinic in Banashankari 2nd Stage: a family physician, a children's doctor and a
-          dentist. Fees are on this page, and appointments are a WhatsApp message away.
+          dentist. Timings are on this page, and appointments are a WhatsApp message away.
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
           <Magnetic><a href="#book" className="btn-accent px-7 text-lg">Book an appointment</a></Magnetic>
-          <a href="#fees" className="btn-line px-6 text-lg">See the fees</a>
+          <a href="#services" className="btn-line px-6 text-lg">What we treat</a>
         </div>
       </motion.div>
       <motion.div className="relative" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...spring, delay: 0.1 }}>
@@ -192,10 +192,7 @@ function Doctors({ data, retry }: { data: Loaded<Data>; retry: () => void }) {
                     <p className="mt-1 text-soft">{d.degrees}. {d.reg}. Speaks {d.languages}.</p>
                     <p className="mt-1 text-soft">{sessionsText(d)}.</p>
                   </div>
-                  <div className="lg:text-right">
-                    <p className="text-2xl font-bold tabular-nums">{rupees(d.fee)}</p>
-                    <p className="text-sm text-soft">{d.note}</p>
-                  </div>
+                  <p className="text-[15px] text-soft lg:text-right">{d.note}</p>
                 </motion.li>
               );
             })}
@@ -239,7 +236,7 @@ function Booking({ data }: { data: Loaded<Data> }) {
   };
   const message = doc && slot ? [`Appointment request, ${SHOP}`, `${doc.name} (${doc.role})`,
     `${niceDate(chosenDay)}, ${clock(slot.start)}, token ${slot.token}`, `Patient: ${patient.trim()}, ${age} years`,
-    `Phone: ${phone.trim()}`, ...(reason.trim() ? [`Reason: ${reason.trim()}`] : []), `Consultation ${rupees(doc.fee)}`].join("\n") : "";
+    `Phone: ${phone.trim()}`, ...(reason.trim() ? [`Reason: ${reason.trim()}`] : [])].join("\n") : "";
 
   return (
     <section id="book" aria-labelledby="book-title" className="page py-20 md:py-24">
@@ -255,7 +252,7 @@ function Booking({ data }: { data: Loaded<Data> }) {
               {doctors.map((d) => (
                 <button key={d.id} type="button" aria-pressed={docId === d.id} onClick={() => { setDocId(d.id); setSlot(null); }}
                   className={`btn min-h-[64px] flex-col items-start gap-0 rounded-2xl px-4 py-2 text-left ${docId === d.id ? "bg-field text-on-field" : "border border-line hover:border-ink/40"}`}>
-                  <span className="font-semibold">{d.name}</span><span className="text-sm opacity-80">{d.role}, {rupees(d.fee)}</span>
+                  <span className="font-semibold">{d.name}</span><span className="text-sm opacity-80">{d.role}</span>
                 </button>
               ))}
             </div>
@@ -303,7 +300,6 @@ function Booking({ data }: { data: Loaded<Data> }) {
               <dt>Time</dt><dd>{slot ? clock(slot.start) : "pick a time"}</dd>
               <dt>Token</dt><dd className="text-2xl font-bold">{slot ? slot.token : "–"}</dd>
               <dt>Patient</dt><dd>{patient.trim() || "..."}{age ? `, ${age} y` : ""}</dd>
-              <dt>Fee</dt><dd>{doc ? rupees(doc.fee) : "..."}</dd>
             </dl>
             <p className="mt-4 text-xs">Please come 10 minutes early with old prescriptions and reports.</p>
           </div>
@@ -319,21 +315,21 @@ function Booking({ data }: { data: Loaded<Data> }) {
 }
 
 // ------------------------------------------------------------------------------------------- the rest
-function Fees({ data }: { data: Loaded<Data> }) {
+function Services({ data }: { data: Loaded<Data> }) {
   return (
-    <section id="fees" aria-labelledby="fees-title" className="bg-field text-on-field">
+    <section id="services" aria-labelledby="services-title" className="bg-field text-on-field">
       <div className="page py-20 md:py-24">
         <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
-          <h2 id="fees-title" className="text-4xl font-bold tracking-tight md:text-5xl">Fees, before you walk in</h2>
-          <p className="max-w-[46ch] text-on-field/85">Medicines and lab tests are billed separately at MRP or the lab's printed rate. You're told the cost before any treatment.</p>
+          <h2 id="services-title" className="text-4xl font-bold tracking-tight md:text-5xl">What each doctor does here</h2>
+          <p className="max-w-[46ch] text-on-field/85">All of it in the clinic, without a trip to a hospital. Each step of a treatment is explained before it starts.</p>
         </div>
         {data.status === "ok" ? (
           <div className="mt-10 grid gap-8 md:grid-cols-3">
-            {data.data.fees.map((g) => (
+            {data.data.services.map((g) => (
               <div key={g.group}>
                 <h3 className="text-xl font-semibold">{g.group}</h3>
                 <ul className="mt-3 divide-y divide-on-field/20 border-y border-on-field/20 text-[15px]">
-                  {g.items.map(([label, price]) => <li key={label} className="flex justify-between gap-4 py-2.5"><span>{label}</span><span className="text-right font-semibold tabular-nums">{price}</span></li>)}
+                  {g.items.map((label) => <li key={label} className="py-2.5">{label}</li>)}
                 </ul>
               </div>
             ))}
@@ -401,12 +397,12 @@ function Footer() {
         <div>
           <p className="flex items-center gap-3 text-4xl font-bold tracking-tight md:text-6xl"><Leaf className="h-12 w-12" /> Tulasi Family Clinic</p>
           <p className="mt-4 max-w-[54ch] text-ground/80">
-            A demo clinic website by Adithya Baliga, Bengaluru: doctors, timings and fees in plain sight, and appointment
+            A demo clinic website by Adithya Baliga, Bengaluru: doctors and timings in plain sight, and appointment
             requests that arrive on the clinic's WhatsApp. Informational only, as the medical council's rules ask.
           </p>
         </div>
         <div className="text-ground/85">
-          <Credits credits={credits} note="Doctors, registration numbers, fees and the address are samples for this demo. The diary is made up." />
+          <Credits credits={credits} note="Doctors, registration numbers and the address are samples for this demo. The diary is made up." />
         </div>
       </div>
     </footer>
