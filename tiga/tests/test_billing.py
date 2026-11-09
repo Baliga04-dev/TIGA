@@ -124,7 +124,7 @@ def test_a_review_card_for_a_clients_shop_has_the_qr_the_link_and_no_incentive()
     card = billing.build_review_card(deal(company="<i>Sri</i> Bakery"), "https://g.page/r/CbX9sriBakery/review", BIZ, TODAY)
     page = billing.render_html("review_card", card)
     assert "&lt;i&gt;Sri&lt;/i&gt; Bakery" in page and "<svg" in page and "g.page/r/CbX9sriBakery/review" in page
-    assert "WhatsApp" in page
+    assert "WhatsApp" in page and "photo" in card["whatsapp"].lower()   # reviews with photos count for more
     for bribe in ("discount", "free", "offer", "% off"):
         assert bribe not in page.split("For the shop")[0].lower()
 
@@ -138,3 +138,4 @@ def test_a_review_card_only_takes_a_google_review_link(link):
 def test_the_photo_refresh_is_a_monthly_add_on(store):
     refresh = next(r for r in billing.get_rates(store) if r["id"] == "photo_refresh")
     assert refresh["unit"] == "month" and "Google" in refresh["name"] and "photos" in refresh["description"]
+    assert "never generated or stock" in refresh["description"]   # AI or stock photos count against a listing

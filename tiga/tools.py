@@ -427,6 +427,7 @@ _PITCH = {
     "no_area_in_title": ("redesign", "local search fixes: their site doesn't name their area"),
     "no_phone_on_site": ("redesign", "tap-to-call and WhatsApp buttons: their site shows no phone number"),
     "no_local_schema": ("redesign", "address and hours marked up for Google"),
+    "single_page": ("business_site", "a page for each service: their site is a single page"),
 }
 
 

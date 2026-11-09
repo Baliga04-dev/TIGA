@@ -8,7 +8,7 @@ CONTACT = """<html><body>Write to <a href="mailto:Orders@SriBakery.in?subject=hi
 info@sribakery.in. Logo: logo@2x.png  tracking: abc@sentry.io</body></html>"""
 MODERN = """<html><head><meta name="viewport" content="width=device-width"><title>Modern Cafe, Indiranagar</title>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "CafeOrCoffeeShop", "name": "Modern"}</script>
-</head><body>hello@modern.in <a href="tel:+919845012345">Call</a> <footer>&copy; 2026 Modern</footer></body></html>"""
+</head><body><a href="/menu">Menu</a> hello@modern.in <a href="tel:+919845012345">Call</a> <footer>&copy; 2026 Modern</footer></body></html>"""
 
 
 async def test_finds_published_emails_on_the_contact_page_and_lists_problems(http):
@@ -39,6 +39,15 @@ async def test_local_search_signals_on_the_homepage(http):
     again = await sitecheck.inspect("http://sri2.in", year=2026, area="12, CMH Road, Indiranagar, Bengaluru")
     assert "no_area_in_title" not in again.problems and "no_phone_on_site" not in again.problems
     assert "no_local_schema" in again.problems
+
+
+async def test_a_one_page_site_is_named_but_a_site_with_pages_is_not(http):
+    http.add("one.in/robots.txt", status=404, text="")
+    http.add("one.in", text=MODERN.replace('<a href="/menu">Menu</a>', '<a href="#menu">Menu</a><a href="https://instagram.com/x">Insta</a><a href="/">Home</a>'))
+    assert "single_page" in (await sitecheck.inspect("https://one.in", year=2026, area="Indiranagar")).problems
+    http.add("many.in/robots.txt", status=404, text="")
+    http.add("many.in", text=MODERN.replace('<a href="/menu">Menu</a>', '<a href="/menu">Menu</a><a href="/catering">Catering</a>'))
+    assert "single_page" not in (await sitecheck.inspect("https://many.in", year=2026, area="Indiranagar")).problems
 
 
 async def test_robots_disallow_is_respected(http):

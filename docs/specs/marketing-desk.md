@@ -209,5 +209,11 @@ Added 2026-11-09, from issues #8-#16 (the R&D bot's weekly research, 1-2 Novembe
 - **The listing category (#16).** The audit sheet has lines for the main category, extra categories and what
   competitors use. **The photo refresh (#9)** is a monthly item on the rate card, to add to a tune-up proposal.
 - **One page per audit sheet.** The printed sheet is tightened to fit one A4 page.
+- **9 November research (#19-#21).** The site check names a site that links to no other page of its own
+  (`single_page`: no page per service to rank with); guessing which pages are "service pages" would make false
+  claims, so it goes no further. The photo refresh promises real photos, only cleaned up, never generated or stock,
+  and the review card's WhatsApp line asks for a photo with the review. The audit sheet has lines for the latest
+  review's date and whether the listing's hours match the board at the door. The subscription tiers idea (#18) is
+  left to the owner, who sets prices.
 
 Acceptance: tests for each item; R&D's own weekly reminders are no longer escalated as "Stabilise" failures.
