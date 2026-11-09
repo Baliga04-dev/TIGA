@@ -4,6 +4,7 @@ Interface: `Store(path)`. Job claims make scheduled work idempotent, issues move
 through one state machine (every step audited), suppressions are permanent.
 Callers never see SQL; statuses change only through `transition_issue`.
 """
+import hashlib
 import json
 import sqlite3
 import threading
@@ -161,6 +162,11 @@ class TransitionError(ValueError):
     """The requested issue status change is not allowed from the current status."""
 
 
+def _hashed(address: str) -> str:
+    """How an erased person's address is kept: enough to recognise it, not to read it."""
+    return "sha256:" + hashlib.sha256(address.encode()).hexdigest()
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -301,6 +307,12 @@ class Store:
         if row is None:
             raise KeyError(f"no outreach {outreach_id}")
         return dict(row)
+
+    def outreach_niches(self) -> dict[int, str]:
+        """outreach id -> the kind of shop it went to (from the prospect it was drafted for)."""
+        with self._lock:
+            rows = self._db.execute("SELECT outreach_id, category FROM prospects WHERE outreach_id IS NOT NULL")
+            return {r["outreach_id"]: r["category"] for r in rows}
 
     def list_outreach(self, *statuses: str, email: str | None = None) -> list[dict]:
         sql, args = "SELECT * FROM outreach WHERE 1=1", []
@@ -867,9 +879,38 @@ class Store:
         domain = "@" + address.rpartition("@")[2]
         with self._lock:
             row = self._db.execute(
-                "SELECT 1 FROM suppressions WHERE address IN (?, ?)", (address, domain)
+                "SELECT 1 FROM suppressions WHERE address IN (?, ?, ?)", (address, domain, _hashed(address))
             ).fetchone()
         return row is not None
+
+    def is_erased(self, address: str) -> bool:
+        with self._lock:
+            row = self._db.execute("SELECT 1 FROM suppressions WHERE address = ?", (_hashed(address.strip().lower()),))
+            return row.fetchone() is not None
+
+    def erase(self, *, keys: list[str], contact_ids: list[int], prospect_ids: list[int]) -> dict:
+        """Delete one person's records (DPDP erasure). `keys` are their suppression keys (an email, `tel:+digits`):
+        each stays only as a one-way hash, so they are never contacted again, and is scrubbed from the audit log."""
+        with self._lock, self._db:
+            for cid in contact_ids:
+                self._db.execute("DELETE FROM touches WHERE contact_id = ?", (cid,))
+                self._db.execute("DELETE FROM contacts WHERE id = ?", (cid,))
+            mails = 0
+            for key in (k.strip().lower() for k in keys):
+                if "@" in key:
+                    mails += self._db.execute("DELETE FROM outreach WHERE email = ?", (key,)).rowcount
+                self._db.execute("DELETE FROM suppressions WHERE address = ?", (key,))
+                self._db.execute("INSERT OR IGNORE INTO suppressions (address, reason, added_at) VALUES (?, ?, ?)",
+                                 (_hashed(key), "erased on request", _now()))
+                for text in {key, key.removeprefix("tel:+")}:
+                    self._db.execute("UPDATE audit_log SET entity_id = '[erased]' WHERE entity_id = ?", (text,))
+                    self._db.execute("UPDATE audit_log SET detail = REPLACE(detail, ?, '[erased]') WHERE instr(detail, ?)",
+                                     (text, text))
+            for pid in prospect_ids:
+                self._db.execute("DELETE FROM prospects WHERE id = ?", (pid,))
+            counts = {"contacts": len(contact_ids), "mails": mails, "shops": len(prospect_ids)}
+            self._write_audit("user", "person.erase", "person", "[erased]", json.dumps(counts))
+        return counts
 
     def suppressions(self) -> list[dict]:
         with self._lock:

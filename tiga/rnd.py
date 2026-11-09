@@ -55,6 +55,8 @@ def analyze(card: dict, issues: list[dict]) -> list[dict]:
         add("backlog", f"Approval backlog: {card['awaiting_approval']} drafts waiting",
             "Approve or reject drafts, or reduce how many leads are drafted per day.")
     for issue in issues:
+        if issue.get("source") == "rnd":
+            continue   # its own proposals repeat while the number stays bad; that is a nudge, not a failure
         if issue["status"] not in ("done", "rejected") and issue["occurrences"] >= 3:
             add(f"issue-{issue['id']}", f"Stabilise: {issue['title']} (seen {issue['occurrences']} times)",
                 "Repeating failure. Investigate the root cause rather than the symptom.")
@@ -200,6 +202,11 @@ def run(store: Store, *, context: dict, guide: str, research: Research | None, s
     lines = [f"Tiga R&D report, {key}", "",
              f"Sent this week: {card['sent_week']}; replies {card['replies']} ({card['interested']} interested); "
              f"drafts waiting for you: {card['awaiting_approval']}", ""]
+    niches = [b for b in card.get("by_niche", []) if b["sent"]]
+    if niches:
+        lines += ["BY KIND OF SHOP (sent: replies, interested, bounced, unsubscribed)"]
+        lines += [f"- {b['label']}: {b['sent']} sent: {b['replies']} replies, {b['interested']} interested, "
+                  f"{b['bounced']} bounced, {b['unsubscribed']} unsubscribed" for b in niches] + [""]
     lines += [f"Research notes: {notes}" if notes else f"Research skipped: {research_error}" if research_error
               else "Research found nothing new this time.", "", "PROPOSALS"]
     for n in numbers:

@@ -102,6 +102,26 @@ def list_outreach(status: str = "") -> dict:
     return {"ok": True, "items": services.get_store().list_outreach(*statuses)}
 
 
+# Before the /outreach/{outreach_id} routes, which would read "batches" as an id.
+class BatchIn(BaseModel):
+    niche: str = Field(default="", max_length=40)   # "" = the drafts that came from news leads
+
+
+@router.get("/outreach/batches")
+def batches() -> dict:
+    return {"ok": True, "items": services.get_mailer().batches()}
+
+
+@router.post("/outreach/batches/approve")
+def approve_batch(body: BatchIn) -> dict:
+    return _guard(lambda: {"ok": True, "count": services.get_mailer().approve_batch(body.niche)})
+
+
+@router.post("/outreach/batches/reject")
+def reject_batch(body: BatchIn) -> dict:
+    return _guard(lambda: {"ok": True, "count": services.get_mailer().reject_batch(body.niche)})
+
+
 @router.patch("/outreach/{outreach_id}")
 def edit_draft(outreach_id: int, body: DraftEditIn) -> dict:
     def edit():

@@ -4,7 +4,8 @@ import { PageHeader, Card, Notice, Field, Toast } from '../components/ui';
 import { api } from '../services/api';
 import { useAction } from '../hooks/useAction';
 import { cn } from '../lib/utils';
-import type { FoundLead, NewDraft, OutreachItem, OutreachStatus, Scorecard } from '../types';
+import type { Batch, FoundLead, NewDraft, OutreachItem, OutreachStatus, Scorecard } from '../types';
+import { Batches } from './outreach/Batches';
 
 const STATUS_BADGE: Record<OutreachStatus, string> = {
   drafted: 'badge-amber', approved: 'badge-blue', sent: 'badge-gray', replied: 'badge-blue',
@@ -59,6 +60,7 @@ function DraftRow({ item, onChanged, onError }: { item: OutreachItem; onChanged:
         <span className="font-medium">{item.email}</span>
         {item.company && <span className="text-ink-2">{item.company}</span>}
         {item.followup_n > 0 && <span className="badge badge-blue">follow-up {item.followup_n}</span>}
+        {item.parent_id && item.followup_n === 0 && <span className="badge badge-green">answer to their reply</span>}
         {item.warnings && <span className="badge badge-red">{item.warnings}</span>}
       </div>
       {item.source_note && <p className="mb-2 text-xs text-ink-3">Address found via: {item.source_note}</p>}
@@ -95,12 +97,15 @@ export function Outreach() {
   const [topics, setTopics] = useState('startup raises seed, website redesign, hiring web developer');
   const [draft, setDraft] = useState<NewDraft>(EMPTY_DRAFT);
   const [activeLead, setActiveLead] = useState<FoundLead | null>(null);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [niche, setNiche] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [list, score] = await Promise.all([api.listOutreach(), api.getScorecard()]);
+      const [list, score, groups] = await Promise.all([api.listOutreach(), api.getScorecard(), api.listBatches()]);
       setItems(list.items);
       setCard(score.scorecard);
+      setBatches(groups.items);
       setLoadError(null);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load outreach');
@@ -148,6 +153,8 @@ export function Outreach() {
   };
 
   const drafts = items.filter((i) => i.status === 'drafted');
+  const inBatch = batches.find((b) => b.niche === niche)?.draft_ids;
+  const shownDrafts = inBatch ? drafts.filter((d) => inBatch.includes(d.id)) : drafts;
   const approved = items.filter((i) => i.status === 'approved');
   const history = items.filter((i) => !['drafted', 'approved'].includes(i.status)).reverse();
   const failure = loadError ?? actionError;
@@ -238,11 +245,13 @@ export function Outreach() {
             }
           >
             {followups.error && <Notice>{followups.error}</Notice>}
-            {drafts.length === 0 ? (
+            <Batches batches={batches} selected={niche} onSelect={setNiche}
+              onDone={(m) => { setActionError(null); setToast(m); refresh(); }} onError={setActionError} />
+            {shownDrafts.length === 0 ? (
               <p className="text-sm text-ink-2">No drafts waiting.</p>
             ) : (
               <ul className="space-y-4">
-                {drafts.map((d) => (
+                {shownDrafts.map((d) => (
                   <DraftRow key={`${d.id}-${d.subject}-${d.body}`} item={d} onChanged={() => { setActionError(null); refresh(); }} onError={setActionError} />
                 ))}
               </ul>

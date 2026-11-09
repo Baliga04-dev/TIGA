@@ -207,6 +207,8 @@ export interface OutreachItem {
   last_error: string;
   thread_id: string;
   followup_n: number;
+  /** The mail this one answers or follows up; with followup_n 0 it is an answer to their reply. */
+  parent_id?: number | null;
   sent_at: string;
   replied_at: string;
 }
@@ -232,6 +234,21 @@ export interface Scorecard {
   awaiting_approval: number;
   daily_cap: number;
   pipeline: Record<string, number>;
+}
+
+/** Drafts grouped by the kind of shop they go to ('' = news leads), with how the sent ones answered. */
+export interface Batch {
+  niche: string;
+  label: string;
+  drafted: number;
+  approved: number;
+  sent: number;
+  replies: number;
+  interested: number;
+  declined: number;
+  unsubscribed: number;
+  bounced: number;
+  draft_ids: number[];
 }
 
 export interface ReportRow {

@@ -69,6 +69,13 @@ PROBLEMS: dict[str, tuple[str, str]] = {
                  "Fresh hours, photos and prices, and changes whenever you WhatsApp me."),
     "slow": ("Your website is slow to open on mobile data.",
              "Light pages that open in a couple of seconds on a basic phone."),
+    "no_area_in_title": ("Your website's title doesn't say which area you're in, so people nearby searching for "
+                         "{category} may not find it.",
+                         "Your area in the page title and main heading, the words people type into Google."),
+    "no_phone_on_site": ("I couldn't find your phone number on your website's front page.",
+                         "Your number at the top of every page, with tap-to-call and WhatsApp buttons."),
+    "no_local_schema": ("Your website doesn't give Google your address and hours in the form it reads.",
+                        "Your address, hours and phone marked up for Google, so search shows them correctly."),
 }
 # How a shop owner would name their kind of business, with its article ("an electronics shop").
 SHOP_NOUNS = {"restaurant": "restaurant", "cafe": "café", "bakery": "bakery", "salon": "salon", "clinic": "clinic",
@@ -77,6 +84,15 @@ SHOP_NOUNS = {"restaurant": "restaurant", "cafe": "café", "bakery": "bakery", "
               "optician": "optician", "florist": "florist", "school": "school", "coaching": "coaching centre",
               "hotel": "hotel", "real_estate": "estate agent", "travel": "travel agent", "photography": "photo studio",
               "car_services": "garage", "pet": "pet shop", "lawyer": "law or accounts office"}
+
+
+def niche_label(category: str) -> str:
+    """A batch's name: "Cafés", "Electronics shops"; drafts from news leads have no category."""
+    if not category:
+        return "News leads"
+    noun = SHOP_NOUNS.get(category, category.replace("_", " "))
+    plural = noun[:-1] + "ies" if noun.endswith("y") and noun[-2] not in "aeiou" else noun + "s"
+    return plural[0].upper() + plural[1:]
 
 
 def shop_noun(category: str) -> str:
@@ -147,6 +163,30 @@ def normalise_phone(raw: str) -> str:
     if not 11 <= len(digits) <= 15:
         raise MarketingError(f"{raw.strip()} doesn't look like a phone number. Write it with its 10 digits.")
     return digits
+
+
+_EMAIL = re.compile(r"[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+")
+
+
+def _phone_digits(raw: str) -> str:
+    try:
+        return normalise_phone(raw)
+    except MarketingError:
+        return ""
+
+
+def erase_person(store: Store, who: str) -> dict:
+    """Someone asked to be deleted: remove them from contacts, cold mail and the shop list. `who` holds their email
+    and/or phone. Only a one-way hash stays, so they are never contacted or imported from the map again."""
+    emails = {e.lower() for e in _EMAIL.findall(who)}
+    phones = {d for d in (_phone_digits(p) for p in re.split(r"[,;/]|\bor\b|\band\b", _EMAIL.sub(" ", who))) if d}
+    if not emails and not phones:
+        raise MarketingError("Write their email address or phone number, as they gave it.")
+    matches = lambda row: row.get("email", "").lower() in emails or _phone_digits(row.get("phone", "")) in phones
+    contacts = [c["id"] for c in store.list_contacts(limit=1_000_000) if matches(c)]
+    shops = [p["id"] for p in store.list_prospects(limit=1_000_000) if matches(p)]
+    return store.erase(keys=sorted(emails) + [f"tel:+{d}" for d in sorted(phones)], contact_ids=contacts,
+                       prospect_ids=shops)
 
 
 def _suppressed(store: Store, contact: dict) -> bool:
@@ -477,7 +517,8 @@ main{{max-width:46rem;margin:0 auto;padding:1.5rem}}h1{{font-size:1.7rem;margin:
 .box{{border:1.5px solid #17201c;border-radius:10px;padding:.9rem 1rem}}.qr svg{{width:150px;height:150px;display:block}}
 .ref{{font-size:1.2rem;font-weight:700;letter-spacing:.04em}}table{{width:100%;border-collapse:collapse}}
 th,td{{text-align:left;padding:.45rem .35rem;border-bottom:1px solid #b9c2bc;vertical-align:top}}td.n{{width:2rem}}td.w{{width:9rem}}
-.small{{font-size:12px}}@media print{{.noprint{{display:none}}}}</style></head><body><main>{body}
+.small{{font-size:12px}}@media print{{.noprint{{display:none}}body{{font-size:13px;line-height:1.4}}main{{padding:0}}
+h1{{font-size:1.5rem}}h2{{margin:.7rem 0 .25rem}}li{{margin:.1rem 0}}.qr svg{{width:112px;height:112px}}.box{{padding:.6rem .9rem}}}}</style></head><body><main>{body}
 <p class="noprint muted small">Print with Ctrl+P (or Save as PDF).</p></main></body></html>"""
 
 
@@ -527,6 +568,9 @@ def _audit_body(prospect: dict, *, owner: str, whatsapp: str, demos_url: str, to
             "<h2>Your Google listing</h2><p class='small muted'>Let's look at it together on your phone:</p>"
             "<ul style='list-style:none;padding-left:0'>"
             + "".join(f"<li>☐ {e(item)}</li>" for item in GOOGLE_CHECKS) + "</ul>"
+            # The main category decides which searches the listing shows up in; up to nine extras widen that.
+            "<p class='small'>Main category: ____________________ &nbsp; Extra categories: ____________________<br>"
+            "Competitors use: ____________________________________________</p>"
             f"<h2>How I work</h2><ul>{terms}</ul>"
             f"<p class='muted small'>If you message me, I keep your name and number only to talk about your website. "
             f"Say \"delete my number\" any time and I will delete it."

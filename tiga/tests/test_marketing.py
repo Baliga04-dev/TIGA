@@ -453,3 +453,37 @@ def test_the_audit_sheet_carries_a_google_listing_checklist_to_tick_at_the_shop(
     page = marketing.audit_sheet_html(p, owner="Adithya", whatsapp="917795052550",
                                       demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
     assert "Your Google listing" in page and page.count("☐") >= 5 and "review" in page.lower()
+    assert "Main category" in page and "Extra categories" in page and "Competitors use" in page
+
+
+def test_the_audit_sheet_names_local_search_gaps_on_the_shops_own_site(store):
+    p = prospect(store, n=501, category="bakery", website="https://sri.in",
+                 problems=["no_area_in_title", "no_phone_on_site", "no_local_schema"])
+    page = marketing.audit_sheet_html(p, owner="Adithya", whatsapp="917795052550",
+                                      demos_url="https://baliga04-dev.github.io/demos/", today=NOON.date())
+    assert "which area" in page and "phone number" in page and "Google" in page
+
+
+# --- erasure on request (DPDP, R&D #14) ----------------------------------------------------------------
+def test_erasing_a_person_removes_them_everywhere_and_keeps_only_a_hash(store):
+    from mailer import Mailer
+    c = contact(store, name="Ravi", phone="98450 12345", email="ravi@shop.in")
+    mailer = Mailer(store, lambda *a: {"ok": True}, postal_address="x")
+    mailer.draft(email="ravi@shop.in", subject="Hi", body="Hello there")
+    p, _ = store.upsert_prospect({"key": "osm:node/9", "source": "osm", "name": "Ravi Stores", "phone": "+91 98450 12345",
+                                  "status": "needs_contact"})
+    store.suppress("ravi@shop.in", reason="unsubscribed")
+    out = marketing.erase_person(store, "+91 98450-12345, ravi@shop.in")
+    assert out == {"contacts": 1, "mails": 1, "shops": 1}
+    assert store.list_contacts() == [] and store.list_outreach() == [] and store.list_prospects(limit=10) == []
+    held = " ".join(str(r) for r in store.suppressions() + store.audit_log())
+    assert "ravi@shop.in" not in held and "9845012345" not in held and "Ravi" not in held
+    assert store.is_suppressed("ravi@shop.in") and store.is_suppressed("tel:+919845012345")
+    with pytest.raises(Exception):
+        mailer.draft(email="ravi@shop.in", subject="Hi again", body="Hello")
+    assert c["id"]   # the contact existed before
+
+
+def test_erasing_needs_an_email_or_a_phone(store):
+    with pytest.raises(marketing.MarketingError):
+        marketing.erase_person(store, "ravi")

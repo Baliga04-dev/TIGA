@@ -10,6 +10,7 @@ import json
 from typing import Callable
 
 MIN_WORDS, MAX_WORDS = 25, 75   # short wins replies; about 50 words is the aim
+DEMO_LINE = "Here's a website I built for a shop like yours:"
 
 _OPENERS = {
     "redesign": "I saw {company} is planning a website redesign.",
@@ -34,8 +35,16 @@ _FINDINGS = {
                  "The {company} website looks like it hasn't been updated in a few years."),
     "slow": ("Your website's loading speed",
              "The {company} website was slow to load on my phone, and people often leave before it opens."),
+    "no_area_in_title": ("Your website and local searches",
+                         "The {company} website doesn't say which area you're in, so people searching nearby may "
+                         "not find it."),
+    "no_phone_on_site": ("Your phone number on your website",
+                         "I couldn't find a phone number on the {company} website, so people who want to call may "
+                         "give up."),
 }
-_FINDING_ORDER = ["no_website", "site_down", "not_mobile", "no_https", "outdated", "slow"]
+# Strongest first. Missing LocalBusiness markup is on the audit sheet but never leads a mail: the owner can't see it.
+_FINDING_ORDER = ["no_website", "site_down", "not_mobile", "no_https", "outdated", "slow", "no_area_in_title",
+                  "no_phone_on_site"]
 _SUBJECTS = {
     "redesign": "Your website redesign",
     "funding": "An idea after your funding news",
@@ -86,7 +95,7 @@ def _with_demo(draft: dict, demo_url: str) -> dict:
     """One line pointing to a working demo for this kind of shop, just before the sign-off: proof, not a pitch."""
     if not demo_url:
         return draft
-    line = f"Here's a website I built for a shop like yours: {demo_url}"
+    line = f"{DEMO_LINE} {demo_url}"
     body = draft["body"]
     at = body.rfind("Best,")
     body = body[:at].rstrip() + f"\n\n{line}\n\n" + body[at:] if at >= 0 else body.rstrip() + f"\n\n{line}"

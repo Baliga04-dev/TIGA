@@ -13,6 +13,9 @@ const PROBLEM_LABEL: Record<string, string> = {
   no_https: 'not secure (no HTTPS)',
   outdated: 'looks outdated',
   slow: 'slow',
+  no_area_in_title: 'area not in title',
+  no_phone_on_site: 'no phone on site',
+  no_local_schema: 'no Google address markup',
 };
 
 const COUNT_LABELS: [string, string][] = [

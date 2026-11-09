@@ -195,3 +195,16 @@ def test_rnd_api_runs_without_a_mailbox_and_reports_status(monkeypatch):
     status = client.get("/api/rnd/status").json()
     assert status["ok"] and status["last_run"] and status["manual_left"] == 1
     assert status["latest"]["kind"] == "research"
+
+
+def test_the_weekly_report_shows_which_kind_of_shop_replies():
+    store = Store(":memory:")
+    card = {**CARD, "by_niche": [
+        {"niche": "cafe", "label": "Cafés", "drafted": 0, "approved": 0, "sent": 12, "replies": 2, "interested": 1,
+         "declined": 1, "unsubscribed": 0, "bounced": 1},
+        {"niche": "school", "label": "Schools", "drafted": 8, "approved": 0, "sent": 0, "replies": 0,
+         "interested": 0, "declined": 0, "unsubscribed": 0, "bounced": 0}]}
+    rnd.run(store, context={**CONTEXT, "card": card}, guide="", research=None, send=Sink(), to="",
+            today=date(2026, 11, 9), manual=False)
+    body = store.list_reports("weekly")[0]["body"]
+    assert "Cafés: 12 sent: 2 replies, 1 interested, 1 bounced" in body and "Schools" not in body

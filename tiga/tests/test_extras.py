@@ -49,7 +49,7 @@ async def test_prospect_brief_uses_the_site_check_and_rate_card(monkeypatch):
     services.get_store().upsert_prospect({"key": "osm:1", "source": "osm", "name": "Sri Bakery",
                                           "website": "http://sri.in", "status": "ready"})
 
-    async def fake_inspect(url, *, year):
+    async def fake_inspect(url, *, year, area=""):
         return SiteReport(url=url, reachable=True, https=False, mobile_ready=False)
 
     import sitecheck

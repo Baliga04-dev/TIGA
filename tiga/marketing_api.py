@@ -103,6 +103,19 @@ def delete_contact(contact_id: int) -> dict:
     return {"ok": True}
 
 
+class EraseIn(_In):
+    who: str = Field(min_length=3, max_length=300)
+
+
+@router.post("/erase")
+def erase(body: EraseIn) -> dict:
+    """Someone asked to be deleted: everything about them goes, a one-way hash keeps them from coming back."""
+    try:
+        return {"ok": True, "erased": marketing.erase_person(services.get_store(), body.who)}
+    except MarketingError as exc:
+        return _refuse(exc)
+
+
 @router.post("/contacts/{contact_id}/consent")
 def consent(contact_id: int, body: ConsentIn) -> dict:
     try:

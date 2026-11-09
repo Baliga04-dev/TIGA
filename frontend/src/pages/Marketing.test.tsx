@@ -144,6 +144,19 @@ describe('Marketing', () => {
     await waitFor(() => expect(dnc).toHaveLength(1))
   })
 
+  it('erases someone who asked, by their email or phone', async () => {
+    mock.get('/marketing/contacts', { ok: true, items: [] })
+    const erased = mock.record('/marketing/erase', { ok: true, erased: { contacts: 1, mails: 2, shops: 1 } })
+    const user = userEvent.setup()
+    renderApp('/marketing?tab=contacts')
+    await user.click(await screen.findByRole('button', { name: /erase on request/i }))
+    const dialog = await screen.findByRole('dialog', { name: 'Erase someone who asked' })
+    await user.type(within(dialog).getByLabelText(/their email or phone/i), '98450 12345')
+    await user.click(within(dialog).getByRole('button', { name: /erase everything about them/i }))
+    await waitFor(() => expect(erased).toEqual([{ who: '98450 12345' }]))
+    expect(await screen.findByText('Erased: 1 contacts, 2 emails, 1 shop listings.')).toBeInTheDocument()
+  })
+
   it('works out the commission maths for a restaurant and links a printout', async () => {
     const asked: string[] = []
     server.use(http.get('*/api/marketing/commission', ({ request }) => {

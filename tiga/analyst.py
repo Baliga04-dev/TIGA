@@ -84,6 +84,11 @@ class Analyst:
         return {"phase": "collect", "category": category, "new": fetched, "checked": checked, "errors": errors}
 
     def _record_business(self, b) -> int:
+        import marketing   # the same phone form the do-not-contact and erasure lists use
+
+        phone = marketing._phone_digits(b.phone)
+        if (b.email and self.store.is_erased(b.email)) or (phone and self.store.is_erased(f"tel:+{phone}")):
+            return 0   # asked to be erased: never listed again
         base = {"key": b.key, "source": "osm", "name": b.name, "category": b.category, "website": b.website,
                 "phone": b.phone, "address": b.address, "lat": getattr(b, "lat", None), "lon": getattr(b, "lon", None)}
         if b.is_chain:
@@ -114,7 +119,7 @@ class Analyst:
     async def _check_sites(self, year: int) -> int:
         batch = self.store.list_prospects("new", limit=self.checks_per_tick)
         for p in batch:
-            report = await self.inspect(p["website"], year=year)
+            report = await self.inspect(p["website"], year=year, area=p["address"])
             problems = report.problems
             if report.no_solicit:
                 self.store.update_prospect(p["id"], status="disqualified", note="site asks for no solicitation")

@@ -15,9 +15,15 @@ const card = {
   bounced: 0, followups_sent: 1, awaiting_approval: 1, daily_cap: 5, pipeline: {},
 }
 
-function load(items: unknown[] = [item()]) {
+const batch = (over: Record<string, unknown> = {}) => ({
+  niche: 'cafe', label: 'Cafés', drafted: 1, approved: 0, sent: 0, replies: 0, interested: 0, declined: 0,
+  unsubscribed: 0, bounced: 0, draft_ids: [1], ...over,
+})
+
+function load(items: unknown[] = [item()], batches: unknown[] = []) {
   mock.get('/outreach', { ok: true, items })
   mock.get('/outreach/scorecard', { ok: true, scorecard: card })
+  mock.get('/outreach/batches', { ok: true, items: batches })
 }
 
 beforeEach(() => mockMountCalls())
@@ -46,6 +52,23 @@ describe('Outreach', () => {
     renderApp('/outreach')
     await user.click(await screen.findByRole('button', { name: /approve owner@acme.io/i }))
     await waitFor(() => expect(calls).toEqual(['approve']))
+  })
+
+  it('narrows the drafts to one kind of shop and approves that batch after a second click', async () => {
+    load([item(), item({ id: 2, email: 'head@school.in', company: 'School' })],
+      [batch(), batch({ niche: 'school', label: 'Schools', draft_ids: [2] })])
+    const calls = mock.record('/outreach/batches/approve', { ok: true, count: 1 })
+    const user = userEvent.setup()
+    renderApp('/outreach')
+    await user.click(await screen.findByRole('button', { name: /^Schools/ }))
+    expect(screen.getByRole('button', { name: /^Schools/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByLabelText('Subject for owner@acme.io')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Subject for head@school.in')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Approve all 1' }))
+    expect(calls).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'Yes, approve 1' }))
+    await waitFor(() => expect(calls).toEqual([{ niche: 'school' }]))
+    expect(await screen.findByText('Approved 1 schools draft')).toBeInTheDocument()
   })
 
   it('must save edits before approving', async () => {
@@ -99,6 +122,7 @@ describe('Outreach', () => {
   it('says so when the server is unreachable', async () => {
     mock.get('/outreach', { detail: 'database locked' }, 500)
     mock.get('/outreach/scorecard', { ok: true, scorecard: card })
+    mock.get('/outreach/batches', { ok: true, items: [] })
     renderApp('/outreach')
     expect(await screen.findByRole('alert')).toHaveTextContent('database locked')
   })

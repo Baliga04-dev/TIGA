@@ -13,6 +13,7 @@ import type {
   GithubSyncResponse,
   FindLeadsResponse,
   OutreachItem,
+  Batch,
   NewDraft,
   Scorecard,
   ReportRow,
@@ -176,6 +177,12 @@ export const api = {
   draftFollowups: () => post<{ ok: true; drafts: OutreachItem[] }>('/outreach/followups'),
 
   getScorecard: () => request<{ ok: true; scorecard: Scorecard }>('/outreach/scorecard'),
+
+  listBatches: () => request<{ ok: true; items: Batch[] }>('/outreach/batches'),
+
+  approveBatch: (niche: string) => post<{ ok: true; count: number }>('/outreach/batches/approve', { niche }),
+
+  rejectBatch: (niche: string) => post<{ ok: true; count: number }>('/outreach/batches/reject', { niche }),
 
   listReports: () => request<{ ok: true; items: ReportRow[] }>('/reports'),
 
@@ -347,6 +354,9 @@ export const api = {
   addContact: (data: Partial<Pick<Contact, 'name' | 'business' | 'category' | 'phone' | 'email' | 'area' | 'source' | 'source_detail' | 'note'>>) =>
     post<{ ok: true; contact: Contact }>('/marketing/contacts', data),
   deleteContact: (id: number) => request<{ ok: true }>(`/marketing/contacts/${id}`, { method: 'DELETE' }),
+
+  erasePerson: (who: string) =>
+    post<{ ok: true; erased: { contacts: number; mails: number; shops: number } }>('/marketing/erase', { who }),
   giveConsent: (id: number, channel: Channel, how: string, notice: boolean) =>
     post<{ ok: true; contact: Contact }>(`/marketing/contacts/${id}/consent`, { channel, how, notice }),
   doNotContact: (id: number, reason: string) => post<{ ok: true; contact: Contact }>(`/marketing/contacts/${id}/dnc`, { reason }),

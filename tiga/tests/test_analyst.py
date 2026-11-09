@@ -38,8 +38,9 @@ class World:
             raise PlacesError("down")
         return self.businesses.get(category, [])
 
-    async def inspect(self, url, *, year):
+    async def inspect(self, url, *, year, area=""):
         self.inspected.append(url)
+        self.areas = getattr(self, "areas", []) + [area]
         return self.sites[url]
 
     async def find_leads(self, topics, limit=30):
@@ -60,7 +61,8 @@ def w():
 
 
 def report(url, **kw):
-    return SiteReport(url=url, **{"reachable": True, "https": True, "mobile_ready": True, **kw})
+    return SiteReport(url=url, **{"reachable": True, "https": True, "mobile_ready": True, "area_in_title": True,
+                                  "phone_on_site": True, "local_schema": True, **kw})
 
 
 async def test_daytime_writes_once_then_idles_and_never_collects(w):
@@ -97,6 +99,7 @@ async def test_businesses_are_sorted_into_ready_needs_contact_and_new(w):
     assert site["status"] == "ready" and site["email"] == "hi@site.in" and site["email_source"].endswith("/contact")
     assert site["problems"] == ["no_https"]
     assert w.inspected == ["https://site.in"]  # chains are never visited
+    assert w.areas == ["Indiranagar"]   # the map address, so the check can look for the area in the title
 
 
 async def test_modern_sites_and_no_solicitation_are_dropped_and_no_email_needs_contact(w):
@@ -168,3 +171,12 @@ async def test_chains_already_on_the_list_are_marked_not_a_fit_once_a_night():
     await w.analyst().tick(EVENING)
     statuses = {p["name"]: p["status"] for p in w.store.list_prospects()}
     assert statuses == {"Vodafone Store": "disqualified", "Sri Ganesh Bakery": "needs_contact"}
+
+
+async def test_a_person_who_asked_to_be_erased_is_not_imported_from_the_map_again(w):
+    import marketing
+    w.businesses["bakery"] = [biz("osm:node/7", "Ravi Stores", phone="+91 98450 12345"),
+                              biz("osm:node/8", "Mail Shop", email="ravi@shop.in")]
+    marketing.erase_person(w.store, "98450 12345, ravi@shop.in")
+    await w.analyst().tick(EVENING)
+    assert w.store.list_prospects(limit=10) == []

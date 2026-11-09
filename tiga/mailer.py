@@ -12,6 +12,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
+from drafter import DEMO_LINE
 from store import Store
 
 STRICT_TLDS = {"de", "at"}  # opt-in countries for B2B cold email
@@ -30,8 +31,9 @@ def _random_gap() -> int:
 
 class Mailer:
     def __init__(self, store: Store, sender: Callable[[str, str, str], dict], *, postal_address: str,
-                 hard_cap: int = 25, gap_seconds: Callable[[], int] = _random_gap):
-        self.store, self.sender = store, sender
+                 hard_cap: int = 25, gap_seconds: Callable[[], int] = _random_gap, privacy_url: str = "",
+                 sender_name: str = ""):
+        self.store, self.sender, self.privacy_url, self.sender_name = store, sender, privacy_url, sender_name
         self.postal_address, self.hard_cap, self.gap_seconds = postal_address.strip(), hard_cap, gap_seconds
 
     # --- drafting and approval -------------------------------------------
@@ -60,6 +62,50 @@ class Mailer:
 
     def reject(self, outreach_id: int) -> dict:
         return self.store.update_outreach(outreach_id, actor="user", status="rejected")
+
+    # --- niche batches: approve one kind of shop at a time, and see which kind replies ----------------
+    def _niche_of(self) -> Callable[[dict], str]:
+        niches, rows = self.store.outreach_niches(), {r["id"]: r for r in self.store.list_outreach()}
+
+        def niche(row: dict) -> str:   # a follow-up belongs to its first mail's batch
+            while row["parent_id"] and row["parent_id"] in rows:
+                row = rows[row["parent_id"]]
+            return niches.get(row["id"], "")
+        return niche
+
+    def batches(self) -> list[dict]:
+        """Per kind of shop ('' = news leads): drafts waiting, approved, sent and how the sent ones answered."""
+        import marketing   # only for the shop-owner wording of the niche
+
+        niche, out = self._niche_of(), {}
+        for row in self.store.list_outreach():
+            b = out.setdefault(niche(row), {**{k: 0 for k in ("drafted", "approved", "sent", "replies", "interested",
+                                                               "declined", "unsubscribed", "bounced")}, "draft_ids": []})
+            if row["status"] in ("drafted", "approved"):
+                b[row["status"]] += 1
+            if row["status"] == "drafted":
+                b["draft_ids"].append(row["id"])
+            if row["sent_at"]:
+                b["sent"] += 1
+            if row["replied_at"]:
+                b["replies"] += 1
+            if row["status"] in ("interested", "declined", "unsubscribed", "bounced"):
+                b[row["status"]] += 1
+        rows = [{"niche": k, "label": marketing.niche_label(k), **v} for k, v in out.items()]
+        return sorted(rows, key=lambda b: (-b["drafted"], -b["sent"], b["label"]))
+
+    def _each_draft_in(self, niche: str, act: Callable[[int], dict]) -> int:
+        of = self._niche_of()
+        rows = [r for r in self.store.list_outreach("drafted") if of(r) == niche]
+        for row in rows:
+            act(row["id"])
+        return len(rows)
+
+    def approve_batch(self, niche: str) -> int:
+        return self._each_draft_in(niche, self.approve)
+
+    def reject_batch(self, niche: str) -> int:
+        return self._each_draft_in(niche, self.reject)
 
     # --- limits -------------------------------------------------------------
     def daily_cap(self, now: datetime) -> int:
@@ -137,14 +183,37 @@ class Mailer:
                 self.store.update_outreach(sibling["id"], actor="mailer", status=status,
                                            replied_at=now.isoformat(timespec="seconds"))
                 changed += 1
+            for waiting in self.store.list_outreach(*OPEN_STATUSES, email=row["email"]):
+                if waiting["followup_n"]:   # they answered: a "closing the loop" note must not go out
+                    self.store.update_outreach(waiting["id"], actor="mailer", status="rejected")
             if status in ("unsubscribed", "declined", "bounced"):
                 self.store.suppress(row["email"], reason=status)
-            if status == "interested":  # a warm reply becomes a deal on the Pipeline page
+            who = row["company"] or row["email"]
+            if status == "interested":  # a warm reply becomes a deal on the Pipeline page, and gets an answer fast
                 self.store.create_deal({"email": row["email"], "company": row["company"], "outreach_id": row["id"]})
+                self._draft_answer(row)
+                self.store.add_reminder(f"{who} replied: interested. Answer within the hour: a reply is drafted on "
+                                        "the Outreach page for you to approve.", now.isoformat(timespec="seconds"))
+            elif status == "replied":
+                self.store.add_reminder(f"{who} replied to your email. Read it in Gmail and answer today.",
+                                        now.isoformat(timespec="seconds"))
         return changed
 
+    def _draft_answer(self, row: dict) -> None:
+        demo = re.search(re.escape(DEMO_LINE) + r"\s*(\S+)", row["body"])
+        body = ("Hi,\n\nThanks for getting back to me. Would a 15-minute call this week suit you? I can show you what "
+                f"a site for {row['company'] or 'you'} could look like"
+                + (f", starting from the one I built for a shop like yours: {demo.group(1)}" if demo else "")
+                + ".\n\nJust tell me a day and time that works.\n\nBest," + (f"\n{self.sender_name}" if self.sender_name else ""))
+        subject = row["subject"] if row["subject"].lower().startswith("re:") else f"Re: {row['subject']}"
+        try:
+            self.draft(email=row["email"], subject=subject, body=body, company=row["company"], lead_url=row["lead_url"],
+                       source_note=row["source_note"], region=row["region"], parent_id=row["id"])
+        except MailerError:
+            pass   # a draft is already open for them
+
     def due_followups(self, *, now: datetime | None = None) -> list[dict]:
-        """Draft (never send) a follow-up for quiet prospects: after 5 days, at most 2 per prospect."""
+        """Draft (never send) one short last note for quiet prospects, after FOLLOWUP_AFTER."""
         now, created = now or datetime.now(timezone.utc), []
         rows = self.store.list_outreach()
         for row in self.store.list_outreach("sent"):
@@ -152,7 +221,7 @@ class Mailer:
                 continue
             if any(other["parent_id"] == row["id"] for other in rows):
                 continue
-            body = _FOLLOWUP_BODY[row["followup_n"]].format(for_company=f" for {row['company']}" if row["company"] else "")
+            body = _LAST_NOTE[DEMO_LINE in row["body"]]
             subject = row["subject"] if row["subject"].lower().startswith("re:") else f"Re: {row['subject']}"
             try:
                 created.append(self.draft(
@@ -185,10 +254,12 @@ class Mailer:
             "awaiting_approval": pipeline.get("drafted", 0),
             "daily_cap": self.daily_cap(now),
             "pipeline": pipeline,
+            "by_niche": self.batches(),
         }
 
     def _with_footer(self, body: str) -> str:
-        return (f"{body.rstrip()}\n\n--\n{self.postal_address}\n"
+        notice = f"How I handle your details, and how to have them deleted: {self.privacy_url}\n" if self.privacy_url else ""
+        return (f"{body.rstrip()}\n\n--\n{self.postal_address}\n{notice}"
                 "If you'd rather not hear from me, just reply STOP and I won't email you again.")
 
 
@@ -197,12 +268,14 @@ _STOP = re.compile(r"\bstop\b|unsubscribe|remove me|take me off|do not (contact|
 _NO = re.compile(r"not interested|no thanks|no thank you|not now|don't need|do not need", re.I)
 _YES = re.compile(r"interested|schedule|\bcall\b|sounds good|let's talk|tell me more|send (me )?(a |the )?(quote|proposal|details)|\byes\b", re.I)
 _QUOTE_START = re.compile(r"^(>|On .{0,80}wrote:?\s*$)", re.I)
-FOLLOWUP_AFTER = timedelta(days=5)
+FOLLOWUP_AFTER = timedelta(days=4)   # day 4-5 replies best; under 48 hours roughly halves replies
 MAX_FOLLOWUPS = 1   # one follow-up per contact: more reads as pressure and invites spam reports
-_FOLLOWUP_BODY = (
-    "Hi, following up once on my note below in case it got buried. Happy to share a plan{for_company} if useful; "
-    "if not, no problem, and I won't write again.",
-)
+_LAST_NOTE = {   # keyed by whether the first mail carried a demo link
+    True: "Hi, just closing the loop on my note below. The demo site is linked there if you'd like a look; "
+          "no reply needed, and I won't write again.",
+    False: "Hi, just closing the loop on my note below. Happy to share a short plan if it's useful; "
+           "no reply needed, and I won't write again.",
+}
 
 
 def _fresh_text(body: str) -> str:

@@ -40,7 +40,10 @@ def get_mailer() -> Mailer:
     store = get_store()
     with _lock:
         if _mailer is None:
-            _mailer = Mailer(store, send_email, postal_address=config.POSTAL_ADDRESS, hard_cap=config.OUTREACH_DAILY_CAP)
+            import marketing
+
+            _mailer = Mailer(store, send_email, postal_address=config.POSTAL_ADDRESS, hard_cap=config.OUTREACH_DAILY_CAP,
+                             privacy_url=marketing.privacy_url(), sender_name=marketing.owner_name())
         return _mailer
 
 
