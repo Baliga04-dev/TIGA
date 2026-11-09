@@ -424,6 +424,9 @@ _PITCH = {
     "no_https": ("redesign", "a secure (HTTPS) redesign: browsers mark their site Not secure"),
     "outdated": ("redesign", "a refresh: their site looks a few years old"),
     "slow": ("redesign", "a faster site: theirs is slow to load"),
+    "no_area_in_title": ("redesign", "local search fixes: their site doesn't name their area"),
+    "no_phone_on_site": ("redesign", "tap-to-call and WhatsApp buttons: their site shows no phone number"),
+    "no_local_schema": ("redesign", "address and hours marked up for Google"),
 }
 
 
@@ -444,7 +447,7 @@ async def prospect_brief(name: str) -> dict:
     website = (prospect or {}).get("website", "")
     problems = list((prospect or {}).get("problems", []))
     if website:
-        report = await sitecheck.inspect(website, year=datetime.now().year)
+        report = await sitecheck.inspect(website, year=datetime.now().year, area=(prospect or {}).get("address", ""))
         problems = report.problems
     elif not problems:
         problems = ["no_website"]

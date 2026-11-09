@@ -182,3 +182,32 @@ Acceptance: chain names are tested, including the whole-name-only words; the ran
 location route orders stops from the given point; the combined printable has one page per stop; drafts for kinds
 with a demo carry exactly one demo link and others none; the salon demo passes the same checks as the others
 (axe at 1440 and 390 px, no horizontal scroll).
+
+# Round 4: the R&D bot's November proposals
+
+Added 2026-11-09, from issues #8-#16 (the R&D bot's weekly research, 1-2 November).
+
+- **The last note (#8).** The one follow-up is drafted after 4 quiet days (never sooner), as a two-line
+  "closing the loop, no reply needed" note that mentions the demo only when the first mail carried one.
+- **Local search signals (#10).** The site check also reads whether the homepage title or main heading names the
+  shop's area (from its map address) or the city, whether a phone number is on the page, and whether there is
+  LocalBusiness markup. Each gap is a problem on the prospect, the audit sheet and the pre-call brief.
+- **The strongest finding opens the mail (#13).** The first two of those can open a cold email, after the
+  existing findings; missing markup never does, because the owner can't see it.
+- **Batches by kind of shop (#12).** Drafts are grouped by the prospect's category ("Cafés", "Schools"; news leads
+  on their own). The Outreach page narrows the list to one kind and approves or rejects that whole batch after a
+  second click; the weekly R&D report lists sends, replies, bounces and unsubscribes per kind. Not by area too:
+  with about 50 drafts over 10 kinds, area batches would hold one or two drafts each.
+- **Erasure on request (#14).** "Erase on request" on the Contacts tab deletes one person, found by email or phone,
+  from contacts, cold mail and the shop list; their keys stay only as SHA-256 hashes in the suppression list (so
+  they are never mailed and the map import never lists them again) and are scrubbed from the audit log. Cold mail
+  carries a line linking the privacy notice. Not done: a time-based purge of map listings, because the nightly
+  import would only bring the same public listings back.
+- **Answer warm replies fast (#15).** Any reply cancels a waiting follow-up for that person. An interested reply
+  also gets a drafted answer (a 15-minute call, and the demo the first mail linked) in the approval queue and a
+  reminder due at once, which every Tiga page shows and reads out; any other reply gets a reminder to read it.
+- **The listing category (#16).** The audit sheet has lines for the main category, extra categories and what
+  competitors use. **The photo refresh (#9)** is a monthly item on the rate card, to add to a tune-up proposal.
+- **One page per audit sheet.** The printed sheet is tightened to fit one A4 page.
+
+Acceptance: tests for each item; R&D's own weekly reminders are no longer escalated as "Stabilise" failures.

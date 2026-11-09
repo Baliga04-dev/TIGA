@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Ban, Check, Trash2, UserPlus } from 'lucide-react';
+import { Ban, Check, Eraser, Trash2, UserPlus } from 'lucide-react';
 import { Field, Modal, Notice } from '../../components/ui';
 import { api } from '../../services/api';
 import type { Channel, Contact, ContactSource } from '../../types';
@@ -14,6 +14,7 @@ export function ContactsPanel({ onToast }: { onToast: (m: string) => void }) {
   const [consenting, setConsenting] = useState<Contact | null>(null);
   const [confirm, setConfirm] = useState<{ kind: 'dnc' | 'delete'; contact: Contact } | null>(null);
   const [adding, setAdding] = useState(false);
+  const [erasing, setErasing] = useState(false);
   const load = useCallback(async () => {
     try {
       setItems((await api.listContacts(source)).items);
@@ -44,7 +45,10 @@ export function ContactsPanel({ onToast }: { onToast: (m: string) => void }) {
             {(Object.keys(SOURCE_LABEL) as ContactSource[]).map((s) => <option key={s} value={s}>{SOURCE_LABEL[s]}</option>)}
           </select>
         )}</Field>
-        <button className="btn btn-secondary btn-sm" onClick={() => setAdding(true)}><UserPlus className="size-4" aria-hidden="true" /> Add a contact</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn btn-ghost btn-sm" onClick={() => setErasing(true)}><Eraser className="size-4" aria-hidden="true" /> Erase on request</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setAdding(true)}><UserPlus className="size-4" aria-hidden="true" /> Add a contact</button>
+        </div>
       </div>
       {error && <div className="mb-4"><Notice title="Something went wrong">{error}</Notice></div>}
       {items === null && !error && <div aria-busy="true" aria-label="Loading contacts" className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse rounded bg-wash" />)}</div>}
@@ -86,6 +90,7 @@ export function ContactsPanel({ onToast }: { onToast: (m: string) => void }) {
         </ul>
       )}
       {consenting && <ConsentForm contact={consenting} onClose={() => setConsenting(null)} onSaved={(m) => { setConsenting(null); onToast(m); load(); }} />}
+      {erasing && <EraseRequest onClose={() => setErasing(false)} onErased={(m) => { setErasing(false); onToast(m); load(); }} />}
       {adding && <AddContact onClose={() => setAdding(false)} onAdded={(c) => { setAdding(false); onToast(`${c.name} added.`); load(); }} />}
       {confirm && (
         <Modal title={confirm.kind === 'dnc' ? `Never contact ${confirm.contact.name}?` : `Delete ${confirm.contact.name}?`} onClose={() => setConfirm(null)}>
@@ -104,6 +109,42 @@ export function ContactsPanel({ onToast }: { onToast: (m: string) => void }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+/** Someone asked to be deleted ("delete my number"): everything about them goes, from every list. */
+function EraseRequest({ onClose, onErased }: { onClose: () => void; onErased: (m: string) => void }) {
+  const [who, setWho] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const { erased } = await api.erasePerson(who);
+      const total = erased.contacts + erased.mails + erased.shops;
+      onErased(total ? `Erased: ${erased.contacts} contacts, ${erased.mails} emails, ${erased.shops} shop listings.`
+        : 'Nothing held for them. They are on the never-contact list now.');
+    } catch (err) {
+      setError(errorText(err));
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title="Erase someone who asked" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-3">
+        <p className="text-sm">Their contact, emails and shop listing are deleted. Tiga keeps only a scrambled copy of the
+          email or number, enough to never contact them or list them again, not enough to read it.</p>
+        {error && <Notice>{error}</Notice>}
+        <Field label="Their email or phone, as they gave it" hint="Both work, separated by a comma.">{(id) => (
+          <input id={id} className="input" value={who} onChange={(e) => setWho(e.target.value)} required minLength={3} />
+        )}</Field>
+        <div className="flex gap-2">
+          <button className="btn btn-danger" disabled={busy}>Erase everything about them</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

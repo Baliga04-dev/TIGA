@@ -68,6 +68,13 @@ def test_idle_pipeline_and_backlog_are_flagged():
     assert any("backlog" in x.lower() for x in titles({**BASE, "awaiting_approval": 12}))
 
 
+def test_the_bots_own_weekly_reminders_are_not_escalated_as_failures():
+    issues = [{"id": 1, "title": "No mail went out this week", "status": "open", "occurrences": 4, "source": "rnd"},
+              {"id": 2, "title": "Tests fail on main", "status": "triaged", "occurrences": 3, "source": "tester"}]
+    out = titles({**BASE, "sent_week": 0, "replies": 0}, issues)
+    assert not any("Stabilise: No mail" in x for x in out) and any("Stabilise: Tests fail" in x for x in out)
+
+
 def test_repeating_failures_are_flagged_and_capped_at_five():
     issues = [{"id": i, "title": f"bug {i}", "status": "triaged", "occurrences": 4} for i in range(8)]
     out = titles({**BASE, "replies": 0, "bounced": 3, "unsubscribed": 3, "awaiting_approval": 20}, issues)

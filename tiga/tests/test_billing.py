@@ -133,3 +133,8 @@ def test_a_review_card_for_a_clients_shop_has_the_qr_the_link_and_no_incentive()
 def test_a_review_card_only_takes_a_google_review_link(link):
     with pytest.raises(ValueError):
         billing.build_review_card(deal(), link, BIZ, TODAY)
+
+
+def test_the_photo_refresh_is_a_monthly_add_on(store):
+    refresh = next(r for r in billing.get_rates(store) if r["id"] == "photo_refresh")
+    assert refresh["unit"] == "month" and "Google" in refresh["name"] and "photos" in refresh["description"]

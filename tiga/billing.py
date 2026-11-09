@@ -38,6 +38,9 @@ DEFAULT_RATES = [
                     "and a review QR card, so people searching nearby find you. A good first job."},
     {"id": "care", "name": "Monthly website care", "price": 1500, "unit": "month", "days": 0,
      "description": "Updates, backups, small text/photo changes and uptime checks."},
+    {"id": "photo_refresh", "name": "Monthly Google photo refresh", "price": 1200, "unit": "month", "days": 0,
+     "description": "8-10 freshly edited photos of your shop and products on your Google listing, and one post a "
+                    "month with a Call or WhatsApp button. An add-on to the listing tune-up."},
 ]
 CLIENT_PROVIDES = [
     "Your logo (or approval of a new one)",

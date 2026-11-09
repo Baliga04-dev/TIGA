@@ -178,3 +178,12 @@ def test_walk_ins_at_scale_over_http(client):
     assert client.get("/api/marketing/route", params={"lat": 19.07, "lon": 72.87}).json()["ok"] is False
     sheets = client.get("/api/marketing/print/route-audits", params={"locality": "Jayanagar", "radius_km": 1})
     assert sheets.status_code == 200 and sheets.text.count("Ref T") == 3 and "<script" not in sheets.text
+
+
+def test_erase_on_request_from_the_page(client):
+    import services
+    services.get_store().upsert_prospect({"key": "osm:1", "source": "osm", "name": "Ravi Stores",
+                                          "phone": "+91 98450 12345", "status": "needs_contact"})
+    out = client.post("/api/marketing/erase", json={"who": "98450 12345"}).json()
+    assert out == {"ok": True, "erased": {"contacts": 0, "mails": 0, "shops": 1}}
+    assert client.post("/api/marketing/erase", json={"who": "Ravi"}).json()["ok"] is False

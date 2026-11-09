@@ -57,6 +57,15 @@ def test_approved_mail_gets_the_compliance_footer(mailer, sender):
     assert "reply STOP" in body and ADDRESS in body and body.startswith("Hi, I noticed")
 
 
+def test_the_footer_says_where_the_privacy_notice_is_when_there_is_one(store, sender):
+    m = Mailer(store, sender, postal_address=ADDRESS, gap_seconds=lambda: 0, privacy_url="https://x.io/privacy.html")
+    d = m.draft(email="a@b.in", subject="Hi", body="Hello there")
+    m.approve(d["id"])
+    m.send_next(now=T0)
+    body = sender.sent[-1][2]
+    assert "How I handle your details, and how to have them deleted: https://x.io/privacy.html" in body
+
+
 def test_sending_refuses_without_a_postal_address(store, sender):
     m = Mailer(store, sender, postal_address="", gap_seconds=lambda: 0)
     d = draft(m)
@@ -195,10 +204,10 @@ def test_bounce_suppresses(mailer, store):
     assert store.is_suppressed("owner@acme.io")
 
 
-def test_followup_drafted_after_five_quiet_days_and_needs_approval(mailer):
+def test_followup_drafted_after_four_quiet_days_and_needs_approval(mailer):
     row = sent_mail(mailer)
-    assert mailer.due_followups(now=T0 + timedelta(days=4)) == []
-    created = mailer.due_followups(now=T0 + timedelta(days=5))
+    assert mailer.due_followups(now=T0 + timedelta(days=3, hours=23)) == []   # never under 4 days
+    created = mailer.due_followups(now=T0 + timedelta(days=4))
     assert len(created) == 1 and created[0]["status"] == "drafted"
     assert created[0]["followup_n"] == 1 and created[0]["parent_id"] == row["id"]
     assert mailer.due_followups(now=T0 + timedelta(days=6)) == []  # not drafted twice
@@ -207,11 +216,23 @@ def test_followup_drafted_after_five_quiet_days_and_needs_approval(mailer):
 def test_at_most_one_followup(mailer):
     sent_mail(mailer)
     follow = mailer.due_followups(now=T0 + timedelta(days=5))[0]
-    assert "won't write again" in follow["body"]
+    assert "closing the loop" in follow["body"].lower() and "won't write again" in follow["body"]
+    assert "no reply needed" in follow["body"].lower() and len(follow["body"].split("--")[0].split()) <= 40
     mailer.approve(follow["id"])
     mailer.send_next(now=T0 + timedelta(days=5))
     assert mailer.due_followups(now=T0 + timedelta(days=12)) == []
     assert mailer.due_followups(now=T0 + timedelta(days=30)) == []
+
+
+def test_last_note_mentions_the_demo_only_when_the_first_mail_had_one(mailer):
+    sent_mail(mailer)
+    assert "demo" not in mailer.due_followups(now=T0 + timedelta(days=4))[0]["body"]
+    d = mailer.draft(email="cafe@shop.in", company="Cafe", lead_url="", source_note="", subject="A website",
+                     body="Hi.\n\nHere's a website I built for a shop like yours: https://x.io/demos/\n\nBest,\nA")
+    mailer.approve(d["id"])
+    mailer.send_next(now=T0 + timedelta(minutes=30))
+    notes = mailer.due_followups(now=T0 + timedelta(days=5))
+    assert any("demo site is linked" in n["body"] for n in notes if n["email"] == "cafe@shop.in")
 
 
 def test_replied_prospects_get_no_followup(mailer):
@@ -231,8 +252,8 @@ def test_scorecard_counts_the_pipeline(mailer):
     card = mailer.scorecard(now=T0 + timedelta(days=1))
     assert card["sent_today"] == 0 and card["sent_week"] == 2
     assert card["replies"] == 2 and card["interested"] == 1 and card["declined"] == 1
-    assert card["awaiting_approval"] == 1
-    assert card["pipeline"]["drafted"] == 1
+    assert card["awaiting_approval"] == 2   # c's first mail, and the drafted answer to a's "yes"
+    assert card["pipeline"]["drafted"] == 2
 
 
 def test_quoted_footer_in_a_reply_is_not_mistaken_for_an_unsubscribe(mailer):
@@ -248,3 +269,74 @@ def test_an_interested_reply_opens_a_deal_once(mailer, store):
     deals = store.list_deals()
     assert len(deals) == 1 and deals[0]["email"] == "owner@acme.io" and deals[0]["company"] == "Acme"
     assert deals[0]["outreach_id"] == row["id"]
+
+
+# --- niche batches (R&D #12): approve one kind of shop at a time and see which kind replies ----------------
+def shop_draft(mailer, store, email, category):
+    d = draft(mailer, email=email)
+    store.upsert_prospect({"key": f"osm:{email}", "source": "osm", "name": email, "category": category,
+                           "status": "drafted", "outreach_id": d["id"]})
+    return d
+
+
+def test_drafts_are_grouped_by_the_kind_of_shop_with_their_results(mailer, store):
+    shop_draft(mailer, store, "a@cafe.in", "cafe")
+    shop_draft(mailer, store, "b@cafe.in", "cafe")
+    shop_draft(mailer, store, "c@school.in", "school")
+    draft(mailer, email="d@news.io")                      # a news lead, not a mapped shop
+    batches = {b["niche"]: b for b in mailer.batches()}
+    assert batches["cafe"]["drafted"] == 2 and batches["cafe"]["label"] == "Cafés"
+    assert len(batches["cafe"]["draft_ids"]) == 2
+    assert batches["school"]["drafted"] == 1 and batches[""]["label"] == "News leads"
+    assert list(batches)[0] == "cafe"                     # the biggest batch first
+
+
+def test_a_whole_batch_is_approved_or_rejected_at_once_and_only_its_drafts(mailer, store):
+    a = shop_draft(mailer, store, "a@cafe.in", "cafe")
+    b = shop_draft(mailer, store, "b@cafe.in", "cafe")
+    c = shop_draft(mailer, store, "c@school.in", "school")
+    mailer.approve(b["id"])
+    assert mailer.approve_batch("cafe") == 1               # b was already approved
+    assert mailer.get(a["id"])["status"] == "approved" and mailer.get(c["id"])["status"] == "drafted"
+    assert mailer.reject_batch("school") == 1 and mailer.get(c["id"])["status"] == "rejected"
+
+
+def test_the_scorecard_reports_replies_per_niche(mailer, store):
+    d = shop_draft(mailer, store, "a@cafe.in", "cafe")
+    mailer.approve(d["id"])
+    row = mailer.send_next(now=T0)
+    mailer.check_replies(threads(**{row["thread_id"]: [("a@cafe.in", "Tell me more")]}), now=T0)
+    cafe = next(b for b in mailer.scorecard(now=T0)["by_niche"] if b["niche"] == "cafe")
+    assert cafe["sent"] == 1 and cafe["replies"] == 1 and cafe["interested"] == 1
+
+
+# --- replies (R&D #15): answer warm replies fast, and never send a "last note" to someone who answered ---------
+def test_an_answer_cancels_the_waiting_follow_up(mailer):
+    row = sent_mail(mailer)
+    follow = mailer.due_followups(now=T0 + timedelta(days=4))[0]
+    mailer.approve(follow["id"])
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", "Not now, thanks")]}), now=T0 + timedelta(days=4))
+    assert mailer.get(follow["id"])["status"] == "rejected"
+    assert mailer.next_due(now=T0 + timedelta(days=4, hours=1)) is None
+
+
+def test_an_interested_reply_gets_a_drafted_answer_and_a_reminder_due_now(mailer, store):
+    m = Mailer(store, FakeSender(), postal_address=ADDRESS, gap_seconds=lambda: 0, sender_name="Adithya")
+    d = m.draft(email="cafe@shop.in", company="Bean Cafe", subject="A website", lead_url="", source_note="",
+                body="Hi.\n\nHere's a website I built for a shop like yours: https://x.io/demos/malnad-table/\n\nBest,\nA")
+    m.approve(d["id"])
+    row = m.send_next(now=T0)
+    m.check_replies(threads(**{row["thread_id"]: [("cafe@shop.in", "Sounds good, tell me more")]}), now=T0)
+    answer = next(r for r in store.list_outreach("drafted") if r["email"] == "cafe@shop.in")
+    assert answer["subject"] == "Re: A website" and answer["parent_id"] == row["id"]
+    assert "15-minute call" in answer["body"] and "https://x.io/demos/malnad-table/" in answer["body"]
+    assert answer["body"].rstrip().endswith("Adithya")
+    due = store.list_reminders("pending", due_before=(T0 + timedelta(minutes=1)).isoformat())
+    assert any("Bean Cafe" in r["text"] and "interested" in r["text"] for r in due)
+
+
+def test_any_other_reply_is_a_reminder_to_read_it_but_no_draft(mailer, store):
+    row = sent_mail(mailer)
+    mailer.check_replies(threads(**{row["thread_id"]: [("owner@acme.io", "What would it cost?")]}), now=T0)
+    assert store.list_outreach("drafted") == []
+    assert any("Acme" in r["text"] for r in store.list_reminders("pending"))

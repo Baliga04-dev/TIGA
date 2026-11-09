@@ -106,3 +106,17 @@ def test_auto_draft_respects_the_suppression_list(client, monkeypatch):
     client.post("/api/suppressions", json={"address": "owner@acme.io"})
     out = client.post("/api/outreach/auto-draft", json={"email": "owner@acme.io"}).json()
     assert out["ok"] is False and "suppressed" in out["error"]
+
+
+def test_batches_are_listed_and_a_whole_niche_is_approved_from_the_page(client):
+    import services
+    did = make_draft(client)["draft"]["id"]
+    services.get_store().upsert_prospect({"key": "osm:1", "source": "osm", "name": "Acme", "category": "cafe",
+                                          "status": "drafted", "outreach_id": did})
+    make_draft(client, email="news@lead.io")
+    items = client.get("/api/outreach/batches").json()["items"]
+    assert {(b["label"], b["drafted"]) for b in items} == {("Cafés", 1), ("News leads", 1)}
+    assert client.post("/api/outreach/batches/approve", json={"niche": "cafe"}).json() == {"ok": True, "count": 1}
+    assert client.post("/api/outreach/batches/reject", json={"niche": ""}).json()["count"] == 1
+    statuses = {r["email"]: r["status"] for r in client.get("/api/outreach").json()["items"]}
+    assert statuses == {"owner@acme.io": "approved", "news@lead.io": "rejected"}

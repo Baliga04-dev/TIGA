@@ -1,6 +1,6 @@
 """Look at a business's own website: published contact emails, and problems worth pitching on.
 
-Interface: `await inspect(url, year=...) -> SiteReport`. Honours robots.txt, reads at most the homepage
+Interface: `await inspect(url, year=..., area=address) -> SiteReport`. Honours robots.txt, reads at most the homepage
 and one contact page, never guesses an address, and never raises for an unreachable site.
 """
 from __future__ import annotations
@@ -21,6 +21,8 @@ _JUNK_DOMAINS = {"example.com", "sentry.io", "wixpress.com", "domain.com", "emai
                  "sentry-next.wixpress.com", "godaddy.com"}
 _JUNK_SUFFIX = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
 _YEAR = re.compile(r"(?:©|&copy;|\(c\)|copyright)\s*(?:\d{4}\s*[-–]\s*)?((?:19|20)\d{2})", re.I)
+_PHONE = re.compile(r"(?:\+91[\s-]?)?(?:\b0?80[\s-]?\d{4}[\s-]?\d{4}\b|\b[6-9]\d{4}[\s-]?\d{5}\b)")
+_CITY = ("bengaluru", "bangalore")
 _NO_SOLICIT = re.compile(r"no solicitation|no unsolicited|do not (?:email|contact) (?:us )?for (?:marketing|sales)", re.I)
 
 
@@ -36,6 +38,10 @@ class SiteReport:
     no_solicit: bool = False
     robots_blocked: bool = False
     stale_before: int = 0
+    # Local search signals: the area in the title or main heading, a phone number, LocalBusiness markup.
+    area_in_title: bool = False
+    phone_on_site: bool = False
+    local_schema: bool = False
 
     @property
     def problems(self) -> list[str]:
@@ -50,7 +56,22 @@ class SiteReport:
             out.append("outdated")
         if self.seconds > SLOW_SECONDS:
             out.append("slow")
+        out += [key for key, ok in (("no_area_in_title", self.area_in_title), ("no_phone_on_site", self.phone_on_site),
+                                    ("no_local_schema", self.local_schema)) if not ok]
         return out
+
+
+def _local_words(area: str) -> list[str]:
+    """The places a local page should name: the parts of the map address that are names, and the city."""
+    parts = [p.strip().lower() for p in area.split(",")]
+    return [p for p in parts if len(p) >= 4 and not any(c.isdigit() for c in p)] + list(_CITY)
+
+
+def _local_schema(soup: BeautifulSoup) -> bool:
+    """LocalBusiness (or one of its kinds, which all carry an address) in JSON-LD or microdata."""
+    blocks = " ".join(t.get_text() for t in soup.find_all("script", attrs={"type": "application/ld+json"}))
+    items = " ".join(t.get("itemtype", "") for t in soup.find_all(attrs={"itemtype": True}))
+    return bool(re.search(r"LocalBusiness|Restaurant|Cafe|Bakery|Store|Salon|Clinic|Hotel|\"address\"", blocks + items))
 
 
 def _emails(html: str, soup: BeautifulSoup, page: str) -> list[tuple[str, str]]:
@@ -76,7 +97,7 @@ async def _robots(client: httpx.AsyncClient, origin: str) -> RobotFileParser:
     return parser
 
 
-async def inspect(url: str, *, year: int) -> SiteReport:
+async def inspect(url: str, *, year: int, area: str = "") -> SiteReport:
     report = SiteReport(url=url, stale_before=year - 3)
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
@@ -102,6 +123,10 @@ async def inspect(url: str, *, year: int) -> SiteReport:
         report.copyright_year = max(years) if years else None
         report.no_solicit = bool(_NO_SOLICIT.search(soup.get_text(" ")))
         report.emails = _emails(home.text, soup, url)
+        heads = " ".join([soup.title.get_text() if soup.title else ""] + [h.get_text() for h in soup.find_all("h1")]).lower()
+        report.area_in_title = any(w in heads for w in _local_words(area))
+        report.phone_on_site = bool(soup.select('a[href^="tel:"]')) or bool(_PHONE.search(soup.get_text(" ")))
+        report.local_schema = _local_schema(soup)
 
         contact = next((a["href"] for a in soup.find_all("a", href=True)
                         if "contact" in a["href"].lower() or "contact" in a.get_text().lower()), None)

@@ -62,6 +62,8 @@ import pytest
     ("no_https", "not secure"),
     ("outdated", "a few years"),
     ("slow", "slow"),
+    ("no_area_in_title", "which area"),
+    ("no_phone_on_site", "phone number"),
 ])
 def test_site_findings_become_the_honest_opener(problem, phrase):
     lead = {"company": "Sri Bakery", "problems": [problem], "category": "bakery"}
@@ -69,6 +71,15 @@ def test_site_findings_become_the_honest_opener(problem, phrase):
     assert phrase in d["body"].lower()
     assert 25 <= words(d["body"]) <= 65 and len(d["subject"].split()) <= 8
     assert "Sri Bakery" in d["body"]
+
+
+def test_the_strongest_finding_leads_and_invisible_markup_never_does():
+    lead = {"company": "Sri Bakery", "problems": ["no_local_schema", "no_area_in_title", "not_mobile"]}
+    assert drafter.write_draft(lead, sender_name="Jo", offer="x")["subject"] == "Your website on phones"
+    lead = {"company": "Sri Bakery", "problems": ["no_local_schema", "no_phone_on_site"]}
+    assert drafter.write_draft(lead, sender_name="Jo", offer="x")["subject"] == "Your phone number on your website"
+    only_markup = drafter.write_draft({"company": "Sri Bakery", "problems": ["no_local_schema"]}, sender_name="Jo", offer="x")
+    assert "schema" not in only_markup["body"].lower() and "markup" not in only_markup["body"].lower()
 
 
 def test_findings_beat_news_signals_and_go_to_the_llm_too():
