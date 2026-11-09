@@ -18,6 +18,8 @@ _ISOLATED_ENV = {
     "TIGA_SENDER_NAME": "",
     "TIGA_UPI_ID": "",
     "TIGA_BRIDGE_TOKEN": "",
+    "TIGA_PHONE": "",
+    "HOST": "127.0.0.1",
     "TIGA_BUSINESS_NAME": "",
     "TIGA_PORTFOLIO_URL": "",
     "TIGA_WHATSAPP": "",

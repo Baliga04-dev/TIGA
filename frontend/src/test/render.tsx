@@ -14,6 +14,7 @@ export function mockMountCalls() {
   mock.get('/reminders/due', { ok: true, items: [] })
   mock.get('/bridge/status', { ok: true, connected: false, configured: true })
   mock.get('/bridge/setup', { ok: true, token: 'tok', server: 'ws://127.0.0.1:8000/ws/bridge' })
+  mock.get('/settings/phone', { ok: true, enabled: false, how: 'Add TIGA_PHONE=on to tiga/.env' })
   mock.get('/reminders', { ok: true, items: [] })
   mock.get('/notes', { ok: true, items: [] })
   mock.get('/routines', { ok: true, items: [] })

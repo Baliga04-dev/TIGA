@@ -4,6 +4,7 @@ import json
 import random
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -84,6 +85,7 @@ RE_MEDIA = re.compile(r"\b(pause|resume|stop)\b\s+(?:the\s+)?(music|song|video|t
                       r"|\bplay\s+(?:the\s+)?(music|song)\s*$", re.I)
 RE_LOCK = re.compile(r"\block\b.*\b(screen|pc|computer|laptop|system)\b", re.I)
 RE_REMIND = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:please\s+)?remind me\b\s*(.*)$", re.I | re.S)
+RE_REMINDERS = re.compile(r"\b(?:what are|what's|whats|show|list|read)\b(?:\s+(?:me|out))?\s+(?:all\s+)?(?:my\s+)?reminders\b|^\s*(?:my\s+)?reminders\s*[?.!]*\s*$", re.I)
 RE_NOTE = re.compile(r"^\s*(?:hey\s+)?(?:tiga[,\s]+)?(?:take a note|note(?:\s+down)?|make a note|remember that)\s*[:,-]?\s*(.+)$", re.I | re.S)
 RE_BRIEFING = re.compile(r"\bgood morning\b|\b(?:morning )?briefing\b|\bwhat(?:'s| is) (?:on|up) (?:for )?today\b|\bplan for today\b", re.I)
 RE_TABS = re.compile(r"\b(?:what|which) tabs\b|\b(?:list|show)(?: me)?(?: my| the)?(?: open)? tabs\b|\bopen tabs\b", re.I)
@@ -115,6 +117,17 @@ def _routine_request(text: str) -> tuple[str, str] | None:
         if m and routines.parse_rule(m.group(rule_group)):
             return m.group(rule_group).strip(), "remind me to " + m.group(what_group).strip(" .!")
     return routines.split(_POLITE.sub("", text, count=1))
+
+
+def _when_text(iso: str) -> str:
+    """A reminder's due time the way it would be said: 'today 5:00 PM', 'Tue 12 Nov 9:00 AM'."""
+    try:
+        due = datetime.fromisoformat(iso).astimezone(ZoneInfo(config.TIMEZONE))
+    except (TypeError, ValueError):
+        return iso
+    today = datetime.now(ZoneInfo(config.TIMEZONE)).date()
+    day = "today" if due.date() == today else due.strftime("%a %-d %b")
+    return f"{day} {due.strftime('%-I:%M %p')}"
 
 
 def _split_reminder(rest: str) -> tuple[str, str]:
@@ -420,6 +433,13 @@ async def _builtin_respond(text: str) -> dict:
         action = await executor.execute("remind_me", {"text": what, "when": when})
         reply = (f"Okay, I'll remind you {action['result']['due']}: {what}." if action["ok"]
                  else f"I couldn't set that: {_err(action['result'])}.")
+        return {"reply": reply, "actions": [action], "mode": "builtin"}
+
+    if RE_REMINDERS.search(text):
+        action = await executor.execute("list_reminders", {})
+        items = action["result"].get("reminders", []) if action["ok"] else []
+        reply = ("You have no reminders waiting." if not items else
+                 "Your reminders: " + "; ".join(f"{r['text']} ({_when_text(r['due_at'])})" for r in items[:8]) + ".")
         return {"reply": reply, "actions": [action], "mode": "builtin"}
 
     note_m = RE_NOTE.match(text)

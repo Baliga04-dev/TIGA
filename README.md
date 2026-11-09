@@ -58,5 +58,21 @@ for d in *.deb; do dpkg -x "$d" ~/.local/chromium-libs/root; done
 - State-changing API calls from other websites are refused (see `ALLOWED_ORIGINS`).
 - After the assistant reads your mail during a turn, it cannot send mail or open links in that turn, so
   instructions hidden inside an email cannot act on your behalf.
+- Tiga listens only on this PC unless you turn on the phone remote (`TIGA_PHONE=on`). Then other devices on
+  your Wi-Fi get the phone page and nothing else, and only a phone that scanned the pairing QR code on the
+  Settings page can use it (docs/adr/0007).
+
+## Phone remote
+
+For when music is playing and the PC's microphone can't hear you. Once:
+
+1. Add `TIGA_PHONE=on` to `tiga/.env`.
+2. In PowerShell opened as administrator, run
+   `powershell -ExecutionPolicy Bypass -File \\wsl.localhost\Ubuntu\home\adithya04\projects\TIGA\phone_setup.ps1`.
+   It switches WSL to mirrored networking and opens port 8000 for private networks only.
+3. `wsl --shutdown`, open Ubuntu again, `./start_dev.sh`.
+4. On the PC, open Settings, and scan the "Phone remote" QR code with the phone. Add the page to the home screen.
+
+To speak on the phone, tap the microphone on its keyboard.
 
 See [CLAUDE.md](CLAUDE.md) for the architecture notes used when working in this repository.

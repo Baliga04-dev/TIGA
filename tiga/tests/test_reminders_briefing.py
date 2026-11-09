@@ -29,6 +29,14 @@ def test_chat_sets_a_reminder_and_takes_a_note(client):
     assert body["reply"] == "Noted." and services.get_store().list_notes()[0]["text"] == "Glow Salon wants a pink theme"
 
 
+def test_chat_lists_the_reminders_that_are_waiting(client):
+    assert "no reminders" in client.post("/api/chat", json={"text": "what are my reminders?"}).json()["reply"].lower()
+    client.post("/api/chat", json={"text": "remind me in 20 minutes to call Sri Bakery"})
+    body = client.post("/api/chat", json={"text": "show my reminders"}).json()
+    assert body["actions"][0]["tool"] == "list_reminders" and "call Sri Bakery" in body["reply"]
+    assert client.post("/api/chat", json={"text": "remind me to list reminders at 5pm"}).json()["actions"][0]["tool"] == "remind_me"
+
+
 def test_unclear_reminders_ask_again(client):
     body = client.post("/api/chat", json={"text": "remind me about stuff"}).json()
     assert body["actions"] == [] and "when" in body["reply"].lower()

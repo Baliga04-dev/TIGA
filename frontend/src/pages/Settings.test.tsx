@@ -129,4 +129,23 @@ describe('Settings', () => {
     await waitFor(() => expect(saved[0]).toMatchObject({ renewal_yearly: 900 }))
     expect(await screen.findByText(/new proposals state this renewal/i)).toBeInTheDocument()
   })
+
+  it('says how to turn the phone remote on', async () => {
+    renderApp('/settings')
+    expect(await screen.findByText(/TIGA_PHONE=on/)).toBeInTheDocument()
+  })
+
+  it('shows the phone QR code and replaces the pairing code on request', async () => {
+    const pairing = { ok: true, enabled: true, url: 'http://192.168.0.102:8000/phone#k=abc', token: 'abc',
+      address: '192.168.0.102', hint: 'Your phone must be on the same Wi-Fi.', qr_svg: '<svg data-testid="qr"></svg>' }
+    mock.get('/settings/phone', pairing)
+    const renewed = mock.record('/settings/phone/new-code', { ...pairing, token: 'def', url: 'http://192.168.0.102:8000/phone#k=def' })
+    const user = userEvent.setup()
+    renderApp('/settings')
+    expect(await screen.findByRole('img', { name: /qr code/i })).toBeInTheDocument()
+    expect(screen.getByText('Your phone must be on the same Wi-Fi.')).toBeInTheDocument()
+    expect(screen.queryByText(/k=abc/)).not.toBeInTheDocument()   // the code isn't printed on screen
+    await user.click(screen.getByRole('button', { name: /new pairing code/i }))
+    await waitFor(() => expect(renewed).toHaveLength(1))
+  })
 })

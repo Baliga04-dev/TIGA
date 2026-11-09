@@ -15,3 +15,5 @@ Words used in Tiga's code, UI and docs. Use these names; don't invent synonyms.
 - **Pending action**: an OUTWARD (or tainted) Tool call waiting for the owner's Confirm click; single use, expires after 10 minutes.
 - **Bridge**: the Tiga Bridge browser extension that lets Tiga see and act on the owner's real Edge tabs over localhost.
 - **Tiga**: the assistant itself (formerly styled "Jarvis").
+- **Phone remote**: the `/phone` page on the home Wi-Fi (off unless `TIGA_PHONE` is on) for music, volume and commands when the PC's microphone can't hear the owner.
+- **Pairing code**: the secret in the phone remote's QR code; every phone call carries it, and a new one locks out the old phone.

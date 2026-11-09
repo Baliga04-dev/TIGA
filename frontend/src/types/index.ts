@@ -664,3 +664,15 @@ export interface WhatWorked {
   retire: string[];
   enough_data: boolean;
 }
+
+/** The phone remote's pairing, from the PC's Settings page. */
+export interface PhonePairing {
+  ok: true;
+  enabled: boolean;
+  how?: string;
+  url?: string;
+  token?: string;
+  address?: string;
+  hint?: string;
+  qr_svg?: string;
+}
