@@ -200,10 +200,10 @@ class Mailer:
         return changed
 
     def _draft_answer(self, row: dict) -> None:
-        demo = re.search(re.escape(DEMO_LINE) + r"\s*(\S+)", row["body"])
+        demo = re.search(re.escape(DEMO_LINE) + r"[^\n]*?(https?://\S+)", row["body"])
         body = ("Hi,\n\nThanks for getting back to me. Would a 15-minute call this week suit you? I can show you what "
                 f"a site for {row['company'] or 'you'} could look like"
-                + (f", starting from the one I built for a shop like yours: {demo.group(1)}" if demo else "")
+                + (f", starting from the demo I sent: {demo.group(1)}" if demo else "")
                 + ".\n\nJust tell me a day and time that works.\n\nBest," + (f"\n{self.sender_name}" if self.sender_name else ""))
         subject = row["subject"] if row["subject"].lower().startswith("re:") else f"Re: {row['subject']}"
         try:

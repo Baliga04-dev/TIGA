@@ -86,7 +86,8 @@ def write_draft(lead: dict) -> dict:
     demo = marketing.demo_for(category, marketing.demos_url()) if category in marketing.DEMOS else ""
     with ai.using("email writer"):
         return drafter.write_draft(lead, sender_name=config.SENDER_NAME or "Tiga", offer=config.OFFER,
-                                   complete=llm_complete(), demo_url=demo)
+                                   complete=llm_complete(), demo_url=demo,
+                                   demo_kind=marketing.DEMO_KINDS.get(marketing.DEMOS.get(category, ""), ""))
 
 
 def get_analyst() -> Analyst:

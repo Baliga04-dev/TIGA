@@ -228,7 +228,7 @@ def test_last_note_mentions_the_demo_only_when_the_first_mail_had_one(mailer):
     sent_mail(mailer)
     assert "demo" not in mailer.due_followups(now=T0 + timedelta(days=4))[0]["body"]
     d = mailer.draft(email="cafe@shop.in", company="Cafe", lead_url="", source_note="", subject="A website",
-                     body="Hi.\n\nHere's a website I built for a shop like yours: https://x.io/demos/\n\nBest,\nA")
+                     body="Hi.\n\nHere's a demo I built for a restaurant, to show what I mean: https://x.io/demos/\n\nBest,\nA")
     mailer.approve(d["id"])
     mailer.send_next(now=T0 + timedelta(minutes=30))
     notes = mailer.due_followups(now=T0 + timedelta(days=5))
@@ -323,7 +323,7 @@ def test_an_answer_cancels_the_waiting_follow_up(mailer):
 def test_an_interested_reply_gets_a_drafted_answer_and_a_reminder_due_now(mailer, store):
     m = Mailer(store, FakeSender(), postal_address=ADDRESS, gap_seconds=lambda: 0, sender_name="Adithya")
     d = m.draft(email="cafe@shop.in", company="Bean Cafe", subject="A website", lead_url="", source_note="",
-                body="Hi.\n\nHere's a website I built for a shop like yours: https://x.io/demos/malnad-table/\n\nBest,\nA")
+                body="Hi.\n\nHere's a demo I built for a restaurant, to show what I mean: https://x.io/demos/malnad-table/\n\nBest,\nA")
     m.approve(d["id"])
     row = m.send_next(now=T0)
     m.check_replies(threads(**{row["thread_id"]: [("cafe@shop.in", "Sounds good, tell me more")]}), now=T0)

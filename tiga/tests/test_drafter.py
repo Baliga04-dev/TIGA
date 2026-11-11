@@ -96,10 +96,39 @@ def test_a_shop_with_a_matching_demo_gets_exactly_one_link_before_the_sign_off()
     lead = {"company": "Udupi Tiffins", "problems": ["no_website"], "category": "restaurant"}
     out = drafter.write_draft(lead, sender_name="Adithya", offer="websites", demo_url=demo)
     body = out["body"]
-    assert body.count("http") == 1 and demo in body and body.index(demo) < body.index("Best,")
+    assert body.count("http") == 1 and demo in body and body.index(demo) < body.index("Thanks,")
+    assert "demo I built for a restaurant" in drafter.write_draft(lead, sender_name="Adithya", offer="websites",
+                                                                  demo_url=demo, demo_kind="a restaurant")["body"]
     llm = drafter.write_draft(lead, sender_name="Adithya", offer="websites", demo_url=demo,
-                              complete=lambda s, u: '{"subject": "A website for Udupi Tiffins", "body": "' + ("word " * 70) + 'Best, Adithya"}')
-    assert llm["body"].count(demo) == 1
+                              complete=lambda s, u: '{"subject": "A website for Udupi Tiffins", "body": "' + ("word " * 50) + '"}')
+    assert llm["body"].count(demo) == 1 and llm["body"].index(demo) < llm["body"].index("Thanks,\nAdithya")
+    assert llm["body"].startswith("Hi Udupi Tiffins team,")
+
+
+@pytest.mark.parametrize("middle", [
+    "Hi there, " + "word " * 40,                                  # its own greeting
+    "word " * 40 + "Thanks, Adithya",                             # its own sign-off
+    "word " * 40 + "I can send a plan with a price.",             # prices are the owner's to bring up
+    "word " * 40 + "Your site has no local markup.",              # jargon a shop owner doesn't use
+    "word " * 40 + "See https://x.io",                            # its own link
+])
+def test_the_writer_only_writes_the_middle_or_the_template_is_used(middle):
+    lead = {"company": "Udupi Tiffins", "problems": ["no_website"], "category": "restaurant"}
+    out = drafter.write_draft(lead, sender_name="Adithya", offer="websites",
+                              complete=lambda s, u: '{"subject": "Hello", "body": "' + middle + '"}')
+    assert out["subject"] == "A website for Udupi Tiffins" and "couldn't find a website" in out["body"]
+
+
+def test_a_draft_reads_like_one_person_writing_to_one_shop():
+    out = drafter.write_draft({"company": "Udupi Tiffins", "problems": ["no_website"], "category": "restaurant"},
+                              sender_name="Adithya P Baliga", offer="websites")
+    body = out["body"]
+    assert body.startswith("Hi Udupi Tiffins team,") and body.endswith("Thanks,\nAdithya P Baliga")
+    assert "I'm Adithya, a web developer here in Bengaluru" in body and "menu and timings" in body
+    assert body.count("Udupi Tiffins") == 1 and "price" not in body.lower() and "cost" not in body.lower()
+    school = drafter.write_draft({"company": "Diya Academy", "problems": ["no_website"], "category": "school"},
+                                 sender_name="Adithya", offer="websites")["body"]
+    assert "parents" in school and "menu" not in school
 
 
 def test_no_demo_means_no_link():

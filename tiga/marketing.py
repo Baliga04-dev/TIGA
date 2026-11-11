@@ -105,6 +105,9 @@ def shop_noun(category: str) -> str:
 DEMOS = {"clinic": "tulasi-clinic", "salon": "mallige-salon", "restaurant": "malnad-table", "cafe": "malnad-table", "bakery": "malnad-table", "clothes": "navilu-boutique",
          "jewellery": "navilu-boutique", "florist": "navilu-boutique", "school": "little-banyan",
          "coaching": "little-banyan", "hotel": "sampige-residency", "travel": "sampige-residency"}
+# What each demo is, for the line that links it in a cold mail ("a demo I built for a restaurant").
+DEMO_KINDS = {"tulasi-clinic": "a clinic", "mallige-salon": "a salon", "malnad-table": "a restaurant",
+              "navilu-boutique": "a saree shop", "little-banyan": "a preschool", "sampige-residency": "a small hotel"}
 TRUST_TERMS = billing.TRUST_TERMS
 # What a shop's Google Business Profile needs; checked by hand at the visit (Google's own API costs money).
 GOOGLE_CHECKS = [
